@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Node
+node_modules/
+frontend/dist/
+
+# 运行时数据（数据库、上传、输出、临时文件）
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# 系统/编辑器
+.DS_Store
+.idea/
+.vscode/
+*.log
