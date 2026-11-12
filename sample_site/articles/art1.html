@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>本地采集工具的设计</title></head>
+<body>
+  <h1>本地采集工具的设计</h1>
+  <p>更新时间：<time datetime="2026-10-20">2026-10-20</time></p>
+  <article class="content">
+    <p>采集工具的核心是一个广度优先的队列：从起始地址出发，解析页面中的链接，依次入队。</p>
+    <p>每个页面只访问一次，已入队的地址会被记录，避免重复抓取。</p>
+  </article>
+  <p><a href="../list-1.html">返回列表</a> | <a href="art2.html">下一篇</a></p>
+</body>
+</html>

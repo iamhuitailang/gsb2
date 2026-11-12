@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>本地资料站 - 首页</title>
+  <meta name="last-modified" content="2026-11-01">
+</head>
+<body>
+  <h1>本地资料站</h1>
+  <nav>
+    <ul>
+      <li><a href="list-1.html">文章列表</a></li>
+      <li><a href="about.html">关于本站</a></li>
+      <!-- 以下三个链接指向同一页面，用于演示 URL 规范化与去重 -->
+      <li><a href="articles/art1.html">推荐文章</a></li>
+      <li><a href="articles/art1.html?utm_source=nav">推荐文章（带追踪参数）</a></li>
+      <li><a href="./articles/art1.html#top">推荐文章（带锚点）</a></li>
+      <!-- 站外链接，同域限制下应被忽略 -->
+      <li><a href="https://example.com/">站外链接（不会被采集）</a></li>
+    </ul>
+  </nav>
+  <article class="content">
+    <p>这是一个用于演示采集与变更追踪的本地资料站点，不依赖外网。</p>
+  </article>
+</body>
+</html>
