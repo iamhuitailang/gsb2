@@ -1,0 +1,27 @@
+{
+  "name": "file-inspection-workbench",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "本地文件接收与隔离工作台：服务端内容检查、随机存储名、ZIP 安全解压、隔离区与审计记录",
+  "scripts": {
+    "dev:server": "node server/index.mjs",
+    "dev:client": "vite --config client/vite.config.js",
+    "build": "vite build --config client/vite.config.js",
+    "start": "node server/index.mjs",
+    "test": "node --test \"tests/*.test.mjs\"",
+    "samples": "node scripts/generate-samples.mjs"
+  },
+  "dependencies": {
+    "busboy": "^1.6.0",
+    "yauzl": "^3.2.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.0",
+    "vite": "^7.0.0",
+    "vue": "^3.5.0"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}
