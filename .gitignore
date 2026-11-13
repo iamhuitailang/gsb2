@@ -1,0 +1,15 @@
+# Local secrets and generated state — never commit.
+backend/config.local.json
+backend/config.local.json.tmp
+backend/data/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+frontend/dist/
+frontend/node_modules/
+.DS_Store
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.check_env.py

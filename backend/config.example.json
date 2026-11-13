@@ -1,0 +1,15 @@
+{
+  "time_window_seconds": 300,
+  "future_skew_seconds": 60,
+  "nonce_retention_seconds": 900,
+  "database_path": "data/audit.sqlite3",
+  "keys": [
+    {
+      "key_id": "demo-local-01",
+      "secret": "REPLACE_WITH_AT_LEAST_16_CHARS",
+      "status": "active",
+      "created_at": "2026-01-01T00:00:00Z",
+      "grace_until": null
+    }
+  ]
+}
