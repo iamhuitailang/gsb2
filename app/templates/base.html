@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}月报资料系统{% endblock %}</title>
+  <style>
+    :root {
+      --blue: #2563eb; --blue-dark: #1d4ed8; --border: #e2e8f0;
+      --bg: #f8fafc; --muted: #64748b; --green: #16a34a; --amber: #d97706;
+      --red: #dc2626;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+           background: var(--bg); color: #0f172a; }
+    header { background: #0f172a; color: #fff; padding: 0 28px; display: flex;
+             align-items: center; gap: 24px; height: 56px; }
+    header .brand { font-weight: 700; font-size: 16px; }
+    header nav a { color: #cbd5e1; text-decoration: none; font-size: 14px; margin-right: 18px; }
+    header nav a:hover, header nav a.active { color: #fff; }
+    main { max-width: 1100px; margin: 28px auto; padding: 0 20px; }
+    h1 { font-size: 20px; margin: 0 0 18px; }
+    h2 { font-size: 16px; margin: 26px 0 12px; }
+    .card { background: #fff; border: 1px solid var(--border); border-radius: 10px;
+            padding: 18px 20px; margin-bottom: 22px; }
+    form.filters { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    select, input { padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px;
+                    font-size: 14px; background: #fff; }
+    button, .btn { display: inline-block; padding: 7px 16px; border-radius: 8px;
+                   border: 1px solid var(--blue); background: var(--blue); color: #fff;
+                   font-size: 14px; cursor: pointer; text-decoration: none; }
+    button:hover, .btn:hover { background: var(--blue-dark); }
+    .btn.secondary { background: #fff; color: var(--blue); }
+    .btn.small { padding: 4px 10px; font-size: 13px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; background: #fff; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 600; font-size: 13px; background: #f1f5f9; }
+    tr:last-child td { border-bottom: none; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; }
+    .badge.current { background: #dcfce7; color: var(--green); }
+    .badge.history { background: #fef3c7; color: var(--amber); }
+    .badge.status-running { background: #dbeafe; color: var(--blue); }
+    .badge.status-done { background: #dcfce7; color: var(--green); }
+    .badge.status-failed { background: #fee2e2; color: var(--red); }
+    .muted { color: var(--muted); font-size: 13px; }
+    .pager { display: flex; gap: 10px; align-items: center; margin-top: 16px;
+             justify-content: flex-end; font-size: 14px; }
+    .pager a.disabled { pointer-events: none; color: #94a3b8; background: #f1f5f9;
+                        border-color: var(--border); }
+    code { background: #f1f5f9; padding: 1px 6px; border-radius: 6px; font-size: 13px; }
+    .event-log { font-family: ui-monospace, Menlo, monospace; font-size: 13px;
+                 max-height: 420px; overflow-y: auto; }
+    .event-log .line { padding: 6px 8px; border-bottom: 1px solid #f1f5f9; display: flex; gap: 10px; }
+    .event-log .ts { color: var(--muted); white-space: nowrap; }
+    .event-log .action { font-weight: 700; width: 72px; flex-shrink: 0; }
+    .event-log .action.download { color: var(--green); }
+    .event-log .action.skip { color: var(--amber); }
+    .event-log .action.error { color: var(--red); }
+    .event-log .action.start, .event-log .action.done, .event-log .action.page { color: var(--blue); }
+    .stats { display: flex; gap: 14px; flex-wrap: wrap; }
+    .stat { background: #f1f5f9; border-radius: 10px; padding: 10px 18px; min-width: 96px; }
+    .stat .num { font-size: 22px; font-weight: 700; }
+    .stat .label { font-size: 12px; color: var(--muted); }
+    iframe.pdf { width: 100%; height: 70vh; border: 1px solid var(--border); border-radius: 8px; }
+    .meta { display: grid; grid-template-columns: 110px 1fr; row-gap: 10px; font-size: 14px; }
+    .meta dt { color: var(--muted); } .meta dd { margin: 0; }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="brand">月报资料系统</span>
+    <nav>
+      <a href="{{ url_for('inbox.index') }}"
+         class="{{ 'active' if request.endpoint and request.endpoint.startswith('inbox') }}">领取入库</a>
+      <a href="{{ url_for('portal.index') }}"
+         class="{{ 'active' if request.endpoint and request.endpoint.startswith('portal') }}">模拟资料站</a>
+    </nav>
+  </header>
+  <main>{% block body %}{% endblock %}</main>
+</body>
+</html>

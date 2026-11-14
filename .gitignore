@@ -1,0 +1,12 @@
+# 运行时生成的数据（演示数据可由应用自动播种重建）
+data/
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# 系统
+.DS_Store

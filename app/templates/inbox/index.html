@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% block title %}领取入库{% endblock %}
+{% block body %}
+<h1>月报领取入库</h1>
+
+<div class="card">
+  <h2 style="margin-top:0">发起领取</h2>
+  <form class="filters" method="post" action="{{ url_for('inbox.harvest_start') }}">
+    <label>月份
+      <select name="month">
+        <option value="">全部月份</option>
+        {% for m in months %}<option value="{{ m }}">{{ m }}</option>{% endfor %}
+      </select>
+    </label>
+    <label>门店
+      <select name="store">
+        <option value="">全部门店</option>
+        {% for s in stores %}
+          <option value="{{ s.store_code }}">{{ s.store_name }}（{{ s.store_code }}）</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit">开始浏览器自动领取</button>
+    <span class="muted">将逐页打开资料站，点击每条报表的下载按钮；已存在的资料编号+版本自动跳过。</span>
+  </form>
+</div>
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+    <h2 style="margin:0">入库文件（{{ rows|length }} 份）</h2>
+    <form method="post" action="{{ url_for('inbox.admin_reset') }}"
+          onsubmit="return confirm('确定清空全部入库记录与已下载文件？资料站原始数据不受影响。')">
+      <button class="btn secondary" type="submit" style="border-color:#cbd5e1;color:#475569">
+        重置演示数据
+      </button>
+    </form>
+  </div>
+
+  <form class="filters" method="get" style="margin:14px 0">
+    <label>月份
+      <select name="month" onchange="this.form.submit()">
+        <option value="">全部月份</option>
+        {% for m in months %}
+          <option value="{{ m }}" {{ 'selected' if m == sel_month else '' }}>{{ m }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>门店
+      <select name="store" onchange="this.form.submit()">
+        <option value="">全部门店</option>
+        {% for s in stores %}
+          <option value="{{ s.store_code }}" {{ 'selected' if s.store_code == sel_store else '' }}>
+            {{ s.store_name }}（{{ s.store_code }}）
+          </option>
+        {% endfor %}
+      </select>
+    </label>
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>月份</th><th>门店</th><th>资料编号</th><th>版本</th><th>状态</th>
+        <th>原始文件名</th><th>大小</th><th>领取时间</th><th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.month }}</td>
+        <td>{{ r.store_name }}</td>
+        <td><code>{{ r.doc_no }}</code></td>
+        <td>{{ r.version }}</td>
+        <td>
+          {% if r.is_current %}
+            <span class="badge current">当前版本</span>
+          {% else %}
+            <span class="badge history">历史版本</span>
+          {% endif %}
+        </td>
+        <td>{{ r.filename }}</td>
+        <td class="muted">{{ r.file_size }} B</td>
+        <td class="muted">{{ r.received_at }}</td>
+        <td>
+          <a class="btn small" href="{{ url_for('inbox.inbox_detail', inbox_id=r.id) }}">查看</a>
+          <a class="btn small secondary"
+             href="{{ url_for('inbox.inbox_download', inbox_id=r.id) }}">下载</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9" class="muted" style="text-align:center;padding:24px">
+        还没有入库文件，请在上方选择月份和门店后开始领取。
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0">最近领取任务</h2>
+  <table>
+    <thead><tr><th>#</th><th>月份</th><th>门店</th><th>状态</th><th>开始时间</th><th>结束时间</th><th></th></tr></thead>
+    <tbody>
+      {% for run in runs %}
+      <tr>
+        <td>{{ run.id }}</td>
+        <td>{{ run.month or '全部' }}</td>
+        <td>{{ run.store_code or '全部' }}</td>
+        <td><span class="badge status-{{ run.status }}">{{ run.status }}</span></td>
+        <td class="muted">{{ run.started_at }}</td>
+        <td class="muted">{{ run.finished_at or '—' }}</td>
+        <td><a class="btn small secondary"
+               href="{{ url_for('inbox.run_detail', run_id=run.id) }}">查看过程</a></td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="muted" style="text-align:center;padding:20px">暂无领取记录</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

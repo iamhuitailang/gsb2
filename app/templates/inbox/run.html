@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}领取任务 #{{ run.id }}{% endblock %}
+{% block body %}
+<h1>领取任务 #{{ run.id }}
+  <span id="status-badge" class="badge status-{{ run.status }}">{{ run.status }}</span>
+</h1>
+
+<div class="card">
+  <p class="muted" style="margin-top:0">
+    范围：月份 <code>{{ run.month or '全部' }}</code> ·
+    门店 <code>{{ run.store_code or '全部' }}</code> ·
+    开始 {{ run.started_at }}{% if run.finished_at %} · 结束 {{ run.finished_at }}{% endif %}
+  </p>
+  <div class="stats" id="stats"></div>
+</div>
+
+<div class="card">
+  <h2 style="margin-top:0">实时过程（浏览器逐页操作日志）</h2>
+  <div class="event-log" id="event-log">
+    {% for e in events %}
+    <div class="line">
+      <span class="ts">{{ e.ts }}</span>
+      <span class="action {{ e.action }}">{{ e.action }}</span>
+      <span>{{ e.message }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  <p class="muted" id="poll-hint" style="margin-bottom:0">页面每 1 秒自动刷新进度…</p>
+  <p><a class="btn secondary" href="{{ url_for('inbox.index') }}">返回领取入库首页</a></p>
+</div>
+
+<script>
+const runId = {{ run.id }};
+const STAT_LABELS = {
+  total_seen: '发现报表', downloaded: '已下载', skipped: '已跳过', errors: '失败'
+};
+
+function renderStats(stats) {
+  const el = document.getElementById('stats');
+  el.innerHTML = Object.entries(STAT_LABELS).map(([k, label]) =>
+    `<div class="stat"><div class="num">${stats[k] ?? 0}</div><div class="label">${label}</div></div>`
+  ).join('');
+}
+
+function renderEvents(events) {
+  document.getElementById('event-log').innerHTML = events.map(e =>
+    `<div class="line"><span class="ts">${e.ts}</span>` +
+    `<span class="action ${e.action}">${e.action}</span><span>${e.message}</span></div>`
+  ).join('');
+}
+
+async function poll() {
+  const resp = await fetch(`{{ url_for('inbox.run_events', run_id=run.id) }}`);
+  const data = await resp.json();
+  document.getElementById('status-badge').textContent = data.status;
+  document.getElementById('status-badge').className = `badge status-${data.status}`;
+  renderStats(JSON.parse(data.stats || '{}'));
+  renderEvents(data.events);
+  if (data.finished) {
+    document.getElementById('poll-hint').textContent = '任务已结束。';
+    return;
+  }
+  setTimeout(poll, 1000);
+}
+renderStats(JSON.parse(`{{ run.stats | tojson }}` || '{}'));
+{% if run.status == 'running' %}poll();{% else %}
+document.getElementById('poll-hint').textContent = '任务已结束。';
+{% endif %}
+</script>
+{% endblock %}
