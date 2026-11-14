@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>展会报名/到场归并工作台</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <h1>展会报名 / 到场归并工作台</h1>
+  <nav>
+    <button class="tab active" data-tab="import">导入</button>
+    <button class="tab" data-tab="merge">归并 <span id="badge-pending" class="badge hidden"></span></button>
+    <button class="tab" data-tab="stats">统计</button>
+    <button class="tab" data-tab="people">人员</button>
+    <button class="tab" data-tab="export">导出</button>
+  </nav>
+</header>
+
+<main>
+  <!-- 导入 -->
+  <section id="tab-import" class="panel active">
+    <h2>导入名单</h2>
+    <p class="hint">两张表无需共同编号。CSV 需包含表头：姓名,单位,邮箱（邮箱可留空）。</p>
+    <div class="import-grid">
+      <div class="card">
+        <h3>报名表</h3>
+        <input type="file" id="file-reg" accept=".csv">
+        <p id="status-reg" class="hint">未导入</p>
+      </div>
+      <div class="card">
+        <h3>现场登记表</h3>
+        <input type="file" id="file-onsite" accept=".csv">
+        <p id="status-onsite" class="hint">未导入</p>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="btn-demo" class="primary">载入内置演示数据</button>
+      <button id="btn-clear" class="danger">清空全部数据与归并决定</button>
+    </div>
+    <h3>已导入记录</h3>
+    <div id="import-preview"></div>
+  </section>
+
+  <!-- 归并 -->
+  <section id="tab-merge" class="panel">
+    <h2>归并工作台</h2>
+    <h3>待人工确认 <span id="pending-count" class="badge"></span></h3>
+    <p class="hint">以下记录姓名相同，但邮箱不同或缺失，无法自动归并。请确认是同一人（合并）还是不同人（分开）。两种处理都会保留全部原始记录。</p>
+    <div id="candidate-list"></div>
+    <h3>已自动合并（邮箱一致且只对应一人）</h3>
+    <div id="auto-list"></div>
+    <h3>已人工处理</h3>
+    <div id="decided-list"></div>
+  </section>
+
+  <!-- 统计 -->
+  <section id="tab-stats" class="panel">
+    <h2>统计（按归并后的人计算）</h2>
+    <div class="stat-grid">
+      <button class="stat-card" data-filter="registered">
+        <div class="stat-num" id="stat-registered">0</div>
+        <div class="stat-label">报名人数</div>
+      </button>
+      <button class="stat-card" data-filter="attended">
+        <div class="stat-num" id="stat-attended">0</div>
+        <div class="stat-label">到场人数</div>
+      </button>
+      <button class="stat-card" data-filter="absent">
+        <div class="stat-num" id="stat-absent">0</div>
+        <div class="stat-label">报名未到场</div>
+      </button>
+      <button class="stat-card" data-filter="walkin">
+        <div class="stat-num" id="stat-walkin">0</div>
+        <div class="stat-label">现场报名（未提前报名）</div>
+      </button>
+    </div>
+    <p class="hint">点击卡片可跳到对应人员列表。到场率：<strong id="stat-rate">—</strong></p>
+    <p id="stat-pending-note" class="warn-text hidden"></p>
+  </section>
+
+  <!-- 人员 -->
+  <section id="tab-people" class="panel">
+    <h2>人员（归并后）</h2>
+    <div id="people-filter" class="hint"></div>
+    <div id="people-list"></div>
+    <div id="person-detail" class="hidden">
+      <h3>人员详情</h3>
+      <div id="person-detail-body"></div>
+      <button id="btn-close-detail">关闭</button>
+    </div>
+  </section>
+
+  <!-- 导出 -->
+  <section id="tab-export" class="panel">
+    <h2>导出</h2>
+    <p class="hint">导出归并后的人员清单（CSV，含是否报名、是否到场、来源记录数）。</p>
+    <button id="btn-export" class="primary">导出人员清单 CSV</button>
+    <h3>预览</h3>
+    <div id="export-preview"></div>
+  </section>
+</main>
+
+<script src="demo-data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

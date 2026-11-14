@@ -1,0 +1,119 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #f5f6f8;
+  color: #222;
+}
+header {
+  background: #1f3a5f;
+  color: #fff;
+  padding: 12px 24px;
+}
+header h1 { font-size: 18px; margin: 0 0 10px; }
+nav { display: flex; gap: 8px; }
+.tab {
+  background: transparent;
+  color: #cfd8e3;
+  border: 1px solid #3a5578;
+  border-radius: 6px;
+  padding: 6px 16px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.tab.active { background: #fff; color: #1f3a5f; border-color: #fff; }
+.badge {
+  display: inline-block;
+  background: #d9534f;
+  color: #fff;
+  border-radius: 10px;
+  padding: 0 7px;
+  font-size: 12px;
+  line-height: 18px;
+}
+.hidden { display: none !important; }
+
+main { padding: 20px 24px; max-width: 1100px; margin: 0 auto; }
+.panel { display: none; }
+.panel.active { display: block; }
+.panel h2 { margin-top: 0; }
+
+.hint { color: #777; font-size: 13px; }
+.card {
+  background: #fff;
+  border: 1px solid #e2e5ea;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+.import-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.actions { margin: 10px 0; display: flex; gap: 8px; }
+
+button {
+  border: 1px solid #c8cdd4;
+  background: #fff;
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 14px;
+}
+button:hover { background: #f0f2f5; }
+button.primary { background: #1f6fd6; border-color: #1f6fd6; color: #fff; }
+button.primary:hover { background: #1a5fb8; }
+button.danger { color: #c0392b; border-color: #e0b4b0; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+  background: #fff;
+  font-size: 14px;
+}
+th, td { border: 1px solid #e2e5ea; padding: 6px 10px; text-align: left; }
+th { background: #f0f2f5; }
+
+.candidate { border-left: 4px solid #f0ad4e; }
+.candidate-head {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.hint-badge {
+  display: inline-block;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 12px;
+  margin-right: 4px;
+}
+.hint-badge.ok { background: #e6f4ea; color: #1e7e34; }
+.hint-badge.bad { background: #fdecea; color: #c0392b; }
+.hint-badge.warn { background: #fff7e0; color: #9a6b00; }
+.warn-text { color: #9a6b00; font-size: 13px; }
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin: 16px 0;
+}
+.stat-card {
+  background: #fff;
+  border: 1px solid #e2e5ea;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+}
+.stat-card:hover { border-color: #1f6fd6; }
+.stat-num { font-size: 32px; font-weight: 700; color: #1f3a5f; }
+.stat-label { color: #666; margin-top: 4px; }
+
+#person-detail {
+  background: #fff;
+  border: 1px solid #1f6fd6;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-top: 12px;
+}
