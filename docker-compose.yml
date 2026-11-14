@@ -1,0 +1,9 @@
+services:
+  bus-boardings:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/data
+    environment:
+      BUS_DATA_DIR: /data

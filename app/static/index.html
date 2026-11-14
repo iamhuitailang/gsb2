@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>公交刷卡归档查询</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header>
+    <h1>公交刷卡汇总 · Parquet 归档查询</h1>
+    <p class="sub">按业务日期分区存储，单日查询只读取当天分区；修订版替换当天数据，旧版保留在归档记录。</p>
+  </header>
+
+  <main>
+    <!-- 1. 导入 -->
+    <section class="card">
+      <h2>① 逐份导入 CSV</h2>
+      <div class="row">
+        <input type="file" id="fileInput" accept=".csv,text/csv" />
+        <button id="importBtn">导入该文件</button>
+      </div>
+      <div id="importMsg" class="msg" hidden></div>
+      <p class="hint">必需列：业务日期、线路、站点、时段、人数；一份文件只能包含一个业务日期。同内容文件重传会直接提示已有版本。</p>
+    </section>
+
+    <!-- 2. 查询 -->
+    <section class="card">
+      <h2>② 查询上车人数</h2>
+      <div class="row wrap">
+        <label>开始日期 <input type="date" id="startDate" /></label>
+        <label>结束日期 <input type="date" id="endDate" /></label>
+        <label>线路
+          <select id="routeSelect"><option value="">全部线路</option></select>
+        </label>
+        <button id="queryBtn">查询</button>
+        <button id="exportStationBtn" class="secondary">导出站点明细 CSV</button>
+        <button id="exportLineBtn" class="secondary">导出线路汇总 CSV</button>
+      </div>
+      <div id="queryMsg" class="msg" hidden></div>
+      <div id="resultArea" hidden>
+        <div class="summary">
+          <span>总上车人数：<strong id="totalBoardings">0</strong></span>
+        </div>
+        <details>
+          <summary>本次实际读取了哪些日期（<span id="partitionCount">0</span> 个分区，点击展开）</summary>
+          <ul id="readDates"></ul>
+        </details>
+
+        <h3>各线路汇总</h3>
+        <table>
+          <thead><tr><th>线路</th><th>上车人数</th></tr></thead>
+          <tbody id="lineTbody"></tbody>
+        </table>
+
+        <h3>各线路 × 各站点</h3>
+        <table>
+          <thead><tr><th>线路</th><th>站点</th><th>上车人数</th></tr></thead>
+          <tbody id="stationTbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 3. 归档记录 -->
+    <section class="card">
+      <h2>③ 归档记录（含已被替换的旧版）</h2>
+      <div class="row">
+        <label>按业务日期筛选 <input type="date" id="archiveDate" /></label>
+        <button id="refreshArchiveBtn" class="secondary">刷新</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>版本</th><th>业务日期</th><th>收到时间</th><th>总人数</th><th>行数</th>
+            <th>状态</th><th>替换自</th><th>内容校验和(sha256 前 12 位)</th>
+          </tr>
+        </thead>
+        <tbody id="archiveTbody"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
