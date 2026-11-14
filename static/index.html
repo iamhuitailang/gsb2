@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>配送日报任务编排</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+         margin: 0; background: #f5f6f8; color: #222; }
+  header { background: #1f3a5f; color: #fff; padding: 14px 24px; }
+  header h1 { margin: 0; font-size: 18px; }
+  main { max-width: 1080px; margin: 20px auto; padding: 0 16px; }
+  section { background: #fff; border-radius: 8px; padding: 16px 20px;
+            margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  h2 { font-size: 15px; margin: 0 0 12px; color: #1f3a5f; }
+  .caliber { background: #eef4fb; border-left: 3px solid #1f3a5f;
+             padding: 8px 12px; border-radius: 4px; font-size: 13px; }
+  label { font-size: 13px; margin-right: 6px; }
+  input[type=date], select { padding: 5px 8px; border: 1px solid #ccc;
+             border-radius: 4px; font-size: 13px; }
+  button { background: #1f3a5f; color: #fff; border: 0; border-radius: 4px;
+           padding: 7px 18px; font-size: 13px; cursor: pointer; }
+  button:hover { background: #2a4f80; }
+  .row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+         margin-bottom: 10px; }
+  .msg { font-size: 13px; margin-top: 6px; }
+  .msg.err { color: #c0392b; }
+  .msg.ok { color: #1e8449; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  th, td { border: 1px solid #e3e6ea; padding: 6px 8px; text-align: left;
+           vertical-align: top; }
+  th { background: #f0f2f5; white-space: nowrap; }
+  .badge { display: inline-block; padding: 1px 8px; border-radius: 10px;
+           font-size: 12px; }
+  .st-running { background: #fff3cd; color: #8a6d00; }
+  .st-success { background: #d4edda; color: #1e6b34; }
+  .st-failed  { background: #f8d7da; color: #a02622; }
+  .st-interrupted { background: #e2e3e5; color: #555; }
+  .steps { margin: 0; padding-left: 0; list-style: none; }
+  .steps li { margin-bottom: 4px; white-space: nowrap; }
+  .steps .n { display: inline-block; min-width: 34px; font-weight: 600;
+              color: #1f3a5f; }
+  .muted { color: #777; font-size: 12px; }
+  .ver-link { margin-right: 10px; white-space: nowrap; }
+  a { color: #1f5fbf; }
+  #report-view { margin-top: 12px; display: none; }
+  #report-view .notes { font-size: 12px; color: #555; margin-bottom: 8px;
+                        white-space: pre-line; }
+  .empty { color: #999; font-size: 13px; }
+</style>
+</head>
+<body>
+<header><h1>配送日报任务编排</h1></header>
+<main>
+
+<section>
+  <h2>完成率口径</h2>
+  <div class="caliber" id="caliber">加载中…</div>
+</section>
+
+<section>
+  <h2>新建任务</h2>
+  <div class="row">
+    <label>执行方式</label>
+    <select id="mode">
+      <option value="full_day">完整流程（单日）</option>
+      <option value="full_range">完整流程（范围补跑）</option>
+      <option value="rerun">从计算完成率重跑（单日，用于补到签收记录后）</option>
+    </select>
+  </div>
+  <div class="row" id="single-date">
+    <label>日期</label><input type="date" id="date">
+  </div>
+  <div class="row" id="range-date" style="display:none">
+    <label>开始</label><input type="date" id="start">
+    <label>结束</label><input type="date" id="end">
+  </div>
+  <div class="row">
+    <button id="run-btn">启动任务</button>
+    <span class="muted">同一日期已有任务在运行时，新任务会被拒绝（不会写入同一份日报）</span>
+  </div>
+  <div class="msg" id="run-msg"></div>
+</section>
+
+<section>
+  <h2>执行记录</h2>
+  <div id="runs"></div>
+</section>
+
+<section>
+  <h2>日报</h2>
+  <div id="reports"></div>
+  <div id="report-view">
+    <h2 id="report-title"></h2>
+    <div class="notes" id="report-notes"></div>
+    <div id="report-table"></div>
+  </div>
+</section>
+
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const STATUS_LABEL = {running:"运行中", success:"成功", failed:"失败", interrupted:"已中断"};
+
+$("mode").addEventListener("change", () => {
+  const range = $("mode").value === "full_range";
+  $("single-date").style.display = range ? "none" : "flex";
+  $("range-date").style.display = range ? "flex" : "none";
+});
+
+$("run-btn").addEventListener("click", async () => {
+  const mode = $("mode").value;
+  const body = {mode};
+  if (mode === "full_range") { body.start = $("start").value; body.end = $("end").value; }
+  else { body.date = $("date").value; }
+  $("run-msg").className = "msg"; $("run-msg").textContent = "";
+  const res = await fetch("/api/run", {method: "POST",
+    headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const data = await res.json();
+  if (res.ok) {
+    $("run-msg").className = "msg ok";
+    $("run-msg").textContent = `任务 ${data.run.id} 已启动（${data.run.dates.join("、")}）`;
+  } else {
+    $("run-msg").className = "msg err";
+    $("run-msg").textContent = data.error;
+  }
+  refresh();
+});
+
+function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+function renderRuns(runs) {
+  if (!runs.length) { $("runs").innerHTML = '<div class="empty">暂无执行记录</div>'; return; }
+  let html = `<table><tr><th>任务</th><th>执行方式</th><th>日期</th><th>状态</th>
+    <th>步骤 / 处理记录数</th><th>输入</th><th>输出</th><th>时间</th></tr>`;
+  for (const r of runs) {
+    const steps = r.steps.map(s =>
+      `<li><span class="n">${s.records} 条</span> ${esc(s.date)} · ${esc(s.name)}
+       <div class="muted">${esc(s.detail)}</div></li>`).join("");
+    const inputs = Object.entries(r.inputs).map(([d, inp]) => {
+      const parts = [];
+      if (inp.orders) parts.push("订单: " + inp.orders);
+      if (inp.signs) parts.push("签收: " + inp.signs.join("、"));
+      return `<div><b>${d}</b><br>${parts.map(esc).join("<br>")}</div>`;
+    }).join("");
+    const outputs = Object.entries(r.outputs)
+      .map(([d, v]) => `<div>${d} → <a href="#" onclick="viewReport('${d}',${v});return false">v${v}</a></div>`).join("");
+    const cur = r.current_step ? `<div class="muted">正在: ${esc(r.current_step)}</div>` : "";
+    const err = r.error ? `<div class="msg err">${esc(r.error)}</div>` : "";
+    html += `<tr>
+      <td>${r.id}</td><td>${esc(r.mode_label)}</td>
+      <td>${r.dates.join("<br>")}</td>
+      <td><span class="badge st-${r.status}">${STATUS_LABEL[r.status]}</span>${cur}${err}</td>
+      <td><ul class="steps">${steps}</ul></td>
+      <td>${inputs}</td><td>${outputs}</td>
+      <td class="muted">${r.started_at}<br>${r.finished_at || ""}</td></tr>`;
+  }
+  $("runs").innerHTML = html + "</table>";
+}
+
+function renderReports(reports) {
+  const dates = Object.keys(reports);
+  if (!dates.length) { $("reports").innerHTML = '<div class="empty">暂无日报，请先运行任务</div>'; return; }
+  $("reports").innerHTML = dates.map(d => {
+    const links = reports[d].map(v =>
+      `<span class="ver-link"><a href="#" onclick="viewReport('${d}',${v});return false">查看 v${v}</a>
+       <a href="/api/report?date=${d}&version=${v}&download=1">下载 v${v}</a></span>`).join("");
+    return `<div class="row"><b style="min-width:100px">${d}</b><span>${links}</span></div>`;
+  }).join("");
+}
+
+async function viewReport(date, version) {
+  const res = await fetch(`/api/report?date=${date}&version=${version}`);
+  if (!res.ok) { alert("日报不存在"); return; }
+  const text = await res.text();
+  const lines = text.split(/\r?\n/).filter(l => l.length);
+  const notes = lines.filter(l => l.startsWith("#")).map(l => l.slice(1).trim());
+  const rows = lines.filter(l => !l.startsWith("#")).map(l => l.split(","));
+  let html = "<table>";
+  rows.forEach((cols, i) => {
+    const tag = i === 0 ? "th" : "td";
+    html += "<tr>" + cols.map(c => `<${tag}>${esc(c)}</${tag}>`).join("") + "</tr>";
+  });
+  $("report-view").style.display = "block";
+  $("report-title").textContent = `日报 ${date} · 版本 v${version}`;
+  $("report-notes").textContent = notes.join("\n");
+  $("report-table").innerHTML = html + "</table>";
+}
+
+async function refresh() {
+  const data = await (await fetch("/api/overview")).json();
+  $("caliber").textContent = data.caliber;
+  renderRuns(data.runs);
+  renderReports(data.reports);
+  if (!$("date").value && data.available_dates.length)
+    $("date").value = data.available_dates[data.available_dates.length - 1];
+}
+refresh();
+setInterval(refresh, 2000);
+</script>
+</body>
+</html>
