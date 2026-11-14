@@ -1,0 +1,14 @@
+{
+  "name": "gsb2-supplier-import",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "供货清单导入：识别新旧版表头，按包装表统一为件数",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

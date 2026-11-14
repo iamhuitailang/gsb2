@@ -1,0 +1,5 @@
+node_modules/
+data/pending/
+data/batches/
+data/表头别名.json
+.DS_Store

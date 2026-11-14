@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>供货清单导入</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="page">
+    <h1>供货清单导入</h1>
+    <p class="subtitle">
+      自动识别旧版 / 新版表头，按商品包装表把数量统一换算为「件」。确认前可逐条核对原始行。
+    </p>
+
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="import" role="tab">导入</button>
+      <button class="tab" data-tab="batches" role="tab">已确认批次</button>
+    </div>
+
+    <section id="view-import">
+      <div class="panel">
+        <h2><span class="step-badge">1</span>选择清单文件</h2>
+        <label class="uploadzone" id="dropzone" for="file-input">
+          <strong>拖入文件，或点击选择</strong>
+          <div class="hint">支持 .csv / .txt / .xlsx；列顺序可任意</div>
+          <input id="file-input" type="file" accept=".csv,.txt,.xlsx" />
+        </label>
+        <div class="samples">
+          <span>自带样例：</span>
+          <a class="btn small" href="/api/samples/old">下载旧版清单</a>
+          <a class="btn small" href="/api/samples/new">下载新版清单</a>
+          <a class="btn small" href="/api/samples/packaging">下载商品包装表</a>
+          <a class="btn small" href="/api/samples/unknown">下载未知表头样例</a>
+        </div>
+      </div>
+
+      <div class="panel" id="pending-panel-wrap">
+        <h2><span class="step-badge">·</span>待处理文件</h2>
+        <div class="pending-hint">
+          认不出表头或尚未确认的文件会保留在这里，随时可以继续配置与预览。
+        </div>
+        <div id="pending-list"><div class="empty">加载中…</div></div>
+      </div>
+
+      <div id="pending-panel"></div>
+      <div id="result-panel"></div>
+    </section>
+
+    <section id="view-batches" hidden>
+      <div class="panel">
+        <h2>已确认批次</h2>
+        <div id="batch-list"><div class="empty">加载中…</div></div>
+      </div>
+      <div id="batch-detail"></div>
+    </section>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
