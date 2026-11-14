@@ -1,0 +1,14 @@
+{
+  "name": "catalog-sync-console",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "模拟供应商商品目录接口 + 游标分页增量同步台",
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning src/server.js",
+    "test": "node --disable-warning=ExperimentalWarning --test"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

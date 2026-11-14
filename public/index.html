@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>商品目录同步台</title>
+  <style>
+    :root {
+      --bg: #f5f6f8; --card: #fff; --line: #e3e6ea; --text: #1f2329;
+      --muted: #6b7280; --primary: #2563eb; --primary-d: #1d4ed8;
+      --green: #15803d; --amber: #b45309; --red: #b91c1c; --gray: #4b5563;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 14px/1.6 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+           background: var(--bg); color: var(--text); }
+    header { background: #111827; color: #fff; padding: 14px 24px; }
+    header h1 { margin: 0; font-size: 18px; }
+    header p { margin: 2px 0 0; color: #9ca3af; font-size: 12px; }
+    main { max-width: 1100px; margin: 20px auto; padding: 0 16px; display: grid; gap: 16px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+    .card h2 { margin: 0 0 12px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+    .kv { display: grid; grid-template-columns: 110px 1fr; gap: 4px 10px; font-size: 13px; }
+    .kv .k { color: var(--muted); }
+    .kv code { background: #f1f3f5; padding: 1px 6px; border-radius: 4px; font-size: 12px; word-break: break-all; }
+    button { border: 1px solid transparent; border-radius: 6px; padding: 7px 14px; font-size: 13px;
+             cursor: pointer; background: var(--primary); color: #fff; }
+    button:hover { background: var(--primary-d); }
+    button.secondary { background: #fff; color: var(--text); border-color: var(--line); }
+    button.secondary:hover { background: #f3f4f6; }
+    button.warn { background: #d97706; } button.warn:hover { background: #b45309; }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+    .badge.running { background: #dbeafe; color: var(--primary); }
+    .badge.paused { background: #fef3c7; color: var(--amber); }
+    .badge.done { background: #dcfce7; color: var(--green); }
+    .badge.failed { background: #fee2e2; color: var(--red); }
+    .badge.full { background: #e0e7ff; color: #3730a3; }
+    .badge.incremental { background: #f5f3ff; color: #6d28d9; }
+    .stat-row { display: flex; gap: 10px; flex-wrap: wrap; margin: 10px 0; }
+    .stat { flex: 1; min-width: 96px; background: #f8fafc; border: 1px solid var(--line);
+            border-radius: 8px; padding: 8px 10px; text-align: center; }
+    .stat .num { font-size: 20px; font-weight: 700; }
+    .stat .lbl { font-size: 12px; color: var(--muted); }
+    .stat.ins .num { color: var(--green); } .stat.upd .num { color: var(--primary); }
+    .stat.skp .num { color: var(--gray); } .stat.pg .num { color: var(--amber); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); font-weight: 600; background: #fafbfc; }
+    td.num, th.num { text-align: right; }
+    .search { display: flex; gap: 8px; margin-bottom: 10px; }
+    .search input { flex: 1; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; }
+    .muted { color: var(--muted); font-size: 12px; }
+    .hint { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 8px 12px;
+            border-radius: 8px; font-size: 12px; margin-top: 10px; }
+    .error { background: #fef2f2; border: 1px solid #fecaca; color: var(--red); padding: 8px 12px;
+             border-radius: 8px; font-size: 12px; margin-top: 10px; white-space: pre-wrap; }
+    .batch-list { margin: 10px 0 0; padding-left: 18px; font-size: 12px; color: var(--muted); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>商品目录同步台</h1>
+    <p>模拟供应商接口（游标分页）· 首次全量 / 之后增量 · 来源版本号防旧覆盖</p>
+  </header>
+
+  <main>
+    <section class="grid">
+      <div class="card">
+        <h2>① 模拟供应商接口</h2>
+        <div class="kv" id="supplier-status"><div class="muted">加载中…</div></div>
+        <div class="actions">
+          <button id="btn-publish">发布下一批数据</button>
+        </div>
+        <ol class="batch-list" id="batch-list"></ol>
+        <div class="hint">接口按 (version, sku) 排序做 keyset 游标分页；同一批里刻意包含更新时间相同、编号不同的商品。</div>
+        <div id="supplier-error"></div>
+      </div>
+
+      <div class="card">
+        <h2>② 同步任务控制</h2>
+        <div id="run-panel"><div class="muted">暂无任务，点击下方按钮开始首轮全量同步。</div></div>
+        <div class="actions">
+          <button id="btn-start">开始新一轮同步</button>
+          <button id="btn-pause" class="warn" hidden>暂停</button>
+          <button id="btn-resume" class="secondary" hidden>继续</button>
+        </div>
+        <div class="hint">暂停在页边界生效；游标等本页数据写完后才保存。重启服务后未完成任务会变为"已暂停"，可从记录的页继续。</div>
+        <div id="sync-error"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>③ 历轮同步（新增 / 更新数量按实际写入结果统计）</h2>
+      <table>
+        <thead><tr>
+          <th>#</th><th>类型</th><th>状态</th><th class="num">已完成页</th>
+          <th class="num">接口行数</th><th class="num">新增</th><th class="num">更新</th>
+          <th class="num">跳过</th><th>开始时间</th><th>结束时间</th>
+        </tr></thead>
+        <tbody id="runs-body"></tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>④ 当前本地目录</h2>
+      <div class="search">
+        <input id="keyword" placeholder="按商品编号或名称查询，例如 SKU1001 / 鸡蛋" />
+        <button id="btn-search" class="secondary">查询</button>
+      </div>
+      <table>
+        <thead><tr>
+          <th>商品编号</th><th>名称</th><th class="num">价格</th>
+          <th class="num">来源版本</th><th>供应商更新时间</th><th>本地写入时间</th>
+        </tr></thead>
+        <tbody id="products-body"></tbody>
+      </table>
+      <p class="muted" id="catalog-summary"></p>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
