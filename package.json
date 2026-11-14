@@ -1,0 +1,15 @@
+{
+  "name": "inventory-batch-receive",
+  "version": "1.0.0",
+  "private": true,
+  "description": "盘点批次接收与库存发布系统",
+  "type": "module",
+  "scripts": {
+    "start": "node --no-warnings server/server.js",
+    "seed": "node --no-warnings scripts/seed.js",
+    "test": "node --no-warnings --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}

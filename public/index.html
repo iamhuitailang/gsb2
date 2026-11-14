@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>盘点批次接收</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">📦 盘点批次接收</div>
+    <nav class="tabs">
+      <button class="tab active" data-view="receive">批次接收</button>
+      <button class="tab" data-view="inventory">库存查询</button>
+      <button class="tab" data-view="history">历史批次</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ============ 批次接收 ============ -->
+    <section id="view-receive" class="view active">
+      <div class="card">
+        <div class="card-row">
+          <label for="date-input">盘点日期</label>
+          <input type="date" id="date-input" />
+          <button id="btn-open-batch" class="btn primary">打开 / 新建批次</button>
+          <span id="receive-hint" class="hint"></span>
+        </div>
+      </div>
+
+      <div id="batch-panel" class="hidden">
+        <div class="card">
+          <div class="batch-head">
+            <div>
+              <h2 id="batch-title"></h2>
+              <div id="batch-meta" class="hint"></div>
+            </div>
+            <div class="batch-actions">
+              <button id="btn-preview" class="btn">预览新批次</button>
+              <button id="btn-publish" class="btn success">确认发布</button>
+            </div>
+          </div>
+          <div class="progress" id="progress-bar"><div class="progress-fill"></div></div>
+        </div>
+
+        <div class="card">
+          <table class="grid">
+            <thead>
+              <tr>
+                <th style="width:110px">仓库编码</th>
+                <th>仓库名称</th>
+                <th style="width:110px">交表状态</th>
+                <th style="width:100px">商品数</th>
+                <th style="width:120px">库存数量</th>
+                <th style="width:150px">接收时间</th>
+                <th style="width:230px">操作</th>
+              </tr>
+            </thead>
+            <tbody id="warehouse-tbody"></tbody>
+          </table>
+          <p class="hint legend">
+            <span class="dot missing"></span>未交表：等待该仓库 CSV
+            <span class="dot empty"></span>零行表：只交了表头，按“已交、库存为 0”处理
+            <span class="dot ok"></span>正常交表
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 库存查询 ============ -->
+    <section id="view-inventory" class="view">
+      <div class="card">
+        <div id="inv-banner" class="banner"></div>
+        <div class="card-row">
+          <label for="inv-q">搜索</label>
+          <input type="text" id="inv-q" placeholder="SKU 或商品名称" />
+          <label for="inv-wh">仓库</label>
+          <select id="inv-wh"><option value="">全部仓库</option></select>
+          <button id="btn-query" class="btn primary">查询</button>
+        </div>
+      </div>
+      <div class="card">
+        <table class="grid">
+          <thead>
+            <tr>
+              <th>仓库</th><th>SKU</th><th>商品名称</th><th style="width:120px">库存数量</th>
+            </tr>
+          </thead>
+          <tbody id="inv-tbody"></tbody>
+        </table>
+        <div id="inv-footer" class="hint"></div>
+      </div>
+    </section>
+
+    <!-- ============ 历史批次 ============ -->
+    <section id="view-history" class="view">
+      <div class="card">
+        <table class="grid">
+          <thead>
+            <tr>
+              <th style="width:130px">盘点日期</th>
+              <th style="width:110px">状态</th>
+              <th style="width:120px">交表进度</th>
+              <th style="width:170px">创建/发布时间</th>
+              <th>各仓库原始文件</th>
+            </tr>
+          </thead>
+          <tbody id="history-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- 预览弹窗 -->
+  <div id="modal-mask" class="modal-mask hidden">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="modal-title">新批次预览（尚未发布，库存查询仍展示上一批）</h3>
+        <button id="btn-modal-close" class="btn">关闭</button>
+      </div>
+      <div id="modal-summary" class="hint"></div>
+      <div class="modal-body">
+        <table class="grid">
+          <thead>
+            <tr><th>仓库</th><th>SKU</th><th>商品名称</th><th style="width:120px">数量</th></tr>
+          </thead>
+          <tbody id="modal-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <input type="file" id="file-input" accept=".csv,text/csv" class="hidden" />
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
