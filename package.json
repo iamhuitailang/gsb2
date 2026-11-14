@@ -1,0 +1,15 @@
+{
+  "name": "delivery-fee-ledger",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "本地配送费核算工具：按运单计费重量与区域费率计算配送费，支持汇总钻取与导出勾稽",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test",
+    "reconcile": "python3 -I test/reconcile.py"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

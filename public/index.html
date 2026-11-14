@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>配送费核算工具</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>配送费核算</h1>
+    <div class="filters">
+      <label>站点
+        <select id="site-select"><option value="">全部站点</option></select>
+      </label>
+      <label>日期自 <input type="date" id="date-from" /></label>
+      <label>至 <input type="date" id="date-to" /></label>
+      <button id="btn-query" class="primary">查询</button>
+      <button id="btn-reload" title="编辑 data/ 下 CSV 后点此重新读盘重算">重算并重载</button>
+      <button id="btn-export-summary">导出汇总 CSV</button>
+      <button id="btn-export-details">导出明细 CSV</button>
+    </div>
+  </header>
+
+  <div id="error-banner" class="banner hidden"></div>
+  <div id="meta-line" class="meta"></div>
+
+  <main>
+    <section id="view-summary">
+      <h2>站点汇总 <span class="hint">点击金额或单数可钻取运单明细</span></h2>
+      <div class="table-wrap">
+        <table id="summary-table">
+          <thead>
+            <tr>
+              <th>站点</th><th>计费金额(元)</th><th>计费单数</th>
+              <th>撤销单数</th><th>缺费率单数</th><th>异常单数</th><th>总单数</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="view-details" class="hidden">
+      <div class="details-head">
+        <h2 id="details-title">运单明细</h2>
+        <div class="tabs" id="category-tabs">
+          <button data-category="all">全部</button>
+          <button data-category="billed">计费</button>
+          <button data-category="cancelled">已撤销</button>
+          <button data-category="missing_rate">缺费率</button>
+          <button data-category="error">数据异常</button>
+        </div>
+        <button id="btn-back">← 返回汇总</button>
+      </div>
+      <p id="missing-tip" class="hint hidden">
+        以上运单缺少生效费率。请在 <code>data/rates.csv</code> 补录对应区域费率后，点击顶部「重算并重载」。
+      </p>
+      <div class="table-wrap">
+        <table id="details-table">
+          <thead>
+            <tr>
+              <th>运单号</th><th>站点</th><th>区域</th><th>日期</th><th>状态</th>
+              <th>重量(kg)</th><th>取整(kg)</th><th>配送费(元)</th><th>计算过程</th><th>费率原始行</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>

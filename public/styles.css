@@ -1,0 +1,61 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+  color: #1f2933;
+  background: #f5f7fa;
+  font-size: 14px;
+}
+.topbar {
+  background: #102a43;
+  color: #fff;
+  padding: 14px 24px;
+}
+.topbar h1 { margin: 0 0 10px; font-size: 18px; font-weight: 600; }
+.filters { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.filters label { display: flex; align-items: center; gap: 6px; }
+select, input[type="date"] {
+  padding: 6px 8px; border: 1px solid #cbd2d9; border-radius: 4px; font-size: 14px;
+}
+button {
+  padding: 7px 14px; border: 1px solid #cbd2d9; border-radius: 4px;
+  background: #fff; cursor: pointer; font-size: 14px;
+}
+button:hover { background: #e4e7eb; }
+button.primary { background: #2563eb; color: #fff; border-color: #2563eb; }
+button.primary:hover { background: #1d4ed8; }
+main { padding: 20px 24px; }
+h2 { font-size: 16px; margin: 0 0 12px; }
+.hint { font-size: 12px; color: #7b8794; font-weight: 400; }
+.meta { padding: 10px 24px 0; color: #7b8794; font-size: 12px; }
+.banner {
+  margin: 12px 24px 0; padding: 10px 14px; border-radius: 4px;
+  background: #fffbea; border: 1px solid #f0b429; color: #8d6e00;
+}
+.banner .err-line { font-family: ui-monospace, Menlo, monospace; font-size: 12px; margin-top: 4px; }
+.hidden { display: none !important; }
+.table-wrap { background: #fff; border: 1px solid #e4e7eb; border-radius: 6px; overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; }
+th, td {
+  padding: 9px 12px; border-bottom: 1px solid #e4e7eb; text-align: left;
+  white-space: nowrap;
+}
+th { background: #f0f4f8; font-weight: 600; color: #334e68; }
+tbody tr:hover { background: #f8fafc; }
+tr.total-row { font-weight: 700; background: #f0f4f8; }
+a.drill { color: #2563eb; text-decoration: none; font-weight: 600; }
+a.drill:hover { text-decoration: underline; }
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px;
+}
+.badge-billed { background: #d3f9d8; color: #2b8a3e; }
+.badge-cancelled { background: #e9ecef; color: #868e96; }
+.badge-missing_rate { background: #fff3bf; color: #e67700; }
+.badge-error { background: #ffe3e3; color: #c92a2a; }
+td.calc { white-space: normal; min-width: 280px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; }
+td.rate-src { white-space: normal; min-width: 220px; font-family: ui-monospace, Menlo, monospace; font-size: 12px; color: #52606d; }
+.details-head { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; flex-wrap: wrap; }
+.tabs { display: flex; gap: 6px; }
+.tabs button.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+#missing-tip { background: #fffbea; border: 1px solid #f0b429; padding: 8px 12px; border-radius: 4px; }
+.empty { padding: 24px; color: #7b8794; text-align: center; }

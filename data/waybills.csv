@@ -1,0 +1,7 @@
+waybill_no,site,region,bill_weight_kg,status,date
+WB2026111001,站点A,华东,1.0,active,2026-11-10
+WB2026111002,站点A,华东,1.2,active,2026-11-10
+WB2026111003,站点A,华南,1.0,cancelled,2026-11-10
+WB2026111004,站点A,西北,2.5,active,2026-11-10
+WB2026111101,站点B,华南,1.005,active,2026-11-11
+WB2026111102,站点B,西南,3,active,2026-11-11

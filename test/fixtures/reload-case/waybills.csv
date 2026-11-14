@@ -1,0 +1,3 @@
+waybill_no,site,region,bill_weight_kg,status,date
+WBF001,站点A,西北,1.0,active,2026-11-10
+WBF002,站点A,华东,1.2,active,2026-11-10
