@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>门店片区归属与报表</title>
+<style>
+  :root { --bd:#d8dee4; --bg:#f6f8fa; --accent:#0969da; --warn:#bf8700; --changed:#fff8c5; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; margin:0; background:var(--bg); color:#1f2328; }
+  header { background:#24292f; color:#fff; padding:12px 20px; }
+  header h1 { font-size:17px; margin:0; }
+  nav { display:flex; gap:4px; padding:8px 20px 0; background:#fff; border-bottom:1px solid var(--bd); }
+  nav button { border:none; background:none; padding:10px 16px; font-size:14px; cursor:pointer; border-bottom:2px solid transparent; color:#57606a; }
+  nav button.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+  main { padding:20px; max-width:1200px; margin:0 auto; }
+  .card { background:#fff; border:1px solid var(--bd); border-radius:8px; padding:16px; margin-bottom:16px; }
+  .card h2 { font-size:15px; margin:0 0 12px; }
+  table { border-collapse:collapse; width:100%; font-size:13px; }
+  th, td { border:1px solid var(--bd); padding:6px 10px; text-align:left; white-space:nowrap; }
+  th { background:var(--bg); }
+  input, select, textarea { font-size:13px; padding:5px 8px; border:1px solid var(--bd); border-radius:6px; font-family:inherit; }
+  textarea { width:100%; font-family:ui-monospace, monospace; }
+  button.btn { background:var(--accent); color:#fff; border:none; border-radius:6px; padding:6px 14px; font-size:13px; cursor:pointer; }
+  button.btn.secondary { background:#fff; color:#1f2328; border:1px solid var(--bd); }
+  button.btn:disabled { opacity:.5; cursor:default; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+  .muted { color:#57606a; font-size:12px; }
+  .tag { display:inline-block; padding:1px 8px; border-radius:10px; font-size:11px; background:#ddf4ff; color:#0969da; }
+  .tag.backfill { background:#fff8c5; color:#7d4e00; }
+  .tag.profile { background:#dafbe1; color:#1a7f37; }
+  .cell-click { cursor:pointer; color:var(--accent); }
+  .cell-click:hover { text-decoration:underline; }
+  td.changed { background:var(--changed); }
+  .banner { background:#fff8c5; border:1px solid #eac54f; border-radius:6px; padding:10px 14px; margin-bottom:16px; font-size:13px; display:none; }
+  .result-box { background:var(--bg); border:1px solid var(--bd); border-radius:6px; padding:12px; margin-top:10px; font-size:13px; }
+  .hidden { display:none !important; }
+  code { background:var(--bg); padding:1px 5px; border-radius:4px; font-size:12px; }
+  .num { text-align:right; font-variant-numeric:tabular-nums; }
+</style>
+</head>
+<body>
+<header><h1>门店片区归属与营业额报表</h1></header>
+<nav>
+  <button data-tab="query" class="active">归属查询</button>
+  <button data-tab="report">片区日营业额</button>
+  <button data-tab="adjust">调整记录 / 补录</button>
+  <button data-tab="data">数据管理</button>
+</nav>
+<main>
+  <div id="backfillBanner" class="banner"></div>
+
+  <!-- 归属查询 -->
+  <section id="tab-query">
+    <div class="card">
+      <h2>按日期查询门店归属</h2>
+      <div class="row">
+        <label>门店 <select id="qStore"></select></label>
+        <label>日期 <input type="date" id="qDate" value="2026-10-15"></label>
+        <button class="btn" onclick="doQuery()">查询</button>
+      </div>
+      <div id="qResult"></div>
+    </div>
+    <div class="card">
+      <h2>门店归属时间线</h2>
+      <div id="qTimeline" class="muted">选择门店并查询后显示。</div>
+    </div>
+  </section>
+
+  <!-- 报表 -->
+  <section id="tab-report" class="hidden">
+    <div class="card">
+      <h2>片区日营业额报表</h2>
+      <div class="row">
+        <label>开始 <input type="date" id="rStart" value="2026-10-10"></label>
+        <label>结束 <input type="date" id="rEnd" value="2026-10-20"></label>
+        <button class="btn" onclick="computeAndRender()">计算</button>
+        <button class="btn secondary" id="btnPublish" onclick="publishVersion()">发布为新版本</button>
+        <label>查看已发布版本 <select id="versionSelect" onchange="renderVersion()"></select></label>
+        <label class="muted"><input type="checkbox" id="diffToggle" checked onchange="renderCurrent()"> 与选中版本对比，高亮变化</label>
+      </div>
+      <div id="reportMeta" class="muted" style="margin-bottom:8px;"></div>
+      <div id="reportTable"></div>
+    </div>
+    <div class="card" id="drillCard" style="display:none;">
+      <h2 id="drillTitle">流水明细</h2>
+      <div id="drillBody"></div>
+    </div>
+  </section>
+
+  <!-- 调整记录 -->
+  <section id="tab-adjust" class="hidden">
+    <div class="card">
+      <h2>补录历史调整（生效日期可早于今天）</h2>
+      <div class="row">
+        <label>门店 <select id="bStore"></select></label>
+        <label>新片区 <select id="bRegion"></select></label>
+        <label>生效日期 <input type="date" id="bDate" value="2026-10-12"></label>
+        <label>备注 <input type="text" id="bNote" size="24" value="补录：实际 10-12 已划转，单据迟到"></label>
+        <button class="btn" onclick="addBackfill()">补录</button>
+        <button class="btn secondary" onclick="fillBackfillExample()">填入示例</button>
+      </div>
+      <div class="muted">生效当天起按新片区统计，之前的日期仍算原片区。补录后到「片区日营业额」重新计算并发布新版本，已发布版本不受影响。</div>
+    </div>
+    <div class="card">
+      <h2>全部归属记录（含档案初始归属与调整）</h2>
+      <div id="assignTable"></div>
+    </div>
+  </section>
+
+  <!-- 数据管理 -->
+  <section id="tab-data" class="hidden">
+    <div class="card">
+      <h2>导入门店档案（CSV）</h2>
+      <div class="muted">格式：<code>门店编号,门店名称,片区,生效日期</code>（含表头）。初始归属自生效日期起算。</div>
+      <textarea id="csvProfile" rows="4"></textarea>
+      <div class="row" style="margin-top:8px;">
+        <button class="btn" onclick="importProfiles()">导入档案</button>
+        <button class="btn secondary" onclick="document.getElementById('csvProfile').value=SAMPLE_PROFILES">填入示例</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>导入调整记录（CSV）</h2>
+      <div class="muted">格式：<code>门店编号,新片区,生效日期,备注</code>（含表头，备注可空）。</div>
+      <textarea id="csvAdjust" rows="4"></textarea>
+      <div class="row" style="margin-top:8px;">
+        <button class="btn" onclick="importAdjustments()">导入调整</button>
+        <button class="btn secondary" onclick="document.getElementById('csvAdjust').value=SAMPLE_ADJUST">填入示例</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>门店档案 / 流水</h2>
+      <div class="row"><button class="btn secondary" onclick="resetSeed()">重置为种子数据</button></div>
+      <h2 style="margin-top:12px;">门店档案</h2>
+      <div id="storeTable"></div>
+      <h2 style="margin-top:12px;">门店流水（虚构数据）</h2>
+      <div id="txnTable"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+'use strict';
+/* ================= 数据模型 =================
+ * stores:      {storeId, name}
+ * assignments: {id, storeId, region, effectiveDate, source: 'profile'|'adjustment'|'backfill', note, seq}
+ * txns:        {id, storeId, date, amount}
+ * versions:    {vid, start, end, publishedAt, rows: {date: {region: amount}}, total}
+ * 归属规则：门店在某日的归属 = 生效日期 <= 当日 的最后一条记录（同日多条取 seq 大者）。生效当天即按新片区。
+ */
+let stores = [], assignments = [], txns = [], versions = [];
+let seqCounter = 0, txnCounter = 0, versionCounter = 0;
+let currentReport = null; // 当前计算的（未发布）报表
+
+const REGIONS = ['华东一区', '华东二区', '华南一区'];
+
+function nextSeq() { return ++seqCounter; }
+
+function addAssignment(storeId, region, effectiveDate, source, note) {
+  const a = { id: 'A' + nextSeq(), storeId, region, effectiveDate, source, note: note || '', seq: seqCounter };
+  assignments.push(a);
+  return a;
+}
+
+/** 门店 storeId 在 date 当天采用的归属记录 */
+function resolveAssignment(storeId, date) {
+  let best = null;
+  for (const a of assignments) {
+    if (a.storeId !== storeId || a.effectiveDate > date) continue;
+    if (!best || a.effectiveDate > best.effectiveDate ||
+        (a.effectiveDate === best.effectiveDate && a.seq > best.seq)) best = a;
+  }
+  return best;
+}
+
+/* ================= 种子数据 ================= */
+const SAMPLE_PROFILES =
+`门店编号,门店名称,片区,生效日期
+S001,上海静安店,华东一区,2026-10-01
+S002,上海浦东店,华东一区,2026-10-01
+S003,杭州西溪店,华东一区,2026-10-01
+S004,南京玄武店,华东一区,2026-10-01
+S005,广州天河店,华南一区,2026-10-01
+S006,深圳南山店,华南一区,2026-10-01`;
+
+const SAMPLE_ADJUST =
+`门店编号,新片区,生效日期,备注
+S003,华东二区,2026-10-15,月中调区：10-15 起划入华东二区
+S004,华东二区,2026-10-18,季度调整`;
+
+/** 可补录的历史调整示例：S004 实际 10-12 已划转华东二区，单据迟到 */
+const BACKFILL_EXAMPLE = { storeId: 'S004', region: '华东二区', date: '2026-10-12', note: '补录：实际 10-12 已划转，单据迟到' };
+
+function seed() {
+  stores = []; assignments = []; txns = []; versions = [];
+  seqCounter = 0; txnCounter = 0; versionCounter = 0; currentReport = null;
+
+  parseProfiles(SAMPLE_PROFILES);
+  parseAdjustments(SAMPLE_ADJUST);
+
+  // 虚构流水：2026-10-10 ~ 2026-10-20，每店每日一笔；S003 在调区前/当天/之后都有记录
+  const base = { S001: 8200, S002: 6700, S003: 5400, S004: 7100, S005: 9300, S006: 8800 };
+  for (let d = 10; d <= 20; d++) {
+    const date = '2026-10-' + String(d).padStart(2, '0');
+    for (const sid of Object.keys(base)) {
+      const amount = base[sid] + ((d * 37 + sid.charCodeAt(3) * 13) % 900) - 450;
+      txns.push({ id: 'T' + (++txnCounter), storeId: sid, date, amount });
+    }
+  }
+
+  // 预置一个已发布版本 v1（补录前发布），用于对照
+  const r = computeReport('2026-10-10', '2026-10-20');
+  versions.push({ vid: 'v' + (++versionCounter), start: r.start, end: r.end,
+                  publishedAt: '2026-10-21 09:00', rows: r.rows, total: r.total });
+}
+
+/* ================= CSV 导入 ================= */
+function parseCsv(text) {
+  const lines = text.trim().split(/\r?\n/).filter(l => l.trim());
+  const rows = lines.map(l => l.split(',').map(c => c.trim()));
+  return rows.slice(1); // 去表头
+}
+function parseProfiles(text) {
+  for (const [sid, name, region, eff] of parseCsv(text)) {
+    if (!stores.find(s => s.storeId === sid)) stores.push({ storeId: sid, name });
+    addAssignment(sid, region, eff, 'profile', '档案初始归属');
+  }
+}
+function parseAdjustments(text) {
+  for (const [sid, region, eff, note] of parseCsv(text)) addAssignment(sid, region, eff, 'adjustment', note);
+}
+function importProfiles() {
+  parseProfiles(document.getElementById('csvProfile').value);
+  refreshAll(); alert('档案已导入');
+}
+function importAdjustments() {
+  parseAdjustments(document.getElementById('csvAdjust').value);
+  refreshAll(); alert('调整记录已导入');
+}
+
+/* ================= 报表计算 ================= */
+function computeReport(start, end) {
+  const rows = {}; // date -> region -> amount
+  const detail = {}; // date -> region -> [{txn, assignment}]
+  for (const t of txns) {
+    if (t.date < start || t.date > end) continue;
+    const a = resolveAssignment(t.storeId, t.date);
+    const region = a ? a.region : '（无归属）';
+    (rows[t.date] ||= {})[region] = (rows[t.date]?.[region] || 0) + t.amount;
+    (detail[t.date] ||= {})[region] = [...(detail[t.date]?.[region] || []), { txn: t, assignment: a }];
+  }
+  let total = 0;
+  for (const d of Object.values(rows)) for (const v of Object.values(d)) total += v;
+  return { start, end, rows, detail, total };
+}
+
+function publishVersion() {
+  if (!currentReport) computeAndRender();
+  const r = currentReport;
+  versions.push({ vid: 'v' + (++versionCounter), start: r.start, end: r.end,
+                  publishedAt: new Date().toLocaleString('zh-CN'), rows: r.rows, total: r.total });
+  renderVersionOptions();
+  document.getElementById('versionSelect').value = versions[versions.length - 1].vid;
+  renderCurrent();
+}
+
+/* ================= 补录 ================= */
+function fillBackfillExample() {
+  document.getElementById('bStore').value = BACKFILL_EXAMPLE.storeId;
+  document.getElementById('bRegion').value = BACKFILL_EXAMPLE.region;
+  document.getElementById('bDate').value = BACKFILL_EXAMPLE.date;
+  document.getElementById('bNote').value = BACKFILL_EXAMPLE.note;
+}
+function addBackfill() {
+  const sid = document.getElementById('bStore').value;
+  const region = document.getElementById('bRegion').value;
+  const date = document.getElementById('bDate').value;
+  const note = document.getElementById('bNote').value;
+  if (!sid || !region || !date) { alert('请填写完整'); return; }
+  addAssignment(sid, region, date, 'backfill', note);
+  const banner = document.getElementById('backfillBanner');
+  banner.style.display = 'block';
+  banner.textContent = `已补录：${sid} 自 ${date} 起归属「${region}」。受影响日期的报表请到「片区日营业额」重新计算并发布新版本，已发布版本仍可单独查看。`;
+  refreshAll();
+}
+
+/* ================= 渲染 ================= */
+const fmt = n => n.toLocaleString('zh-CN');
+const storeName = sid => { const s = stores.find(x => x.storeId === sid); return s ? `${s.name}（${sid}）` : sid; };
+const srcTag = a => {
+  if (!a) return '<span class="tag">无记录</span>';
+  const label = { profile: '档案', adjustment: '调整', backfill: '补录' }[a.source];
+  return `<span class="tag ${a.source}">${label}</span>`;
+};
+
+function doQuery() {
+  const sid = document.getElementById('qStore').value;
+  const date = document.getElementById('qDate').value;
+  const a = resolveAssignment(sid, date);
+  document.getElementById('qResult').innerHTML = a
+    ? `<div class="result-box"><b>${storeName(sid)}</b> 在 <b>${date}</b> 属于 <b>${a.region}</b><br>
+       采用归属记录：${a.id} ${srcTag(a)} 生效日期 ${a.effectiveDate}${a.note ? '，' + a.note : ''}</div>`
+    : `<div class="result-box">该日期之前没有任何归属记录。</div>`;
+  // 时间线
+  const list = assignments.filter(x => x.storeId === sid)
+    .sort((x, y) => x.effectiveDate.localeCompare(y.effectiveDate) || x.seq - y.seq);
+  document.getElementById('qTimeline').innerHTML = list.length
+    ? '<table><tr><th>记录</th><th>片区</th><th>生效日期</th><th>来源</th><th>备注</th></tr>' +
+      list.map(x => `<tr${x === a ? ' style="background:#ddf4ff;"' : ''}>
+        <td>${x.id}</td><td>${x.region}</td><td>${x.effectiveDate}</td><td>${srcTag(x)}</td><td>${x.note || ''}</td></tr>`).join('') +
+      '</table><div class="muted" style="margin-top:6px;">高亮行为查询日期所采用的记录。</div>'
+    : '<span class="muted">无归属记录。</span>';
+}
+
+function computeAndRender() {
+  const start = document.getElementById('rStart').value;
+  const end = document.getElementById('rEnd').value;
+  currentReport = computeReport(start, end);
+  renderCurrent();
+}
+
+function selectedVersion() {
+  const vid = document.getElementById('versionSelect').value;
+  return versions.find(v => v.vid === vid) || null;
+}
+
+function renderCurrent() {
+  if (!currentReport) computeAndRenderSilent();
+  const r = currentReport;
+  const ver = document.getElementById('diffToggle').checked ? selectedVersion() : null;
+  document.getElementById('reportMeta').textContent =
+    `当前计算结果（未发布） · ${r.start} ~ ${r.end} · 合计 ¥${fmt(r.total)}` +
+    (ver ? ` · 对比版本 ${ver.vid}（${ver.publishedAt}），黄色为归属/金额发生变化的日期` : '');
+  document.getElementById('reportTable').innerHTML = reportTableHtml(r, ver);
+}
+
+function computeAndRenderSilent() {
+  currentReport = computeReport(document.getElementById('rStart').value, document.getElementById('rEnd').value);
+}
+
+function reportTableHtml(r, compareVer, clickable = true) {
+  const dates = Object.keys(r.rows).sort();
+  if (!dates.length) return '<span class="muted">该区间没有流水。</span>';
+  const regions = [...new Set(dates.flatMap(d => Object.keys(r.rows[d])))].sort();
+  let html = '<table><tr><th>日期</th>' + regions.map(g => `<th class="num">${g}</th>`).join('') + '<th class="num">合计</th></tr>';
+  for (const d of dates) {
+    let dayTotal = 0, cells = '';
+    for (const g of regions) {
+      const v = r.rows[d][g] || 0;
+      dayTotal += v;
+      const old = compareVer?.rows?.[d]?.[g] || 0;
+      const changed = compareVer && v !== old;
+      cells += `<td class="num ${clickable && v ? 'cell-click' : ''} ${changed ? 'changed' : ''}" ${clickable && v ? `onclick="drill('${d}','${g}')"` : ''}>${v ? fmt(v) : ''}</td>`;
+    }
+    const oldTotal = compareVer ? Object.values(compareVer.rows[d] || {}).reduce((a, b) => a + b, 0) : dayTotal;
+    html += `<tr><td>${d}</td>${cells}<td class="num ${compareVer && dayTotal !== oldTotal ? 'changed' : ''}">${fmt(dayTotal)}</td></tr>`;
+  }
+  return html + '</table>' + (clickable ? '<div class="muted" style="margin-top:6px;">点击金额可查看该日该片区的门店流水及其采用的归属记录。</div>' : '');
+}
+
+function renderVersion() {
+  const v = selectedVersion();
+  if (!v) return;
+  document.getElementById('reportMeta').textContent =
+    `已发布版本 ${v.vid} · ${v.start} ~ ${v.end} · 发布于 ${v.publishedAt} · 合计 ¥${fmt(v.total)}（历史快照，不受补录影响）`;
+  document.getElementById('reportTable').innerHTML = reportTableHtml({ ...v }, null, false);
+  document.getElementById('drillCard').style.display = 'none';
+}
+
+function renderVersionOptions() {
+  document.getElementById('versionSelect').innerHTML =
+    versions.map(v => `<option value="${v.vid}">${v.vid}（${v.start}~${v.end}，${v.publishedAt}）</option>`).join('');
+}
+
+/** 流水溯源：显示每条流水采用了哪条归属记录 */
+function drill(date, region) {
+  const items = currentReport.detail?.[date]?.[region] || [];
+  const card = document.getElementById('drillCard');
+  card.style.display = 'block';
+  document.getElementById('drillTitle').textContent = `${date} · ${region} · 流水明细`;
+  document.getElementById('drillBody').innerHTML =
+    '<table><tr><th>流水号</th><th>门店</th><th class="num">金额</th><th>采用的归属记录</th><th>生效日期</th><th>来源</th></tr>' +
+    items.map(({ txn, assignment: a }) => `<tr>
+      <td>${txn.id}</td><td>${storeName(txn.storeId)}</td><td class="num">${fmt(txn.amount)}</td>
+      <td>${a ? a.id + ' → ' + a.region : '—'}</td><td>${a ? a.effectiveDate : '—'}</td><td>${srcTag(a)}</td></tr>`).join('') +
+    '</table>';
+  card.scrollIntoView({ behavior: 'smooth' });
+}
+
+function renderAssignments() {
+  const list = [...assignments].sort((x, y) => x.storeId.localeCompare(y.storeId) ||
+    x.effectiveDate.localeCompare(y.effectiveDate) || x.seq - y.seq);
+  document.getElementById('assignTable').innerHTML =
+    '<table><tr><th>记录</th><th>门店</th><th>片区</th><th>生效日期</th><th>来源</th><th>备注</th></tr>' +
+    list.map(a => `<tr><td>${a.id}</td><td>${storeName(a.storeId)}</td><td>${a.region}</td>
+      <td>${a.effectiveDate}</td><td>${srcTag(a)}</td><td>${a.note || ''}</td></tr>`).join('') + '</table>';
+}
+
+function renderStoresAndTxns() {
+  document.getElementById('storeTable').innerHTML =
+    '<table><tr><th>门店编号</th><th>名称</th></tr>' +
+    stores.map(s => `<tr><td>${s.storeId}</td><td>${s.name}</td></tr>`).join('') + '</table>';
+  document.getElementById('txnTable').innerHTML =
+    '<table><tr><th>流水号</th><th>门店</th><th>日期</th><th class="num">金额</th></tr>' +
+    txns.map(t => `<tr><td>${t.id}</td><td>${storeName(t.storeId)}</td><td>${t.date}</td><td class="num">${fmt(t.amount)}</td></tr>`).join('') + '</table>';
+}
+
+function refreshSelects() {
+  const storeOpts = stores.map(s => `<option value="${s.storeId}">${s.name}（${s.storeId}）</option>`).join('');
+  document.getElementById('qStore').innerHTML = storeOpts;
+  document.getElementById('bStore').innerHTML = storeOpts;
+  document.getElementById('bRegion').innerHTML = REGIONS.map(r => `<option>${r}</option>`).join('');
+}
+
+function refreshAll() {
+  refreshSelects(); renderAssignments(); renderStoresAndTxns(); renderVersionOptions();
+  currentReport = null;
+  if (!document.getElementById('tab-report').classList.contains('hidden')) renderCurrent();
+}
+
+function resetSeed() { seed(); refreshAll(); document.getElementById('backfillBanner').style.display = 'none'; }
+
+/* ================= 页签 ================= */
+document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('active', x === b));
+  document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+  document.getElementById('tab-' + b.dataset.tab).classList.remove('hidden');
+  if (b.dataset.tab === 'report' && !currentReport) computeAndRenderSilent(), renderCurrent();
+}));
+
+seed();
+refreshAll();
+computeAndRenderSilent();
+renderCurrent();
+</script>
+</body>
+</html>
