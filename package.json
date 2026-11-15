@@ -1,0 +1,15 @@
+{
+  "name": "gift-card-reconciliation",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "礼品卡流水接收服务与对账页面（充值/消费/退款，退款暂存与并发额度核算）",
+  "scripts": {
+    "start": "node --no-warnings src/server.js",
+    "seed": "node --no-warnings scripts/seed.js",
+    "test": "node --no-warnings --test \"test/*.test.js\""
+  },
+  "engines": {
+    "node": ">=22.5"
+  }
+}

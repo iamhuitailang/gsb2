@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>礼品卡流水对账</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>礼品卡流水对账</h1>
+    <div class="topbar-actions">
+      <span id="autoRefreshHint" class="hint">每 3 秒自动刷新</span>
+      <button id="refreshBtn" class="btn">刷新</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel">
+      <div class="panel-row">
+        <div class="field">
+          <label>选择卡</label>
+          <select id="cardSelect"></select>
+        </div>
+        <div class="field field-grow">
+          <label>开新卡（初始余额，单位元）</label>
+          <div class="inline">
+            <input id="newCardId" placeholder="卡号，如 C001" />
+            <input id="newCardBalance" type="number" step="0.01" min="0" value="0" />
+            <button id="createCardBtn" class="btn">开卡</button>
+          </div>
+        </div>
+      </div>
+      <div class="balance-box">
+        <div>
+          <div class="balance-label">当前余额</div>
+          <div id="cardBalance" class="balance-value">—</div>
+        </div>
+        <div id="cardMeta" class="hint"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>上报流水</h2>
+      <form id="txForm" class="tx-form">
+        <div class="field">
+          <label>收银点</label>
+          <input name="registerId" required placeholder="如 POS-A" />
+        </div>
+        <div class="field">
+          <label>流水号</label>
+          <input name="seq" required placeholder="该收银点内唯一" />
+        </div>
+        <div class="field">
+          <label>类型</label>
+          <select name="type" id="txType">
+            <option value="recharge">充值</option>
+            <option value="purchase">消费</option>
+            <option value="refund">退款</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>金额（元）</label>
+          <input name="amountYuan" type="number" step="0.01" min="0.01" required placeholder="0.00" />
+        </div>
+        <div class="field ref-field" id="refFields" hidden>
+          <label>原消费（退款必填）</label>
+          <div class="inline">
+            <input name="refRegisterId" placeholder="原消费收银点" />
+            <input name="refSeq" placeholder="原消费流水号" />
+          </div>
+        </div>
+        <div class="field field-action">
+          <button type="submit" class="btn btn-primary">提交</button>
+        </div>
+      </form>
+      <div id="formMsg" class="form-msg" hidden></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-row">
+        <h2>流水明细</h2>
+        <div class="filters">
+          <select id="statusFilter">
+            <option value="">全部状态</option>
+            <option value="posted">已入账</option>
+            <option value="pending">暂存</option>
+            <option value="rejected">被拒绝</option>
+          </select>
+          <select id="typeFilter">
+            <option value="">全部类型</option>
+            <option value="recharge">充值</option>
+            <option value="purchase">消费</option>
+            <option value="refund">退款</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>收银点 / 流水号</th>
+              <th>类型</th>
+              <th class="num">金额</th>
+              <th>状态</th>
+              <th class="num">入账后余额</th>
+              <th class="num">剩余可退</th>
+              <th>原因 / 关联</th>
+              <th>时间</th>
+            </tr>
+          </thead>
+          <tbody id="txTbody"></tbody>
+        </table>
+        <div id="emptyHint" class="hint" hidden>暂无流水</div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
