@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>停车记录配对处理台</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>停车记录配对处理台</h1>
+    <nav>
+      <button class="tab active" data-tab="import">导入</button>
+      <button class="tab" data-tab="pairs">停车记录</button>
+      <button class="tab" data-tab="unpaired">未配对事件</button>
+      <button class="tab" data-tab="events">事件总表 / 更正</button>
+      <button class="tab" data-tab="stats">每日统计</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- 导入 -->
+    <section id="tab-import" class="panel active">
+      <div class="card">
+        <h2>导入道闸记录</h2>
+        <p class="hint">支持 UTF-8 CSV，表头：停车场, 闸机号, 流水号, 车牌, 事件类型, 事件时间。
+          文件可乱序到达，配对只看事件时间。同一 (停车场, 闸机号, 流水号) 重复导入会被忽略。</p>
+        <input type="file" id="file-input" accept=".csv,text/csv" multiple />
+        <div id="import-results"></div>
+      </div>
+      <div class="card">
+        <h2>导入批次</h2>
+        <table>
+          <thead><tr><th>批次</th><th>文件名</th><th>导入时间</th><th>总行数</th><th>新增</th><th>重复跳过</th></tr></thead>
+          <tbody id="batches-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 停车记录 -->
+    <section id="tab-pairs" class="panel">
+      <div class="card">
+        <h2>停车记录（进场—出场配对）</h2>
+        <div class="filters">
+          <input id="pairs-filter-plate" placeholder="按车牌过滤" />
+          <input id="pairs-filter-lot" placeholder="按停车场过滤" />
+          <button onclick="loadPairs()">刷新</button>
+        </div>
+        <table>
+          <thead><tr>
+            <th>停车场</th><th>车牌</th>
+            <th>进场时间</th><th>进场闸机/流水</th>
+            <th>出场时间</th><th>出场闸机/流水</th><th>停留时长</th>
+          </tr></thead>
+          <tbody id="pairs-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 未配对 -->
+    <section id="tab-unpaired" class="panel">
+      <div class="card">
+        <h2>未配对事件</h2>
+        <p class="hint">点击行查看事件详情、原始导入内容与配对轨迹（后来 / 曾经跟哪条事件配过）。</p>
+        <div class="filters">
+          <input id="unpaired-filter-plate" placeholder="按车牌过滤" />
+          <input id="unpaired-filter-lot" placeholder="按停车场过滤" />
+          <button onclick="loadUnpaired()">刷新</button>
+        </div>
+        <table>
+          <thead><tr>
+            <th>停车场</th><th>生效车牌</th><th>类型</th><th>事件时间</th>
+            <th>闸机/流水</th><th>来源文件</th><th>配对轨迹</th>
+          </tr></thead>
+          <tbody id="unpaired-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 事件总表 -->
+    <section id="tab-events" class="panel">
+      <div class="card">
+        <h2>事件总表</h2>
+        <p class="hint">原始车牌与生效车牌并列展示；生效车牌来自最近一次更正。点击行更正或查看历史。</p>
+        <div class="filters">
+          <input id="events-filter-plate" placeholder="按车牌过滤" />
+          <input id="events-filter-lot" placeholder="按停车场过滤" />
+          <button onclick="loadEvents()">刷新</button>
+        </div>
+        <table>
+          <thead><tr>
+            <th>停车场</th><th>闸机</th><th>流水号</th><th>原始车牌</th>
+            <th>生效车牌</th><th>类型</th><th>事件时间</th><th>来源文件</th><th>操作</th>
+          </tr></thead>
+          <tbody id="events-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 每日统计 -->
+    <section id="tab-stats" class="panel">
+      <div class="card">
+        <h2>每日统计</h2>
+        <p class="hint">离场次数按出场日期统计；平均停留时长基于配对后的实际时间差。</p>
+        <table>
+          <thead><tr><th>出场日期</th><th>停车场</th><th>离场次数</th><th>平均停留（分钟）</th></tr></thead>
+          <tbody id="stats-body"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- 事件详情弹窗 -->
+  <div id="modal-mask" class="modal-mask hidden">
+    <div class="modal">
+      <div class="modal-head">
+        <h3>事件详情</h3>
+        <button onclick="closeModal()">✕</button>
+      </div>
+      <div id="modal-body"></div>
+      <div class="modal-foot">
+        <h4>更正车牌</h4>
+        <div class="filters">
+          <input id="correct-plate" placeholder="输入正确车牌" />
+          <input id="correct-reason" placeholder="更正原因（可选）" />
+          <button class="primary" onclick="submitCorrection()">提交更正并重算</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="app.js"></script>
+</body>
+</html>
