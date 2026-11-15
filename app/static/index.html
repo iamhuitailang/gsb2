@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>客服工单分片交付 · 来源 / 接收台</title>
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --panel: #ffffff;
+    --ink: #1c2430;
+    --muted: #68727f;
+    --line: #dfe3e8;
+    --accent: #2f6feb;
+    --ok: #1a7f52;
+    --warn: #a86600;
+    --bad: #b3382c;
+    --staged: #6b4fbb;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font: 14px/1.55 -apple-system, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  header {
+    padding: 18px 26px 14px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  header h1 { font-size: 17px; margin: 0; letter-spacing: .2px; }
+  header .sub { color: var(--muted); font-size: 12.5px; }
+  header .spacer { flex: 1; }
+  main {
+    display: grid;
+    grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+    gap: 18px;
+    padding: 18px 26px 40px;
+    align-items: start;
+  }
+  @media (max-width: 1080px) { main { grid-template-columns: 1fr; } }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .panel > h2 {
+    font-size: 13px;
+    margin: 0;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--line);
+    background: #fafbfc;
+    letter-spacing: .4px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .panel > h2 .tag { font-weight: 400; color: var(--muted); font-size: 12px; }
+  .body { padding: 12px 14px; }
+  button {
+    font: inherit;
+    font-size: 12.5px;
+    padding: 5px 10px;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  button:hover { border-color: #b9c0c9; background: #f7f9fb; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { background: #255cc7; }
+  button.ghost { background: transparent; border-color: transparent; color: var(--muted); padding: 4px 6px; }
+  button.ghost:hover { color: var(--ink); background: #f0f2f5; }
+  button:disabled { opacity: .45; cursor: default; }
+  .batch {
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .batch:last-child { margin-bottom: 0; }
+  .batch-head {
+    padding: 9px 11px;
+    background: #fbfcfd;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .batch-head .no { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .batch-head .kind {
+    font-size: 11.5px;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 0 7px;
+  }
+  .batch-head .spacer { flex: 1; }
+  .files { padding: 6px 0; }
+  .file {
+    display: grid;
+    grid-template-columns: 18px minmax(0,1fr) auto;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 11px;
+    border-bottom: 1px dashed #eef0f3;
+  }
+  .file:last-child { border-bottom: 0; }
+  .file .dot { width: 8px; height: 8px; border-radius: 50%; background: #c9ced6; margin-left: 5px; }
+  .file .dot.done { background: var(--ok); }
+  .file .dot.warn { background: var(--warn); }
+  .file .name { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; overflow-wrap: anywhere; }
+  .file .meta { color: var(--muted); font-size: 11.5px; }
+  .file .sha { font-family: ui-monospace, Menlo, monospace; font-size: 10.5px; color: #98a1ac; overflow-wrap: anywhere; }
+  .file-actions { display: flex; gap: 6px; align-items: center; }
+  .state {
+    font-size: 11px;
+    padding: 1px 7px;
+    border-radius: 20px;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+  .state.published { color: var(--ok); background: #e8f5ee; border-color: #c3e5d3; }
+  .state.staged, .state.ready { color: var(--staged); background: #f0ecfb; border-color: #d9cff3; }
+  .state.partial, .state.awaiting_manifest, .state.unverified { color: var(--warn); background: #fdf3e2; border-color: #f0ddb8; }
+  .state.problem { color: var(--bad); background: #fbeceb; border-color: #f0cac6; }
+  .note { color: var(--muted); font-size: 12px; padding: 0 11px 8px; }
+  .problems { margin: 6px 11px 10px; padding: 7px 9px; background: #fbeceb; border: 1px solid #f0cac6; border-radius: 7px; color: var(--bad); font-size: 12px; }
+  .problems div + div { margin-top: 3px; }
+
+  .kpis { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .kpi {
+    flex: 1 1 130px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 13px;
+  }
+  .kpi .label { font-size: 11.5px; color: var(--muted); }
+  .kpi .value { font-size: 22px; font-weight: 650; font-variant-numeric: tabular-nums; letter-spacing: -.5px; }
+  .kpi .value small { font-size: 12px; font-weight: 400; color: var(--muted); }
+
+  .tabs { display: flex; gap: 4px; padding: 8px 10px 0; }
+  .tabs button { border: 0; background: transparent; border-bottom: 2px solid transparent; border-radius: 0; padding: 6px 9px; color: var(--muted); }
+  .tabs button.active { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+  .toolbar { display: flex; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--line); align-items: center; flex-wrap: wrap; }
+  .toolbar input, .toolbar select {
+    font: inherit; font-size: 12.5px; padding: 5px 8px;
+    border: 1px solid var(--line); border-radius: 7px; background: #fff; color: var(--ink);
+  }
+  .toolbar input { min-width: 190px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { text-align: left; padding: 7px 11px; border-bottom: 1px solid #eef0f3; vertical-align: top; }
+  th { font-size: 11.5px; color: var(--muted); font-weight: 600; background: #fafbfc; position: sticky; top: 0; z-index: 1; }
+  tbody tr:hover { background: #f7f9fb; cursor: pointer; }
+  .mono { font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; }
+  .empty { padding: 26px 14px; text-align: center; color: var(--muted); font-size: 12.5px; }
+  .scroll { max-height: 460px; overflow: auto; }
+
+  dialog {
+    border: 1px solid var(--line); border-radius: 12px; padding: 0;
+    width: min(720px, 92vw); box-shadow: 0 18px 60px rgba(20,30,50,.22);
+  }
+  dialog::backdrop { background: rgba(20,28,40,.35); }
+  dialog .dhead { padding: 13px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 10px; }
+  dialog .dhead h3 { margin: 0; font-size: 14px; }
+  dialog .dhead .spacer { flex: 1; }
+  dialog .dbody { padding: 14px 16px 18px; }
+  .field { margin-bottom: 12px; }
+  .field .k { font-size: 11.5px; color: var(--muted); margin-bottom: 2px; }
+  .changes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .changes pre {
+    margin: 0; padding: 8px 10px; background: #f7f8fa; border: 1px solid var(--line);
+    border-radius: 7px; font-size: 11.5px; overflow: auto; max-height: 240px;
+  }
+  .changes pre.added { border-color: #c3e5d3; background: #f2faf6; }
+  .changes pre.removed { border-color: #f0cac6; background: #fdf4f3; }
+  .badge { font-size: 11px; padding: 1px 7px; border-radius: 20px; border: 1px solid var(--line); color: var(--muted); }
+  .flow { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; font-size: 12px; color: var(--muted); }
+  .flow .chip { border: 1px solid var(--line); border-radius: 20px; padding: 1px 8px; background: #fff; }
+  .flow .chip.on { border-color: #c3e5d3; background: #e8f5ee; color: var(--ok); }
+  td .link { color: var(--accent); text-decoration: none; }
+  td .link:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<header>
+  <h1>客服工单分片交付 <span class="sub">来源模拟 → 接收台 → 本地查询库</span></h1>
+  <div class="spacer"></div>
+  <span class="sub" id="clock"></span>
+  <button class="ghost" id="btnReset" title="清空收件箱、发布记录与查询库">重置演示</button>
+</header>
+
+<main>
+  <!-- 左：来源 -->
+  <section class="panel" id="sourcePanel">
+    <h2>来源模拟台 <span class="tag">清单与分片可分别、乱序送达</span></h2>
+    <div class="body" id="sourceBody"></div>
+  </section>
+
+  <!-- 右：接收台 + 查询库 -->
+  <section style="min-width:0">
+    <div class="kpis" id="kpis"></div>
+
+    <div class="panel" style="margin-bottom:18px">
+      <h2>接收台 <span class="tag">已收到哪些文件 / 校验 / 生效状态</span></h2>
+      <div class="body" id="receiverBody"></div>
+    </div>
+
+    <div class="panel">
+      <h2>本地查询库 <span class="tag" id="libTag"></span></h2>
+      <div class="tabs" id="tabs">
+        <button data-tab="tickets" class="active">当前工单</button>
+        <button data-tab="history">变更历史</button>
+      </div>
+      <div id="tabTickets">
+        <div class="toolbar">
+          <input id="q" type="search" placeholder="搜索工单号 / 标题 / 客户 / 处理人">
+          <select id="statusFilter">
+            <option value="">全部状态</option>
+            <option>待处理</option>
+            <option>处理中</option>
+            <option>已解决</option>
+            <option>已完成</option>
+          </select>
+          <span class="sub" id="ticketCount" style="color:var(--muted);font-size:12px"></span>
+        </div>
+        <div class="scroll" id="ticketsWrap"></div>
+      </div>
+      <div id="tabHistory" style="display:none">
+        <div class="scroll" id="historyWrap"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<dialog id="detail">
+  <div class="dhead">
+    <h3 id="detailTitle">工单</h3>
+    <span class="badge" id="detailBadge"></span>
+    <div class="spacer"></div>
+    <button class="ghost" onclick="document.getElementById('detail').close()">关闭</button>
+  </div>
+  <div class="dbody" id="detailBody"></div>
+</dialog>
+
+<script>
+const S = { source: null, state: null, tab: "tickets", tickets: [], history: [], detailId: null };
+
+const STATE_LABEL = {
+  published: "已发布",
+  staged: "已收齐·待前批生效",
+  ready: "已校验·可生效",
+  partial: "缺文件",
+  awaiting_manifest: "缺清单",
+  problem: "校验失败",
+};
+
+async function api(path, opts) {
+  const r = await fetch(path, Object.assign({ headers: { "Content-Type": "application/json" } }, opts || {}));
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || ("HTTP " + r.status));
+  return data;
+}
+
+function esc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+const shortSha = s => (s || "").slice(0, 16) + (s && s.length > 16 ? "…" : "");
+
+// ---------------- 来源面板 ----------------
+function renderSource() {
+  const batches = (S.source && S.source.batches) || [];
+  const received = S.state ? S.state.batches : [];
+  const gotSet = new Set();
+  received.forEach(b => {
+    if (b.received_manifest) gotSet.add(b.batch_no + "/manifest");
+    (b.received_files || []).forEach(f => gotSet.add(b.batch_no + "/" + f));
+  });
+  const el = document.getElementById("sourceBody");
+  if (!batches.length) { el.innerHTML = '<div class="empty">没有可交付的批次</div>'; return; }
+  el.innerHTML = batches.map(b => {
+    const stateInfo = received.find(x => x.batch_no === b.batch_no);
+    const files = b.items.filter(i => i.kind === "shard");
+    const manifest = b.items.find(i => i.kind === "manifest");
+    const st = stateInfo ? stateInfo.state : null;
+    return `
+      <div class="batch" data-batch="${b.batch_no}">
+        <div class="batch-head">
+          <span class="no">第 ${b.batch_no} 批</span>
+          <span class="kind">${b.kind === "full" ? "初始批" : "增量"}</span>
+          ${st ? `<span class="state ${st}">${STATE_LABEL[st] || st}</span>` : ""}
+          <span class="spacer"></span>
+          <button data-send-batch="${b.batch_no}" ${st === "published" ? "disabled" : ""}>整批送达</button>
+          <button data-send-batch="${b.batch_no}" data-order="reverse" title="分片倒序、最后送清单" ${st === "published" ? "disabled" : ""}>倒序送达</button>
+          <button class="primary" data-send-one="${b.batch_no}" data-file="${esc(manifest.filename)}" ${st === "published" ? "disabled" : ""}>送清单</button>
+        </div>
+        <div class="note">${esc(b.note)} · ${esc(b.created_at)} · 共 ${files.length} 个分片，清单记录 ${files.length} 个文件</div>
+        <div class="files">
+          ${files.map(f => {
+            const got = gotSet.has(b.batch_no + "/" + f.filename);
+            return `
+              <div class="file">
+                <span class="dot ${got ? "done" : ""}"></span>
+                <div>
+                  <div class="name">${esc(f.filename)}</div>
+                  <div class="meta">${esc(f.summary)}</div>
+                  <div class="sha">sha256 ${esc(shortSha(f.sha256))}</div>
+                </div>
+                <div class="file-actions">
+                  <button data-send-one="${b.batch_no}" data-file="${esc(f.filename)}" ${st === "published" ? "disabled" : ""}>送此分片</button>
+                </div>
+              </div>`;
+          }).join("")}
+        </div>
+      </div>`;
+  }).join("");
+}
+
+async function sendOne(batchNo, filename) {
+  try {
+    await api("/api/source/push", { method: "POST", body: JSON.stringify({ batch_no: batchNo, filename }) });
+    await refresh();
+  } catch (e) { alert("送达失败：" + e.message); }
+}
+async function sendBatch(batchNo, order) {
+  try {
+    await api("/api/source/push", { method: "POST", body: JSON.stringify({ batch_no: batchNo, which: "all", order: order || "normal" }) });
+    await refresh();
+  } catch (e) { alert("送达失败：" + e.message); }
+}
+
+// ---------------- 接收台 ----------------
+function renderReceiver() {
+  const st = S.state;
+  const el = document.getElementById("receiverBody");
+  if (!st || !st.batches.length) {
+    el.innerHTML = '<div class="empty">还没有收到任何文件。点击左侧「送清单」或「送此分片」开始交付。</div>';
+    return;
+  }
+  el.innerHTML = st.batches.map(b => {
+    const files = (b.expected_files || []).length ? b.expected_files : (b.received_files || []);
+    const recv = new Set(b.received_files || []);
+    const labels = b.manifest ? b.manifest.files.reduce((m, f) => (m[f.filename] = f, m), {}) : {};
+    return `
+      <div class="batch" data-rbatch="${b.batch_no}">
+        <div class="batch-head">
+          <span class="no">第 ${b.batch_no} 批</span>
+          ${b.batch_kind ? `<span class="kind">${b.batch_kind === "full" ? "初始批" : "增量"}</span>` : ""}
+          <span class="state ${b.state}">${STATE_LABEL[b.state] || b.state}</span>
+          <span class="spacer"></span>
+          <span class="sub" style="color:var(--muted);font-size:11.5px">
+            清单 ${b.received_manifest ? "✓" : "✗"} ·
+            ${(b.received_files || []).length}/${(b.expected_files || []).length || "?"} 分片
+          </span>
+        </div>
+        ${b.note ? `<div class="note">${esc(b.note)}</div>` : ""}
+        <div class="files">
+          <div class="file">
+            <span class="dot ${b.received_manifest ? (b.manifest ? "done" : "warn") : ""}"></span>
+            <div>
+              <div class="name">batch-${String(b.batch_no).padStart(4, "0")}-manifest.json</div>
+              <div class="meta">${b.received_manifest ? "清单已收到" : "清单未收到"}${b.manifest ? ` · ${b.manifest.file_count} 个文件` : ""}</div>
+            </div>
+            <div class="file-actions"></div>
+          </div>
+          ${files.map(f => {
+            const got = recv.has(f);
+            const info = labels[f];
+            const fs = (b.file_status || {})[f];
+            const fsLabel = fs === "verified" ? "摘要已核" : fs === "bad" ? "摘要不符" : fs === "missing" ? "缺" : "待清单";
+            return `
+              <div class="file">
+                <span class="dot ${got ? "done" : ""}"></span>
+                <div>
+                  <div class="name">${esc(f)}</div>
+                  <div class="meta">${got ? "已收到" : "未收到"}${info ? ` · 清单摘要 ${esc(shortSha(info.sha256))}` : ""}</div>
+                </div>
+                <div class="file-actions">
+                  <span class="badge" style="${fs === "bad" ? "color:var(--bad);border-color:#f0cac6" : ""}">${fsLabel}</span>
+                </div>
+              </div>`;
+          }).join("")}
+        </div>
+        ${b.published ? `
+          <div class="note" style="color:var(--ok)">
+            已发布 · ${esc(b.published.published_at)} · 记录 ${b.published.record_count} 条 ·
+            新增 ${b.published.counts.inserted} / 修改 ${b.published.counts.updated} / 删除 ${b.published.counts.deleted}
+          </div>` : ""}
+        ${b.state === "staged" ? `<div class="note" style="color:var(--staged)">文件已收齐并校验通过，等待第 ${st.next_batch} 批先生效。</div>` : ""}
+        ${b.problems && b.problems.length ? `<div class="problems">${b.problems.map(p => `<div>· ${esc(p)}</div>`).join("")}</div>` : ""}
+      </div>`;
+  }).join("");
+}
+
+function renderKpis() {
+  const st = S.state || {};
+  const eff = st.effective_batch == null ? 0 : st.effective_batch;
+  document.getElementById("kpis").innerHTML = `
+    <div class="kpi"><div class="label">当前生效批次</div><div class="value">${eff ? "第 " + eff + " 批" : "—"} <small>${eff ? "已发布" : "尚未发布"}</small></div></div>
+    <div class="kpi"><div class="label">下一待生效</div><div class="value">第 ${(st.next_batch || 1)} 批</div></div>
+    <div class="kpi"><div class="label">已发布批次数</div><div class="value">${(st.published_batches || []).length}</div></div>
+    <div class="kpi"><div class="label">当前查询工单</div><div class="value">${st.ticket_count == null ? "—" : st.ticket_count} <small>条</small></div></div>
+  `;
+  document.getElementById("libTag").textContent = eff ? `按第 ${eff} 批生效 · 删除不进当前查询，历史可查` : "等待初始批";
+  document.getElementById("clock").textContent = st.server_time ? "接收台时间 " + st.server_time.replace("T", " ") : "";
+}
+
+// ---------------- 查询库 ----------------
+function renderTickets() {
+  const wrap = document.getElementById("ticketsWrap");
+  const list = S.tickets || [];
+  document.getElementById("ticketCount").textContent = `共 ${list.length} 条`;
+  if (!list.length) { wrap.innerHTML = '<div class="empty">当前查询库为空</div>'; return; }
+  wrap.innerHTML = `<table>
+    <thead><tr><th>工单号</th><th>标题</th><th>客户</th><th>状态</th><th>优先级</th><th>处理人</th><th>更新时间</th></tr></thead>
+    <tbody>${list.map(t => `<tr data-ticket="${esc(t.id)}">
+      <td class="mono">${esc(t.id)}</td>
+      <td>${esc(t.title)}</td>
+      <td>${esc(t.customer)}</td>
+      <td>${esc(t.status)}</td>
+      <td>${esc(t.priority)}</td>
+      <td>${esc(t.assignee)}</td>
+      <td class="mono">${esc(t.updated_at)}</td>
+    </tr>`).join("")}</tbody></table>`;
+}
+
+const ACTION_LABEL = { create: "新建", update: "修改", delete: "删除" };
+function renderHistory() {
+  const wrap = document.getElementById("historyWrap");
+  const list = S.history || [];
+  if (!list.length) { wrap.innerHTML = '<div class="empty">还没有变更记录</div>'; return; }
+  wrap.innerHTML = `<table>
+    <thead><tr><th>#</th><th>批次</th><th>动作</th><th>工单号</th><th>变化</th><th>时间</th></tr></thead>
+    <tbody>${list.map(h => {
+      let chg = "—";
+      if (h.action === "create") chg = "新增快照";
+      else if (h.action === "delete") chg = h.before ? `${esc(h.before.status)} → 移除` : "删除（本已不存在）";
+      else if (h.before && h.after) {
+        const parts = [];
+        if (h.before.status !== h.after.status) parts.push(`状态 ${esc(h.before.status)} → ${esc(h.after.status)}`);
+        if (h.before.priority !== h.after.priority) parts.push(`优先级 ${esc(h.before.priority)} → ${esc(h.after.priority)}`);
+        if (h.before.assignee !== h.after.assignee) parts.push(`处理人 ${esc(h.before.assignee)} → ${esc(h.after.assignee)}`);
+        if (!parts.length) parts.push("字段更新");
+        chg = parts.join("；");
+      }
+      return `<tr data-history="${h.seq}">
+        <td class="mono">${h.seq}</td>
+        <td>第 ${h.batch_no} 批</td>
+        <td><span class="badge">${ACTION_LABEL[h.action] || h.action}</span></td>
+        <td class="mono">${esc(h.ticket_id)}</td>
+        <td>${chg}</td>
+        <td class="mono">${esc((h.at || "").replace("T", " "))}</td>
+      </tr>`;
+    }).join("")}</tbody></table>`;
+}
+
+function renderTabs() {
+  document.querySelectorAll("#tabs button").forEach(b => b.classList.toggle("active", b.dataset.tab === S.tab));
+  document.getElementById("tabTickets").style.display = S.tab === "tickets" ? "" : "none";
+  document.getElementById("tabHistory").style.display = S.tab === "history" ? "" : "none";
+}
+
+// ---------------- 详情 ----------------
+async function openTicket(id, reopen) {
+  let d;
+  try { d = await api("/api/tickets/" + encodeURIComponent(id)); }
+  catch (e) { alert("查询失败：" + e.message); return; }
+  S.detailId = id;
+  const dlg = document.getElementById("detail");
+  document.getElementById("detailTitle").textContent = id;
+  const badge = document.getElementById("detailBadge");
+  badge.textContent = d.exists ? "当前可查" : "已从当前查询移除";
+  badge.style.color = d.exists ? "var(--ok)" : "var(--bad)";
+  const cur = d.current;
+  const hist = d.history || [];
+  document.getElementById("detailBody").innerHTML = `
+    ${cur ? `<div class="field"><div class="k">当前记录</div>
+      <div class="mono">${esc(cur.title)} · ${esc(cur.customer)} · ${esc(cur.status)} · ${esc(cur.priority)} · ${esc(cur.assignee)} · ${esc(cur.updated_at)}</div></div>`
+      : `<div class="field"><div class="k">当前记录</div><div style="color:var(--bad)">该工单已从当前查询库移除，但仍可在下方历史中查看全部变化。</div></div>`}
+    <div class="field"><div class="k">变更历史（按生效顺序）</div></div>
+    ${hist.length ? hist.map(h => `
+      <div class="field">
+        <div class="k">#${h.seq} · 第 ${h.batch_no} 批 · ${ACTION_LABEL[h.action] || h.action} · ${esc((h.at || "").replace("T", " "))}${h.reason ? " · " + esc(h.reason) : ""}</div>
+        <div class="changes">
+          <pre class="${h.after ? "added" : "removed"}">${esc(h.after ? JSON.stringify(h.after, null, 2) : (h.before ? JSON.stringify(h.before, null, 2) : "（无）"))}</pre>
+          <pre class="${h.before ? "removed" : "added"}">${esc(h.before ? JSON.stringify(h.before, null, 2) : "（无）")}</pre>
+        </div>
+      </div>`).join("") : '<div class="empty">没有历史</div>'}
+  `;
+  if (!reopen && !dlg.open) dlg.showModal();
+}
+
+// ---------------- 刷新 ----------------
+async function refresh() {
+  const [src, st] = await Promise.all([api("/api/source/deliveries"), api("/api/receiver/state")]);
+  S.source = src; S.state = st;
+  const [tk, hs] = await Promise.all([api("/api/tickets" + queryString()), api("/api/history")]);
+  S.tickets = tk.tickets; S.history = hs.history;
+  renderSource(); renderReceiver(); renderKpis(); renderTickets(); renderHistory(); renderTabs();
+  if (S.detailId) {
+    const dlg = document.getElementById("detail");
+    if (dlg.open) await openTicket(S.detailId, true);
+  }
+}
+
+function queryString() {
+  const p = new URLSearchParams();
+  const q = document.getElementById("q").value.trim();
+  const s = document.getElementById("statusFilter").value;
+  if (q) p.set("q", q);
+  if (s) p.set("status", s);
+  const str = p.toString();
+  return str ? "?" + str : "";
+}
+
+// ---------------- 事件 ----------------
+document.addEventListener("click", async (e) => {
+  const one = e.target.closest("[data-send-one]");
+  if (one) { e.preventDefault(); return sendOne(Number(one.dataset.sendOne), one.dataset.file); }
+  const batch = e.target.closest("[data-send-batch]");
+  if (batch) { e.preventDefault(); return sendBatch(Number(batch.dataset.sendBatch), batch.dataset.order || "normal"); }
+  const tab = e.target.closest("#tabs button");
+  if (tab) { S.tab = tab.dataset.tab; renderTabs(); return; }
+  const tr = e.target.closest("tr[data-ticket]");
+  if (tr) return openTicket(tr.dataset.ticket);
+  const hr = e.target.closest("tr[data-history]");
+  if (hr) {
+    const row = (S.history || []).find(h => String(h.seq) === hr.dataset.history);
+    if (row) return openTicket(row.ticket_id);
+  }
+});
+
+let searchTimer = null;
+document.getElementById("q").addEventListener("input", () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(async () => {
+    const tk = await api("/api/tickets" + queryString());
+    S.tickets = tk.tickets; renderTickets();
+  }, 180);
+});
+document.getElementById("statusFilter").addEventListener("change", async () => {
+  const tk = await api("/api/tickets" + queryString());
+  S.tickets = tk.tickets; renderTickets();
+});
+document.getElementById("btnReset").addEventListener("click", async () => {
+  if (!confirm("清空收件箱、发布记录与查询库，回到演示初始状态？")) return;
+  await api("/api/receiver/reset", { method: "POST", body: "{}" });
+  await refresh();
+});
+
+refresh();
+setInterval(refresh, 4000);
+</script>
+</body>
+</html>
