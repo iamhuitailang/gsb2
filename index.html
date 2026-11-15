@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>食品厂批次追溯（本地）</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <h1>食品厂批次追溯 <small>本地页面 · 数据仅保存在浏览器</small></h1>
+  <div class="toolbar">
+    <label class="imp">导入原料台账 <input type="file" id="imp-materials" accept=".json,application/json"></label>
+    <label class="imp">导入生产台账 <input type="file" id="imp-production" accept=".json,application/json"></label>
+    <label class="imp">导入出库台账 <input type="file" id="imp-outbound" accept=".json,application/json"></label>
+    <button id="btn-export">导出当前台账</button>
+    <button id="btn-reset" class="danger">重置为示例数据</button>
+  </div>
+  <div id="ledger-status" class="status"></div>
+  <p class="hint" style="margin:6px 0 0">导入格式：JSON 数组。可用「导出当前台账」获取字段模板；页面纯本地运行，数据只存浏览器 localStorage，不上传。</p>
+</header>
+
+<section id="missing-panel" class="missing hidden"></section>
+
+<section class="query-panel">
+  <label>原料批次
+    <select id="query-batch"></select>
+  </label>
+  <button id="btn-trace" class="primary">追溯</button>
+  <button id="btn-save-snapshot" disabled>保存当前结果</button>
+  <span class="demo">
+    演示出库更正：
+    <button id="btn-demo-revoke">撤销第二单(OUT-2)</button>
+    <button id="btn-demo-restore">恢复撤销</button>
+  </span>
+  <span class="demo">
+    演示台账后到：
+    <button id="btn-demo-late">移除 H2 生产记录</button>
+    <button id="btn-demo-fill">补齐迟到台账</button>
+  </span>
+</section>
+
+<main>
+  <section id="result-panel">
+    <p class="placeholder">请选择原料批次并点击「追溯」。</p>
+  </section>
+  <aside id="snapshot-panel">
+    <h2>已保存的追溯结果</h2>
+    <p class="hint">保存的是当时范围的历史快照，后续出库更正不影响它。</p>
+    <ul id="snapshot-list"></ul>
+  </aside>
+</main>
+
+<section id="ledgers">
+  <h2>原始台账</h2>
+  <div class="ledger-cols">
+    <div class="ledger">
+      <h3>原料台账</h3>
+      <table id="tbl-materials"></table>
+    </div>
+    <div class="ledger">
+      <h3>生产台账</h3>
+      <table id="tbl-production"></table>
+    </div>
+    <div class="ledger">
+      <h3>出库台账 · 明细</h3>
+      <table id="tbl-outbound"></table>
+      <h3>出库台账 · 更正记录</h3>
+      <table id="tbl-corrections"></table>
+    </div>
+  </div>
+</section>
+
+<div id="toast" class="hidden"></div>
+<script src="trace.js"></script>
+<script src="sample-data.js"></script>
+<script src="graph.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
