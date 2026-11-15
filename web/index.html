@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>场馆预约采集调度台</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>场馆预约采集调度台</h1>
+    <div class="meta">
+      <span id="server-time"></span>
+      <label class="auto"><input type="checkbox" id="auto-refresh" checked /> 每秒自动刷新</label>
+    </div>
+  </header>
+
+  <section class="card">
+    <h2>① 模拟来源额度</h2>
+    <p class="hint">在页面上启动一轮预设额度周期；来源暂停等额度时，另一来源可继续采集。</p>
+    <table>
+      <thead>
+        <tr>
+          <th>来源</th><th>服务地址</th><th>额度状态</th><th>下一次请求时间</th>
+          <th>调度状态</th><th>最近错误</th><th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="sources-body"></tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>② 新建采集任务 / 计划任务</h2>
+    <div class="form-row">
+      <label>场馆
+        <select id="venue-select"></select>
+      </label>
+      <label>日期
+        <input type="date" id="date-input" />
+      </label>
+      <button id="btn-create">立即采集（手动）</button>
+      <label>计划任务间隔（秒）
+        <input type="number" id="interval-input" value="60" min="1" style="width:90px" />
+      </label>
+      <button id="btn-schedule" class="secondary">创建计划任务</button>
+    </div>
+    <div id="action-msg" class="msg"></div>
+  </section>
+
+  <section class="card">
+    <h2>③ 采集进度（按场馆 / 日期）</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>任务</th><th>来源</th><th>状态</th><th>页面进度</th><th>已入库预约</th>
+          <th>触发方式</th><th>创建时间</th><th>更新时间</th><th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="jobs-body"></tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>④ 计划任务</h2>
+    <table>
+      <thead>
+        <tr><th>场馆</th><th>日期</th><th>间隔(秒)</th><th>启用</th><th>上次触发</th><th>下次触发</th><th>操作</th></tr>
+      </thead>
+      <tbody id="schedules-body"></tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>⑤ 真实请求日志</h2>
+    <div class="form-row">
+      <label>按来源筛选
+        <select id="log-source-filter">
+          <option value="">全部来源</option>
+        </select>
+      </label>
+      <button id="btn-refresh-logs" class="secondary">刷新日志</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>来源</th><th>场馆</th><th>日期</th><th>页码</th><th>请求时间</th>
+          <th>响应时间</th><th>响应码</th><th>结果</th><th>新写入(条)</th><th>等待(秒)</th><th>详情</th>
+        </tr>
+      </thead>
+      <tbody id="logs-body"></tbody>
+    </table>
+  </section>
+
+  <script src="app.js"></script>
+</body>
+</html>

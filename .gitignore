@@ -1,0 +1,8 @@
+# 运行时数据与日志
+data/
+logs/
+__pycache__/
+*.pyc
+*.db-wal
+*.db-shm
+.DS_Store

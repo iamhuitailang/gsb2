@@ -1,0 +1,15 @@
+{
+  "venue-a": {
+    "2026-11-15": [
+      {"id": "a-001", "venue_id": "venue-a", "venue_name": "甲馆", "date": "2026-11-15", "slot": "09:00-10:00", "court": "1号场", "user": "张三", "phone": "138****0001"},
+      {"id": "a-002", "venue_id": "venue-a", "venue_name": "甲馆", "date": "2026-11-15", "slot": "10:00-11:00", "court": "1号场", "user": "李四", "phone": "138****0002"},
+      {"id": "a-003", "venue_id": "venue-a", "venue_name": "甲馆", "date": "2026-11-15", "slot": "14:00-15:00", "court": "2号场", "user": "王五", "phone": "138****0003"}
+    ]
+  },
+  "venue-b": {
+    "2026-11-15": [
+      {"id": "b-001", "venue_id": "venue-b", "venue_name": "乙馆", "date": "2026-11-15", "slot": "08:00-09:00", "court": "A场", "user": "赵六", "phone": "139****0001"},
+      {"id": "b-002", "venue_id": "venue-b", "venue_name": "乙馆", "date": "2026-11-15", "slot": "16:00-17:00", "court": "B场", "user": "钱七", "phone": "139****0002"}
+    ]
+  }
+}
