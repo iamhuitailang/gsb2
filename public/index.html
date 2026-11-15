@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>本地营销归因服务</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">归</span>
+      <div>
+        <h1>本地营销归因服务</h1>
+        <p class="subtitle">活动点击 · 付款 · 整单退款 — 付款前 24 小时 last-click 归因</p>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button class="tab active" data-view="ingest">数据接入</button>
+      <button class="tab" data-view="report">归因报表</button>
+      <button class="tab" data-view="orders">订单查询</button>
+      <button class="tab" data-view="rules">规则说明</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- 数据接入 -->
+    <section class="view active" id="view-ingest">
+      <div class="grid grid-3">
+        <div class="card">
+          <h2>活动点击</h2>
+          <p class="hint">click_id, account_id, campaign_id, campaign_name, click_time</p>
+          <input type="file" accept=".csv,text/csv" class="file-input" data-type="clicks" hidden>
+          <div class="btn-row">
+            <button class="btn primary pick-file" data-type="clicks">选择 CSV 上传</button>
+            <a class="btn ghost" href="/api/samples/clicks" download>下载样例</a>
+          </div>
+          <div class="result" id="result-clicks"></div>
+        </div>
+        <div class="card">
+          <h2>付款记录</h2>
+          <p class="hint">order_id, account_id, payment_time</p>
+          <input type="file" accept=".csv,text/csv" class="file-input" data-type="payments" hidden>
+          <div class="btn-row">
+            <button class="btn primary pick-file" data-type="payments">选择 CSV 上传</button>
+            <a class="btn ghost" href="/api/samples/payments" download>下载样例</a>
+          </div>
+          <div class="result" id="result-payments"></div>
+        </div>
+        <div class="card">
+          <h2>整单退款</h2>
+          <p class="hint">refund_id, order_id, refund_time</p>
+          <input type="file" accept=".csv,text/csv" class="file-input" data-type="refunds" hidden>
+          <div class="btn-row">
+            <button class="btn primary pick-file" data-type="refunds">选择 CSV 上传</button>
+            <a class="btn ghost" href="/api/samples/refunds" download>下载样例</a>
+          </div>
+          <div class="result" id="result-refunds"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>最近上传</h2>
+          <button class="btn ghost small" id="btn-reload-batches">刷新</button>
+        </div>
+        <table>
+          <thead>
+            <tr><th>#</th><th>类型</th><th>文件名</th><th class="num">总行</th><th class="num">接受</th><th class="num">重复</th><th class="num">错误行</th><th>接收时间</th><th>错误明细</th></tr>
+          </thead>
+          <tbody id="batches-body">
+            <tr><td colspan="9" class="empty">暂无上传记录</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="card tip">
+        <h2>演示路径</h2>
+        <ol class="steps">
+          <li><code>npm run seed</code> 后，O001（12:00 付款）已归因活动甲，O002 为直接成交。</li>
+          <li>上传 <a href="/api/samples/late-click" download>晚到点击样例</a>（11:50 活动乙）→ O001 改归乙，甲 0 单、乙 1 单。</li>
+          <li>上传退款样例 → 活动乙成交 1 / 退款 1 / 净 0；到“订单查询”打开 O001 查看完整时间线。</li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- 归因报表 -->
+    <section class="view" id="view-report">
+      <div class="card">
+        <div class="filters">
+          <label>查询方式
+            <select id="report-mode">
+              <option value="date">按单日</option>
+              <option value="range">按日期范围</option>
+            </select>
+          </label>
+          <label id="label-date">付款日期 <input type="date" id="report-date"></label>
+          <label class="hidden" id="label-start">开始日期 <input type="date" id="report-start"></label>
+          <label class="hidden" id="label-end">结束日期 <input type="date" id="report-end"></label>
+          <button class="btn primary" id="btn-query-report">查询</button>
+          <a class="btn ghost" id="link-export-summary" download>导出汇总 CSV</a>
+          <a class="btn ghost" id="link-export-detail" download>导出明细 CSV</a>
+        </div>
+        <p class="hint" id="report-range-hint"></p>
+        <div id="report-tables"></div>
+      </div>
+    </section>
+
+    <!-- 订单查询 -->
+    <section class="view" id="view-orders">
+      <div class="card">
+        <div class="filters">
+          <label>搜索订单号/账号 <input type="text" id="order-q" placeholder="如 O001 / A001"></label>
+          <label>活动
+            <select id="order-campaign"><option value="">全部</option></select>
+          </label>
+          <label>付款日期 <input type="date" id="order-paydate"></label>
+          <button class="btn primary" id="btn-query-orders">查询</button>
+        </div>
+        <table>
+          <thead>
+            <tr><th>订单编号</th><th>账号</th><th>付款时间</th><th>付款日期</th><th>当前归因</th><th>归因点击</th><th>退款</th><th></th></tr>
+          </thead>
+          <tbody id="orders-body">
+            <tr><td colspan="8" class="empty">点击“查询”加载订单</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 规则说明 -->
+    <section class="view" id="view-rules">
+      <div class="card doc">
+        <h2>归因口径（页面公开规则）</h2>
+        <ol>
+          <li><strong>归因窗口：</strong>一笔订单归给同一账号、点击时间落在 <code>[付款时间 − 24 小时, 付款时间]</code>
+            区间内的活动点击；区间两端都包含，<strong>正好相差 24 小时也算</strong>。</li>
+          <li><strong>最后一次点击获胜（last-click）：</strong>窗口内点击时间最晚的一次点击所属活动赢得归因。</li>
+          <li><strong>同刻定序规则：</strong>两次点击的点击时间完全相同时，按<strong>点击编号字典序</strong>定先后，
+            编号靠后者视为更晚（例如 C02 晚于 C01）。建议使用等长编号，避免 C9 与 C10 这类字典序与数字序不一致。</li>
+          <li><strong>直接成交：</strong>窗口内没有任何活动点击时，订单归为“直接成交”。</li>
+          <li><strong>晚到改判：</strong>点击埋点可能晚于付款到达；新点击若成为新的最后一次有效点击，
+            订单立即从原活动移到新活动，原活动与新活动的报表同时变化，每次改判都在订单时间线留痕并写明原因。</li>
+          <li><strong>整单退款：</strong>退款从订单<strong>当前归属</strong>的活动扣减，不改变归因；
+            若退款后又发生改判，订单（含退款状态）整体移到新活动，保证任何时刻报表都对得上、净单数不为负。
+            同一退款单号、同一订单的重复退款只处理一次。</li>
+          <li><strong>统计口径：</strong>报表按<strong>付款日期</strong>分组，与点击/退款的到达时间无关；
+            每个活动展示成交单数、退款单数、净单数（= 成交 − 退款），汇总导出与明细导出可逐格对账。</li>
+          <li><strong>时间口径：</strong>CSV 时间格式为 <code>YYYY-MM-DD HH:mm:ss</code>，按服务器本地时区解释
+            （建议以 <code>TZ=Asia/Shanghai</code> 启动）。</li>
+        </ol>
+      </div>
+    </section>
+  </main>
+
+  <!-- 订单详情弹层 -->
+  <div class="modal-mask hidden" id="modal-mask">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="modal-title">订单详情</h2>
+        <button class="btn ghost small" id="btn-close-modal">关闭</button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

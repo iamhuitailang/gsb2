@@ -1,0 +1,15 @@
+{
+  "name": "marketing-attribution-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "本地营销归因服务：活动点击/付款/整单退款接收与 last-click 归因",
+  "type": "module",
+  "scripts": {
+    "start": "node --no-warnings server/server.js",
+    "seed": "node --no-warnings scripts/seed.js",
+    "test": "node --no-warnings --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  }
+}
