@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>规则版本</h1>
+<table>
+  <tr><th>版本</th><th>状态</th><th>配置</th><th>说明</th><th>创建时间</th><th>发布时间</th><th>操作</th></tr>
+  {% for v in versions %}
+  {% set cfg = v['config_json'] | jsonloads %}
+  <tr>
+    <td><a href="{{ url_for('rule_detail', vid=v['id']) }}">v{{ v['version_no'] }}</a></td>
+    <td><span class="tag tag-{{ v['status'] }}">
+      {{ {'draft':'草稿','published':'生效中','archived':'历史版本'}[v['status']] }}</span></td>
+    <td class="muted">重量 [{{ cfg['weight']['min'] }}, {{ cfg['weight']['max'] }}]kg；
+      {{ cfg['service_types'] | join('/') }}；
+      冷链温区{{ '必填' if cfg['cold_chain_requires_temp_zone'] else '非必填' }}</td>
+    <td>{{ v['note'] }}</td>
+    <td>{{ v['created_at'] }}</td>
+    <td>{{ v['published_at'] or '—' }}</td>
+    <td>
+      {% if v['status'] == 'draft' %}
+        <a class="btn secondary" href="{{ url_for('dryrun_new') }}?draft_id={{ v['id'] }}">预跑</a>
+      {% elif v['status'] == 'archived' %}
+        <form method="post" action="{{ url_for('rule_publish', vid=v['id']) }}" style="display:inline"
+              onsubmit="return confirm('确认回滚到 v{{ v['version_no'] }}？当前生效版本将归档。')">
+          <button class="btn secondary" type="submit">回滚到此版本</button>
+        </form>
+      {% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+
+<h2>发布 / 回滚记录</h2>
+{% if events %}
+<table>
+  <tr><th>时间</th><th>动作</th><th>版本</th><th>操作人</th></tr>
+  {% for e in events %}
+  <tr>
+    <td>{{ e['created_at'] }}</td>
+    <td>{{ '回滚' if e['action'] == 'rollback' else '发布' }}</td>
+    <td>v{{ e['version_no'] }}</td>
+    <td>{{ e['operator'] or '—' }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}<p class="muted">暂无记录。</p>{% endif %}
+{% endblock %}

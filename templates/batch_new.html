@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>新建批次</h1>
+{% if published %}
+<p class="muted">批次启动时将绑定当前生效规则
+  <a href="{{ url_for('rule_detail', vid=published['id']) }}">v{{ published['version_no'] }}</a>，
+  之后规则发布或回滚不影响本批次。</p>
+{% else %}
+<p class="reject">当前没有生效的规则版本，无法创建批次。</p>
+{% endif %}
+<form method="post" action="{{ url_for('batch_create') }}">
+  <label>批次名称</label>
+  <input type="text" name="name" required placeholder="例如 BATCH-20261115-01">
+  <label>包裹数据（CSV：包裹号,重量kg,服务类型,是否冷链,温区）</label>
+  <textarea name="csv_text" placeholder="PKG001,18,标准,否,
+PKG002,12,特快,是,2-8°C"></textarea>
+  <p><button class="btn" type="submit" {% if not published %}disabled{% endif %}>创建并校验</button></p>
+</form>
+{% endblock %}

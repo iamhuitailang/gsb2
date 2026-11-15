@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>发起预跑</h1>
+<p class="muted">选择一个已完成批次，用其绑定的生效规则与草稿规则各跑一遍，生成对比报告。
+  预跑只保存报告，不修改批次的正式校验结果。</p>
+<form method="post" action="{{ url_for('dryrun_create') }}">
+  <label>已完成批次</label>
+  <select name="batch_id" required>
+    {% for b in batches %}<option value="{{ b['id'] }}">{{ b['name'] }}</option>{% endfor %}
+  </select>
+  <label>草稿规则</label>
+  <select name="draft_id" required>
+    {% for d in drafts %}
+    <option value="{{ d['id'] }}" {% if request.args.get('draft_id', type=int) == d['id'] %}selected{% endif %}>
+      v{{ d['version_no'] }} — {{ d['note'] }}</option>
+    {% endfor %}
+  </select>
+  {% if not drafts %}<p class="muted">暂无草稿版本，请先在「新建草稿」中创建。</p>{% endif %}
+  {% if not batches %}<p class="muted">暂无已完成批次。</p>{% endif %}
+  <p><button class="btn" type="submit" {% if not drafts or not batches %}disabled{% endif %}>运行预跑</button></p>
+</form>
+{% endblock %}

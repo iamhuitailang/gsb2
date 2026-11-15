@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>预跑报告 #{{ report['id'] }}</h1>
+<div class="card">
+  <p>批次：<a href="{{ url_for('batch_detail', bid=batch['id']) }}">{{ batch['name'] }}</a></p>
+  <p>对比：
+    <a href="{{ url_for('rule_detail', vid=base_v['id']) }}">v{{ base_v['version_no'] }}（批次绑定规则）</a>
+    →
+    <a href="{{ url_for('rule_detail', vid=draft_v['id']) }}">v{{ draft_v['version_no'] }}（草稿）</a></p>
+  <p>时间：{{ report['created_at'] }}</p>
+  <p>
+    <span class="reject">通过→拒绝：{{ report['pass_to_reject'] }}</span>
+    <span class="pass">拒绝→通过：{{ report['reject_to_pass'] }}</span>
+    原因变化：{{ report['reason_changed'] }}
+    无变化：{{ report['unchanged'] }}
+  </p>
+  <p class="muted">预跑只保存本报告，批次的正式校验结果不受影响。</p>
+</div>
+
+<p>
+  <a class="btn secondary" href="{{ url_for('dryrun_detail', rid=report['id']) }}?show=changed">只看变化</a>
+  <a class="btn secondary" href="{{ url_for('dryrun_detail', rid=report['id']) }}?show=all">全部记录</a>
+</p>
+
+<table>
+  <tr><th>#</th><th>包裹号</th><th>原始行</th><th>变化类型</th>
+      <th>v{{ base_v['version_no'] }} 结果</th><th>v{{ draft_v['version_no'] }} 结果</th></tr>
+  {% for r in rows %}
+  <tr class="chg-{{ r['change_type'] }}">
+    <td>{{ r['row_no'] }}</td>
+    <td>{{ r['parcel_no'] }}</td>
+    <td class="muted">{{ r['raw_line'] }}</td>
+    <td>{{ change_labels[r['change_type']] }}</td>
+    <td>
+      <span class="{{ r['base_outcome'] }}">{{ '通过' if r['base_outcome'] == 'pass' else '拒绝' }}</span>
+      {% set brs = r['base_reasons_json'] | jsonloads %}
+      {% if brs %}<ul class="reasons">{% for x in brs %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
+    </td>
+    <td>
+      <span class="{{ r['draft_outcome'] }}">{{ '通过' if r['draft_outcome'] == 'pass' else '拒绝' }}</span>
+      {% set drs = r['draft_reasons_json'] | jsonloads %}
+      {% if drs %}<ul class="reasons">{% for x in drs %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

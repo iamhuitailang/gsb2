@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>规则版本 v{{ v['version_no'] }}
+  <span class="tag tag-{{ v['status'] }}">
+    {{ {'draft':'草稿','published':'生效中','archived':'历史版本'}[v['status']] }}</span>
+</h1>
+<div class="card">
+  <p>重量区间：[{{ config['weight']['min'] }}kg, {{ config['weight']['max'] }}kg]</p>
+  <p>服务类型允许值：{{ config['service_types'] | join('、') }}</p>
+  <p>冷链包裹必须填写温区：{{ '是' if config['cold_chain_requires_temp_zone'] else '否' }}</p>
+  <p class="muted">说明：{{ v['note'] or '—' }}　创建：{{ v['created_at'] }}
+     {{ '　发布：' ~ v['published_at'] if v['published_at'] }}</p>
+</div>
+
+<p>
+  <a class="btn secondary" href="{{ url_for('rule_new') }}?from={{ v['id'] }}">基于此版本新建草稿</a>
+  {% if v['status'] == 'draft' %}
+  <a class="btn secondary" href="{{ url_for('dryrun_new') }}?draft_id={{ v['id'] }}">用此草稿预跑</a>
+  <form method="post" action="{{ url_for('rule_publish', vid=v['id']) }}" style="display:inline"
+        onsubmit="return confirm('确认发布 v{{ v['version_no'] }}？发布后新批次将使用该版本。')">
+    <input type="text" name="operator" placeholder="审批人" style="width:120px" required>
+    <button class="btn" type="submit">审批发布</button>
+  </form>
+  {% elif v['status'] == 'archived' %}
+  <form method="post" action="{{ url_for('rule_publish', vid=v['id']) }}" style="display:inline"
+        onsubmit="return confirm('确认回滚到 v{{ v['version_no'] }}？')">
+    <input type="text" name="operator" placeholder="操作人" style="width:120px">
+    <button class="btn" type="submit">回滚到此版本</button>
+  </form>
+  {% endif %}
+</p>
+
+<h2>使用此版本的批次</h2>
+{% if used_by %}
+<table>
+  <tr><th>批次</th><th>状态</th><th>创建时间</th></tr>
+  {% for b in used_by %}
+  <tr>
+    <td><a href="{{ url_for('batch_detail', bid=b['id']) }}">{{ b['name'] }}</a></td>
+    <td>{{ '已完成' if b['status'] == 'completed' else b['status'] }}</td>
+    <td>{{ b['created_at'] }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}<p class="muted">暂无批次使用。回滚前跑过的批次仍保留当时绑定的规则版本。</p>{% endif %}
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>批次 {{ batch['name'] }}</h1>
+<div class="card">
+  <p>状态：{{ '已完成' if batch['status'] == 'completed' else batch['status'] }}
+     创建时间：{{ batch['created_at'] }}</p>
+  <p>绑定规则版本：
+    <a href="{{ url_for('rule_detail', vid=version['id']) }}">v{{ version['version_no'] }}</a>
+    <span class="tag tag-{{ version['status'] }}">
+      {{ {'draft':'草稿','published':'当前生效','archived':'历史版本'}[version['status']] }}</span>
+    <span class="muted">（批次启动时绑定，后续发布/回滚不影响本批次的校验结果）</span></p>
+  <p class="muted">规则内容：重量 [{{ config['weight']['min'] }}, {{ config['weight']['max'] }}]kg；
+    服务类型 {{ config['service_types'] | join('、') }}；
+    冷链温区{{ '必填' if config['cold_chain_requires_temp_zone'] else '非必填' }}</p>
+  <p>共 {{ batch['total_rows'] }} 条：
+    <span class="pass">通过 {{ batch['pass_count'] }}</span> /
+    <span class="reject">拒绝 {{ batch['reject_count'] }}</span></p>
+</div>
+
+<table>
+  <tr><th>#</th><th>原始行</th><th>包裹号</th><th>重量kg</th><th>服务类型</th><th>冷链</th><th>温区</th>
+      <th>校验结果</th><th>原因</th></tr>
+  {% for r in rows %}
+  <tr>
+    <td>{{ r['row_no'] }}</td>
+    <td class="muted">{{ r['raw_line'] }}</td>
+    <td>{{ r['parcel_no'] }}</td>
+    <td>{{ '%g' % r['weight'] if r['weight'] is not none else '—' }}</td>
+    <td>{{ r['service_type'] }}</td>
+    <td>{{ '是' if r['is_cold_chain'] else '否' }}</td>
+    <td>{{ r['temp_zone'] or '—' }}</td>
+    <td class="{{ r['outcome'] }}">{{ '通过' if r['outcome'] == 'pass' else '拒绝' }}</td>
+    <td>
+      {% set reasons = r['reasons_json'] | jsonloads %}
+      {% if reasons %}<ul class="reasons">{% for x in reasons %}<li>{{ x }}</li>{% endfor %}</ul>
+      {% else %}—{% endif %}
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endblock %}

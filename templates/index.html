@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>规则工作台</h1>
+
+{% if not published and not drafts and not batches %}
+<div class="card">
+  <p>当前还没有任何数据，可以加载演示数据（旧规则 v1 + 4 条样例批次 + 新规则草稿 v2）。</p>
+  <form method="post" action="{{ url_for('seed') }}">
+    <button class="btn" type="submit">加载演示数据</button>
+  </form>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>当前生效规则</h2>
+  {% if published %}
+    {% set cfg = published['config_json'] | jsonloads %}
+    <p><a href="{{ url_for('rule_detail', vid=published['id']) }}">v{{ published['version_no'] }}</a>
+       <span class="tag tag-published">生效中</span></p>
+    <p>重量区间：[{{ cfg['weight']['min'] }}kg, {{ cfg['weight']['max'] }}kg]；
+       服务类型：{{ cfg['service_types'] | join('、') }}；
+       冷链必填温区：{{ '是' if cfg['cold_chain_requires_temp_zone'] else '否' }}</p>
+    <p class="muted">{{ published['note'] }}</p>
+  {% else %}
+    <p>暂无生效版本。</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h2>草稿版本</h2>
+  {% if drafts %}
+  <table>
+    <tr><th>版本</th><th>说明</th><th>创建时间</th><th></th></tr>
+    {% for d in drafts %}
+    <tr>
+      <td><a href="{{ url_for('rule_detail', vid=d['id']) }}">v{{ d['version_no'] }}</a></td>
+      <td>{{ d['note'] }}</td>
+      <td>{{ d['created_at'] }}</td>
+      <td><a class="btn secondary" href="{{ url_for('dryrun_new') }}?draft_id={{ d['id'] }}">去预跑</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}<p>暂无草稿。<a href="{{ url_for('rule_new') }}">新建草稿</a></p>{% endif %}
+</div>
+
+<div class="card">
+  <h2>批次</h2>
+  {% if batches %}
+  <table>
+    <tr><th>批次</th><th>状态</th><th>绑定规则</th><th>总数</th><th>通过</th><th>拒绝</th><th>创建时间</th></tr>
+    {% for b in batches %}
+    <tr>
+      <td><a href="{{ url_for('batch_detail', bid=b['id']) }}">{{ b['name'] }}</a></td>
+      <td>{{ '已完成' if b['status'] == 'completed' else b['status'] }}</td>
+      <td>v{{ b['version_no'] }}</td>
+      <td>{{ b['total_rows'] }}</td>
+      <td class="pass">{{ b['pass_count'] }}</td>
+      <td class="reject">{{ b['reject_count'] }}</td>
+      <td>{{ b['created_at'] }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}<p>暂无批次。</p>{% endif %}
+</div>
+
+<div class="card">
+  <h2>预跑报告</h2>
+  {% if reports %}
+  <table>
+    <tr><th>报告</th><th>批次</th><th>对比</th><th>通过→拒绝</th><th>拒绝→通过</th><th>原因变化</th><th>时间</th></tr>
+    {% for r in reports %}
+    <tr>
+      <td><a href="{{ url_for('dryrun_detail', rid=r['id']) }}">#{{ r['id'] }}</a></td>
+      <td>{{ r['batch_name'] }}</td>
+      <td>v{{ r['base_no'] }} → v{{ r['draft_no'] }}</td>
+      <td class="reject">{{ r['pass_to_reject'] }}</td>
+      <td class="pass">{{ r['reject_to_pass'] }}</td>
+      <td>{{ r['reason_changed'] }}</td>
+      <td>{{ r['created_at'] }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}<p>暂无预跑报告。</p>{% endif %}
+</div>
+{% endblock %}
