@@ -1,0 +1,7 @@
+# 运行期数据：商品价格、改价历史、执行记录
+data/store.json
+data/runs/
+
+# 系统文件
+.DS_Store
+node_modules/

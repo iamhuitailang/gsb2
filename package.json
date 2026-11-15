@@ -1,0 +1,17 @@
+{
+  "name": "gsb2-price-console",
+  "version": "1.0.0",
+  "private": true,
+  "description": "促销改价：本地模拟后台 + 浏览器自动化执行台",
+  "scripts": {
+    "server": "node server/server.js",
+    "preview": "node executor/executor.js preview --file data/price-changes.csv",
+    "execute": "node executor/executor.js execute",
+    "resume": "node executor/executor.js resume",
+    "pause": "node executor/executor.js pause",
+    "status": "node executor/executor.js status",
+    "runs": "node executor/executor.js runs",
+    "reset": "node scripts/reset.js",
+    "test": "node test/e2e.js"
+  }
+}
