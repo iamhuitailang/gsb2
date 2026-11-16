@@ -1,0 +1,14 @@
+{
+  "name": "gsb2-team-invite-portal",
+  "version": "1.0.0",
+  "private": true,
+  "description": "内部项目组入驻页面：管理员按邮箱/团队/角色发邀请，受邀者从本地收件箱接受",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test"
+  }
+}
