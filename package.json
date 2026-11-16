@@ -1,0 +1,14 @@
+{
+  "name": "local-ticket-console",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "多机构本地工单后台：按服务端机构与角色做鉴权，权限撤销即时生效",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/e2e.mjs"
+  },
+  "engines": {
+    "node": ">=18.17"
+  }
+}
