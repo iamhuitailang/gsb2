@@ -1,0 +1,15 @@
+{
+  "name": "local-contract-vault",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "本地合同库：一次性领取链接 + 短期只读访问会话",
+  "scripts": {
+    "start": "node src/server.js",
+    "demo": "node scripts/demo.js",
+    "test": "node scripts/demo.js"
+  },
+  "engines": {
+    "node": ">=18.17"
+  }
+}
