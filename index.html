@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CSP 检查台（本地）</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <h1>内容安全策略（CSP）检查台</h1>
+    <p class="muted">纯本地运行：所有检查都在浏览器内完成，不发送任何输入到网络。</p>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>输入</h2>
+
+      <label for="pageUrl">页面地址（用于解析 'self' 与相对路径）</label>
+      <input type="text" id="pageUrl" value="https://shop.example.com/app/index.html" spellcheck="false">
+
+      <div class="sample-row">
+        <label for="sampleSelect">本地样例：</label>
+        <select id="sampleSelect"></select>
+        <button id="loadSampleBtn" type="button">加载样例</button>
+        <span id="sampleDesc" class="muted"></span>
+      </div>
+
+      <label for="policies">策略（每行一条，多条同时生效）</label>
+      <textarea id="policies" rows="4" spellcheck="false"
+        placeholder="default-src 'self'; script-src 'self' https://cdn.example.com"></textarea>
+
+      <label for="resources">资源清单（每行一项：<code>类型 地址|inline [nonce=...] [hash=...]</code>，类型支持 script / style / img / font / connect / frame / object）</label>
+      <textarea id="resources" rows="8" spellcheck="false"
+        placeholder="script https://cdn.example.com/app.js&#10;script inline nonce=abc123&#10;img /logo.png"></textarea>
+
+      <div class="button-row">
+        <button id="runBtn" type="button" class="primary">检查</button>
+        <button id="clearBtn" type="button">清空输入</button>
+      </div>
+    </section>
+
+    <div id="errors"></div>
+
+    <section class="panel">
+      <h2>统计</h2>
+      <div id="stats"></div>
+    </section>
+
+    <section class="panel">
+      <h2>检查结果</h2>
+      <table id="resultTable">
+        <thead>
+          <tr><th>#</th><th>类型</th><th>资源</th><th>结论</th><th>判断依据</th></tr>
+        </thead>
+        <tbody id="resultBody"></tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <h2>策略分析（重复项 / 未知规则 / 格式问题）</h2>
+      <div id="policyAnalysis"></div>
+    </section>
+  </main>
+
+  <footer class="muted">
+    检查结果为静态分析结论，不能替代真实浏览器验证；详见 README。
+  </footer>
+
+  <script src="js/csp.js"></script>
+  <script src="js/samples.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
