@@ -1,0 +1,77 @@
+{
+  "config": {"max_ttl": 300, "negative_ttl": 60, "max_cname_depth": 4, "clock_start": 0},
+  "steps": [
+    {
+      "op": "query", "id": 1, "qname": "www.example.com", "qtype": "A",
+      "upstream": {
+        "id": 1, "rcode": "NOERROR",
+        "question": {"name": "www.example.com", "type": "A", "class": "IN"},
+        "answers": [
+          {"name": "www.example.com", "type": "CNAME", "class": "IN", "ttl": 200, "data": "cdn.example.net"},
+          {"name": "cdn.example.net", "type": "A", "class": "IN", "ttl": 200, "data": "192.0.2.50"}
+        ]
+      }
+    },
+    {"op": "query", "id": 2, "qname": "cdn.example.net", "qtype": "A"},
+    {
+      "op": "query", "id": 3, "qname": "alias.example.com", "qtype": "A",
+      "upstream": {
+        "id": 3, "rcode": "NOERROR",
+        "question": {"name": "alias.example.com", "type": "A", "class": "IN"},
+        "answers": [
+          {"name": "alias.example.com", "type": "CNAME", "class": "IN", "ttl": 200, "data": "cdn.example.net"}
+        ]
+      }
+    },
+    {
+      "op": "query", "id": 4, "qname": "loop1.example.com", "qtype": "A",
+      "upstream": {
+        "id": 4, "rcode": "NOERROR",
+        "question": {"name": "loop1.example.com", "type": "A", "class": "IN"},
+        "answers": [
+          {"name": "loop1.example.com", "type": "CNAME", "class": "IN", "ttl": 200, "data": "loop2.example.com"},
+          {"name": "loop2.example.com", "type": "CNAME", "class": "IN", "ttl": 200, "data": "loop1.example.com"}
+        ]
+      }
+    },
+    {
+      "op": "query", "id": 5, "qname": "dangling.example.com", "qtype": "A",
+      "upstream": {
+        "id": 5, "rcode": "NOERROR",
+        "question": {"name": "dangling.example.com", "type": "A", "class": "IN"},
+        "answers": [
+          {"name": "dangling.example.com", "type": "CNAME", "class": "IN", "ttl": 200, "data": "missing.example.com"}
+        ]
+      }
+    },
+    {"op": "query", "id": 6, "qname": "dangling.example.com", "qtype": "A"},
+    {
+      "op": "query", "id": 7, "qname": "conflict.example.com", "qtype": "A",
+      "upstream": {
+        "id": 7, "rcode": "NOERROR",
+        "question": {"name": "conflict.example.com", "type": "A", "class": "IN"},
+        "answers": [
+          {"name": "conflict.example.com", "type": "CNAME", "class": "IN", "ttl": 200, "data": "a.example.com"},
+          {"name": "conflict.example.com", "type": "CNAME", "class": "IN", "ttl": 200, "data": "b.example.com"},
+          {"name": "a.example.com", "type": "A", "class": "IN", "ttl": 200, "data": "192.0.2.1"},
+          {"name": "b.example.com", "type": "A", "class": "IN", "ttl": 200, "data": "192.0.2.2"}
+        ]
+      }
+    },
+    {
+      "op": "query", "id": 8, "qname": "deep0.example.com", "qtype": "A",
+      "upstream": {
+        "id": 8, "rcode": "NOERROR",
+        "question": {"name": "deep0.example.com", "type": "A", "class": "IN"},
+        "answers": [
+          {"name": "deep0.example.com", "type": "CNAME", "class": "IN", "ttl": 100, "data": "deep1.example.com"},
+          {"name": "deep1.example.com", "type": "CNAME", "class": "IN", "ttl": 100, "data": "deep2.example.com"},
+          {"name": "deep2.example.com", "type": "CNAME", "class": "IN", "ttl": 100, "data": "deep3.example.com"},
+          {"name": "deep3.example.com", "type": "CNAME", "class": "IN", "ttl": 100, "data": "deep4.example.com"},
+          {"name": "deep4.example.com", "type": "CNAME", "class": "IN", "ttl": 100, "data": "deep5.example.com"},
+          {"name": "deep5.example.com", "type": "A", "class": "IN", "ttl": 100, "data": "192.0.2.99"}
+        ]
+      }
+    }
+  ]
+}

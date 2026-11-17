@@ -1,0 +1,60 @@
+{
+  "config": {"max_ttl": 300, "negative_ttl": 60, "max_cname_depth": 8, "clock_start": 1000},
+  "steps": [
+    {
+      "op": "query", "id": 1, "qname": "www.example.com", "qtype": "A",
+      "upstream": {
+        "id": 1, "rcode": "NOERROR",
+        "question": {"name": "www.example.com", "type": "A", "class": "IN"},
+        "answers": [
+          {"name": "www.example.com", "type": "A", "class": "IN", "ttl": 3600, "data": "192.0.2.10"}
+        ]
+      }
+    },
+    {"op": "query", "id": 2, "qname": "WWW.Example.COM.", "qtype": "A"},
+    {"op": "advance", "seconds": 301},
+    {"op": "cleanup"},
+    {
+      "op": "query", "id": 3, "qname": "www.example.com", "qtype": "A",
+      "upstream": {
+        "id": 3, "rcode": "NOERROR",
+        "question": {"name": "www.example.com", "type": "A", "class": "IN"},
+        "answers": [
+          {"name": "www.example.com", "type": "A", "class": "IN", "ttl": 120, "data": "192.0.2.11"}
+        ]
+      }
+    },
+    {
+      "op": "query", "id": 4, "qname": "spoofed.example.com", "qtype": "A",
+      "upstream": {
+        "id": 999, "rcode": "NOERROR",
+        "question": {"name": "spoofed.example.com", "type": "A", "class": "IN"},
+        "answers": [
+          {"name": "spoofed.example.com", "type": "A", "class": "IN", "ttl": 600, "data": "198.51.100.66"}
+        ]
+      }
+    },
+    {
+      "op": "query", "id": 5, "qname": "spoofed.example.com", "qtype": "A",
+      "upstream": {
+        "id": 5, "rcode": "NOERROR",
+        "question": {"name": "evil.example.net", "type": "A", "class": "IN"},
+        "answers": [
+          {"name": "evil.example.net", "type": "A", "class": "IN", "ttl": 600, "data": "203.0.113.66"}
+        ]
+      }
+    },
+    {
+      "op": "query", "id": 6, "qname": "spoofed.example.com", "qtype": "A",
+      "upstream": {
+        "id": 6, "rcode": "NOERROR",
+        "question": {"name": "spoofed.example.com", "type": "A", "class": "IN"},
+        "answers": [
+          {"name": "unrelated.example.org", "type": "A", "class": "IN", "ttl": 600, "data": "203.0.113.99"}
+        ]
+      }
+    },
+    {"op": "query", "id": 7, "qname": "spoofed.example.com", "qtype": "A"},
+    {"op": "query", "id": 8, "qname": "www.example.com", "qtype": "A"}
+  ]
+}

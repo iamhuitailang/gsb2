@@ -1,0 +1,44 @@
+{
+  "config": {"max_ttl": 300, "negative_ttl": 60, "max_cname_depth": 8, "clock_start": 0},
+  "steps": [
+    {
+      "op": "query", "id": 1, "qname": "gone.example.com", "qtype": "A",
+      "upstream": {
+        "id": 1, "rcode": "NXDOMAIN",
+        "question": {"name": "gone.example.com", "type": "A", "class": "IN"},
+        "answers": []
+      }
+    },
+    {"op": "query", "id": 2, "qname": "gone.example.com", "qtype": "A"},
+    {"op": "advance", "seconds": 61},
+    {"op": "query", "id": 3, "qname": "gone.example.com", "qtype": "A"},
+    {
+      "op": "query", "id": 4, "qname": "flaky.example.com", "qtype": "A",
+      "upstream": {
+        "id": 4, "rcode": "SERVFAIL",
+        "question": {"name": "flaky.example.com", "type": "A", "class": "IN"},
+        "answers": []
+      }
+    },
+    {"op": "query", "id": 5, "qname": "flaky.example.com", "qtype": "A"},
+    {
+      "op": "query", "id": 6, "qname": "stable.example.com", "qtype": "A",
+      "upstream": {
+        "id": 6, "rcode": "NOERROR",
+        "question": {"name": "stable.example.com", "type": "A", "class": "IN"},
+        "answers": [
+          {"name": "stable.example.com", "type": "A", "class": "IN", "ttl": 300, "data": "192.0.2.70"}
+        ]
+      }
+    },
+    {
+      "op": "query", "id": 7, "qname": "stable.example.com", "qtype": "A",
+      "upstream": {
+        "id": 7, "rcode": "SERVFAIL",
+        "question": {"name": "stable.example.com", "type": "A", "class": "IN"},
+        "answers": []
+      }
+    },
+    {"op": "query", "id": 8, "qname": "stable.example.com", "qtype": "A"}
+  ]
+}
