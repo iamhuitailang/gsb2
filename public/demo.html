@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>演示请求 · 客户资料中心</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="topbar" id="topbar"></div>
+
+  <div class="container">
+    <div class="card">
+      <h2>原始请求演示</h2>
+      <p class="muted">
+        直接构造发往服务端的 JSON，绕过页面表单限制，验证服务端字段白名单与归属校验。
+        当前登录身份决定走本人接口还是主管接口。
+      </p>
+
+      <label>请求方法 / 路径</label>
+      <div style="display: flex; gap: 10px">
+        <select id="method" style="width: 110px">
+          <option>PUT</option>
+          <option>GET</option>
+        </select>
+        <input id="path" value="/api/customer/me" />
+      </div>
+
+      <label>请求体（JSON，GET 时忽略）</label>
+      <textarea id="body" rows="8" style="font-family: ui-monospace, Menlo, monospace; font-size: 13px"></textarea>
+
+      <div class="preset-row" style="margin-top: 12px">
+        <button type="button" data-preset="noteOnly">仅签收备注（客户应成功）</button>
+        <button type="button" data-preset="noteAndCredit">签收备注 + 信用等级（客户应整次拒绝）</button>
+        <button type="button" data-preset="creditAdmin">主管改信用等级</button>
+        <button type="button" data-preset="crossStore">主管改跨店客户</button>
+      </div>
+
+      <div id="alert" class="alert"></div>
+      <button id="sendBtn">发送请求</button>
+    </div>
+
+    <div class="card">
+      <h2>响应</h2>
+      <pre id="response">（暂无）</pre>
+    </div>
+  </div>
+
+  <script src="/js/common.js"></script>
+  <script>
+    let user;
+
+    const presets = {
+      noteOnly: {
+        path: '/api/customer/me',
+        body: { deliveryNote: '请在下午三点后派送' },
+      },
+      noteAndCredit: {
+        path: '/api/customer/me',
+        // 同时带能改的签收备注和受保护的信用等级：两项均不落库
+        body: { deliveryNote: '请在下午三点后派送', creditLevel: 'A' },
+      },
+      creditAdmin: {
+        path: '/api/admin/customers/1',
+        body: { creditLevel: 'A' },
+      },
+      crossStore: {
+        path: '/api/admin/customers/2',
+        body: { creditLevel: 'C' },
+      },
+    };
+
+    async function init() {
+      user = await guard();
+      if (!user) return;
+      renderTopbar(user, '/demo.html');
+      applyPreset('noteAndCredit');
+    }
+
+    function applyPreset(name) {
+      const preset = presets[name];
+      document.getElementById('path').value = preset.path;
+      document.getElementById('method').value = 'PUT';
+      document.getElementById('body').value = JSON.stringify(preset.body, null, 2);
+    }
+
+    document.querySelectorAll('.preset-row button').forEach((btn) => {
+      btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+    });
+
+    document.getElementById('sendBtn').addEventListener('click', async () => {
+      hideAlert('alert');
+      const method = document.getElementById('method').value;
+      const reqPath = document.getElementById('path').value.trim();
+      let payload;
+      try {
+        payload = method === 'GET' ? undefined : JSON.parse(document.getElementById('body').value);
+      } catch {
+        showAlert('alert', '请求体不是合法 JSON');
+        return;
+      }
+      try {
+        const data = await api(method, reqPath, payload);
+        showAlert('alert', `请求成功（${method} ${reqPath}）`, 'success');
+        document.getElementById('response').textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        showAlert('alert', `请求被拒绝（HTTP ${err.status}）：${err.message}`);
+        document.getElementById('response').textContent = JSON.stringify(err.data, null, 2);
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>

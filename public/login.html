@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>登录 · 客户资料中心</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="card">
+      <h2>客户资料中心 · 登录</h2>
+      <p class="muted">本地演示环境，所有账号密码均为 <code>demo1234</code></p>
+
+      <label for="username">用户名</label>
+      <input id="username" placeholder="如 cust_jia" autocomplete="username" />
+
+      <label for="password">密码</label>
+      <input id="password" type="password" value="demo1234" autocomplete="current-password" />
+
+      <div id="alert" class="alert"></div>
+      <button id="loginBtn" style="width: 100%">登录</button>
+
+      <label>一键填充演示账号</label>
+      <div class="quick-accounts">
+        <button type="button" data-username="cust_jia">甲店客户<br /><small>cust_jia</small></button>
+        <button type="button" data-username="cust_yi">乙店客户<br /><small>cust_yi</small></button>
+        <button type="button" data-username="mgr_jia">甲店主管<br /><small>mgr_jia</small></button>
+        <button type="button" data-username="mgr_yi">乙店主管<br /><small>mgr_yi</small></button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/common.js"></script>
+  <script>
+    document.querySelectorAll('.quick-accounts button').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.getElementById('username').value = btn.dataset.username;
+        document.getElementById('password').value = 'demo1234';
+      });
+    });
+
+    async function doLogin() {
+      hideAlert('alert');
+      try {
+        const data = await api('POST', '/api/auth/login', {
+          username: document.getElementById('username').value.trim(),
+          password: document.getElementById('password').value,
+        });
+        window.location.href =
+          data.user.role === 'supervisor' ? '/admin.html' : '/customer.html';
+      } catch (err) {
+        showAlert('alert', err.message);
+      }
+    }
+
+    document.getElementById('loginBtn').addEventListener('click', doLogin);
+    document.getElementById('password').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doLogin();
+    });
+
+    // 已登录则直接进入对应首页
+    currentUser().then((user) => {
+      if (user) {
+        window.location.href = user.role === 'supervisor' ? '/admin.html' : '/customer.html';
+      }
+    });
+  </script>
+</body>
+</html>

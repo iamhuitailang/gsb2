@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>审计记录 · 客户资料中心</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="topbar" id="topbar"></div>
+
+  <div class="container">
+    <div class="card">
+      <h2>审计记录（最近 200 条）</h2>
+      <p class="muted">
+        记录每次字段改动与越权/跨店拒绝尝试。地址字段刻意不保存原文，统一显示为
+        <code>[地址已隐藏]</code>。
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>时间</th>
+            <th>操作人</th>
+            <th>客户</th>
+            <th>动作</th>
+            <th>字段</th>
+            <th>旧值</th>
+            <th>新值</th>
+            <th>结果</th>
+            <th>说明</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script src="/js/common.js"></script>
+  <script>
+    (async () => {
+      const user = await guard('supervisor');
+      if (!user) return;
+      renderTopbar(user, '/audit.html');
+
+      const { logs } = await api('GET', '/api/admin/audit-logs');
+      document.getElementById('rows').innerHTML = logs
+        .map((log) => {
+          const rowClass = log.result === 'success' ? 'row-success' : 'row-denied';
+          return `
+            <tr class="${rowClass}">
+              <td>${esc(log.created_at)}</td>
+              <td>${esc(log.actor_name)}<br /><small class="muted">${esc(log.actor_role)}</small></td>
+              <td>${log.customer_id ? '#' + log.customer_id : '—'}</td>
+              <td>${esc(log.action)}</td>
+              <td>${log.field ? esc(log.field) : '—'}</td>
+              <td>${log.old_value === null ? '—' : esc(log.old_value)}</td>
+              <td>${log.new_value === null ? '—' : esc(log.new_value)}</td>
+              <td>${log.result === 'success' ? '<span class="tag">成功</span>' : '<span class="tag danger">拒绝</span>'}</td>
+              <td>${log.detail ? esc(log.detail) : '—'}</td>
+            </tr>`;
+        })
+        .join('');
+    })();
+  </script>
+</body>
+</html>

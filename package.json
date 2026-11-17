@@ -1,0 +1,13 @@
+{
+  "name": "gsb2",
+  "version": "1.0.0",
+  "private": true,
+  "description": "客户资料本地资料页与维护后台：字段级权限、门店归属校验与审计",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node --no-warnings src/server.js",
+    "test": "node --no-warnings test/smoke.js"
+  }
+}

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>我的资料 · 客户资料中心</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="topbar" id="topbar"></div>
+
+  <div class="container">
+    <div class="card">
+      <h2>我的资料</h2>
+      <p class="muted">
+        你可以修改显示名、地址和签收备注；信用等级、所属门店、停用状态由主管维护，页面上仅展示。
+      </p>
+
+      <label for="displayName">显示名</label>
+      <input id="displayName" maxlength="50" />
+
+      <label for="address">地址</label>
+      <textarea id="address" rows="3" maxlength="200"></textarea>
+
+      <label for="deliveryNote">签收备注</label>
+      <textarea id="deliveryNote" rows="3" maxlength="200"></textarea>
+
+      <h2 style="margin-top: 26px; font-size: 15px">
+        受保护字段 <span class="tag lock">仅主管可改</span>
+      </h2>
+
+      <label>信用等级</label>
+      <input id="creditLevel" disabled />
+      <div class="hint">提交该字段会被服务端整次拒绝，不会落库</div>
+
+      <label>所属门店</label>
+      <input id="storeId" disabled />
+
+      <label>停用状态</label>
+      <input id="disabled" disabled />
+
+      <div id="alert" class="alert"></div>
+      <button id="saveBtn">保存修改</button>
+    </div>
+  </div>
+
+  <script src="/js/common.js"></script>
+  <script>
+    let user;
+
+    async function load() {
+      user = await guard('customer');
+      if (!user) return;
+      renderTopbar(user, '/customer.html');
+
+      const { customer } = await api('GET', '/api/customer/me');
+      document.getElementById('displayName').value = customer.displayName;
+      document.getElementById('address').value = customer.address;
+      document.getElementById('deliveryNote').value = customer.deliveryNote;
+      document.getElementById('creditLevel').value = customer.creditLevel;
+      document.getElementById('storeId').value = `门店 #${customer.storeId}`;
+      document.getElementById('disabled').value = customer.disabled ? '已停用' : '正常';
+    }
+
+    document.getElementById('saveBtn').addEventListener('click', async () => {
+      hideAlert('alert');
+      // 只提交本人有权改的三个字段，服务端仍会再做一次白名单校验
+      const payload = {
+        displayName: document.getElementById('displayName').value,
+        address: document.getElementById('address').value,
+        deliveryNote: document.getElementById('deliveryNote').value,
+      };
+      try {
+        const result = await api('PUT', '/api/customer/me', payload);
+        if (result.changed) {
+          showAlert('alert', `保存成功，已更新 ${result.changes.length} 个字段`, 'success');
+        } else {
+          showAlert('alert', '资料没有变化，无需更新', 'warn');
+        }
+      } catch (err) {
+        const rejected = err.data?.error?.rejectedFields;
+        const msg = rejected
+          ? `${err.message}：${rejected.join('、')}。原资料保持不变。`
+          : err.message;
+        showAlert('alert', msg);
+      }
+    });
+
+    load();
+  </script>
+</body>
+</html>

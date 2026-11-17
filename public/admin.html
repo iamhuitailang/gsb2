@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>维护后台 · 客户资料中心</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="topbar" id="topbar"></div>
+
+  <div class="container">
+    <div class="card">
+      <h2>客户列表</h2>
+      <p class="muted" id="scopeHint"></p>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>显示名</th>
+            <th>门店</th>
+            <th>信用等级</th>
+            <th>状态</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="customerRows"></tbody>
+      </table>
+    </div>
+
+    <div class="card" id="editCard" style="display: none">
+      <h2>维护客户 <span id="editTitle"></span> <span id="ownerTag" class="tag"></span></h2>
+      <div id="crossStoreWarn" class="alert show warn" style="display: none">
+        该客户属于其他门店：可以查看详情，但任何修改提交都会被服务端拒绝。
+      </div>
+
+      <label for="f_displayName">显示名</label>
+      <input id="f_displayName" maxlength="50" />
+
+      <label for="f_address">地址</label>
+      <textarea id="f_address" rows="2" maxlength="200"></textarea>
+
+      <label for="f_deliveryNote">签收备注</label>
+      <textarea id="f_deliveryNote" rows="2" maxlength="200"></textarea>
+
+      <label for="f_creditLevel">信用等级 <span class="tag">主管字段</span></label>
+      <select id="f_creditLevel">
+        <option value="A">A</option>
+        <option value="B">B</option>
+        <option value="C">C</option>
+        <option value="D">D</option>
+      </select>
+
+      <label for="f_storeId">所属门店 <span class="tag">主管字段</span></label>
+      <select id="f_storeId">
+        <option value="1">门店 #1（甲店）</option>
+        <option value="2">门店 #2（乙店）</option>
+      </select>
+
+      <label for="f_disabled">停用状态 <span class="tag">主管字段</span></label>
+      <select id="f_disabled">
+        <option value="false">正常</option>
+        <option value="true">停用</option>
+      </select>
+
+      <div id="alert" class="alert"></div>
+      <button id="saveBtn">提交修改</button>
+    </div>
+  </div>
+
+  <script src="/js/common.js"></script>
+  <script>
+    let user;
+    let current = null;
+    let editable = false;
+
+    async function init() {
+      user = await guard('supervisor');
+      if (!user) return;
+      renderTopbar(user, '/admin.html');
+      document.getElementById('scopeHint').textContent =
+        `你负责门店 #${user.storeId}。列表含全部客户，跨店客户只读。`;
+
+      const { customers } = await api('GET', '/api/admin/customers');
+      document.getElementById('customerRows').innerHTML = customers
+        .map((c) => {
+          const mine = c.storeId === user.storeId;
+          return `
+            <tr>
+              <td>${c.id}</td>
+              <td>${esc(c.displayName)}</td>
+              <td>#${c.storeId} ${mine ? '' : '<span class="tag lock">跨店</span>'}</td>
+              <td>${esc(c.creditLevel)}</td>
+              <td>${c.disabled ? '<span class="tag danger">已停用</span>' : '正常'}</td>
+              <td><button class="small secondary" onclick="openCustomer(${c.id})">查看/维护</button></td>
+            </tr>`;
+        })
+        .join('');
+    }
+
+    async function openCustomer(id) {
+      hideAlert('alert');
+      const { customer } = await api('GET', `/api/admin/customers/${id}`);
+      current = customer;
+      editable = customer.storeId === user.storeId;
+
+      document.getElementById('editCard').style.display = 'block';
+      document.getElementById('editTitle').textContent = `#${customer.id} ${customer.displayName}`;
+      document.getElementById('ownerTag').textContent =
+        editable ? `本店（门店 #${user.storeId}）` : `归属门店 #${customer.storeId}`;
+      document.getElementById('ownerTag').className = editable ? 'tag' : 'tag lock';
+      document.getElementById('crossStoreWarn').style.display = editable ? 'none' : 'block';
+
+      document.getElementById('f_displayName').value = customer.displayName;
+      document.getElementById('f_address').value = customer.address;
+      document.getElementById('f_deliveryNote').value = customer.deliveryNote;
+      document.getElementById('f_creditLevel').value = customer.creditLevel;
+      document.getElementById('f_storeId').value = String(customer.storeId);
+      document.getElementById('f_disabled').value = String(customer.disabled);
+
+      for (const fid of ['f_displayName', 'f_address', 'f_deliveryNote', 'f_creditLevel', 'f_storeId', 'f_disabled']) {
+        document.getElementById(fid).disabled = !editable;
+      }
+      document.getElementById('saveBtn').disabled = !editable;
+      document.getElementById('saveBtn').style.opacity = editable ? '1' : '0.5';
+    }
+
+    document.getElementById('saveBtn').addEventListener('click', async () => {
+      if (!current || !editable) return;
+      hideAlert('alert');
+      const payload = {
+        displayName: document.getElementById('f_displayName').value,
+        address: document.getElementById('f_address').value,
+        deliveryNote: document.getElementById('f_deliveryNote').value,
+        creditLevel: document.getElementById('f_creditLevel').value,
+        storeId: Number(document.getElementById('f_storeId').value),
+        disabled: document.getElementById('f_disabled').value === 'true',
+      };
+      try {
+        const result = await api('PUT', `/api/admin/customers/${current.id}`, payload);
+        showAlert(
+          'alert',
+          result.changed ? `保存成功，已更新 ${result.changes.length} 个字段` : '资料没有变化',
+          result.changed ? 'success' : 'warn',
+        );
+        await openCustomer(current.id);
+        await init();
+      } catch (err) {
+        const rejected = err.data?.error?.rejectedFields;
+        showAlert(
+          'alert',
+          rejected ? `${err.message}：${rejected.join('、')}` : err.message,
+        );
+      }
+    });
+
+    init();
+  </script>
+</body>
+</html>
