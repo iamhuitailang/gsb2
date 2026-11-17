@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>本地知识库</title>
+<style>
+  body { font-family: -apple-system, "PingFang SC", sans-serif; margin: 0; display: flex; height: 100vh; }
+  #sidebar { width: 260px; border-right: 1px solid #ddd; padding: 12px; overflow: auto; }
+  #main { flex: 1; padding: 16px; overflow: auto; }
+  .dir { cursor: pointer; color: #0366d6; }
+  .doc { cursor: pointer; color: #24292e; margin-left: 12px; }
+  .doc:hover, .dir:hover { text-decoration: underline; }
+  #topbar { padding: 8px 12px; background: #f6f8fa; border-bottom: 1px solid #ddd; }
+  pre { background: #f6f8fa; padding: 12px; border-radius: 6px; white-space: pre-wrap; }
+  .deny { color: #d73a49; } .allow { color: #22863a; }
+  button { margin-left: 8px; }
+  input, select { margin: 4px 0; }
+  h3 { margin-bottom: 4px; }
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <h3>目录</h3>
+  <div id="tree"></div>
+</div>
+<div style="flex:1;display:flex;flex-direction:column;">
+  <div id="topbar">
+    用户:<select id="userSel"></select>
+    <input id="searchBox" placeholder="搜索标题/内容">
+    <button onclick="doSearch()">搜索</button>
+    <span id="adminHint"></span>
+  </div>
+  <div id="main"><p>选择左侧目录或文档。</p></div>
+</div>
+<script>
+let users = [], groups = [], me = null;
+
+async function api(path, opts = {}) {
+  opts.headers = Object.assign({'X-User-Id': me.id, 'Content-Type': 'application/json'}, opts.headers || {});
+  const r = await fetch(path, opts);
+  if (!r.ok) {
+    let detail = r.status;
+    try { detail = (await r.json()).detail; } catch (e) {}
+    const err = new Error(detail); err.status = r.status; throw err;
+  }
+  return r.json();
+}
+
+async function init() {
+  // 先以管理员(种子用户 id=1)拿用户列表;失败则说明无种子数据
+  me = { id: 1 };
+  users = await api('/api/users');
+  groups = await api('/api/groups');
+  const sel = document.getElementById('userSel');
+  users.forEach(u => {
+    const o = document.createElement('option');
+    o.value = u.id; o.textContent = u.name + (u.is_admin ? '(管理员)' : '');
+    sel.appendChild(o);
+  });
+  sel.onchange = () => { me.id = parseInt(sel.value); loadTree(); showMain('<p>已切换用户。</p>'); };
+  sel.value = users[users.length - 1] ? users[0].id : 1;
+  sel.value = users.find(u => !u.is_admin)?.id ?? users[0].id;
+  me.id = parseInt(sel.value);
+  loadTree();
+}
+
+async function loadTree() {
+  const tree = await api('/api/tree');
+  const el = document.getElementById('tree');
+  el.innerHTML = '';
+  function render(nodes, container) {
+    nodes.forEach(n => {
+      const d = document.createElement('div');
+      d.className = 'dir'; d.textContent = '📁 ' + n.name;
+      d.onclick = (e) => { e.stopPropagation(); openDir(n.id); };
+      container.appendChild(d);
+      const childBox = document.createElement('div');
+      childBox.style.marginLeft = '16px';
+      container.appendChild(childBox);
+      render(n.children, childBox);
+    });
+  }
+  render(tree, el);
+}
+
+async function openDir(id) {
+  try {
+    const d = await api('/api/directories/' + id);
+    let html = `<h3>📁 ${d.name}</h3>`;
+    d.children.forEach(c => html += `<div class="dir" onclick="openDir(${c.id})">📁 ${c.name}</div>`);
+    d.documents.forEach(doc => html += `<div class="doc" onclick="openDoc(${doc.id})">📄 ${doc.title}</div>`);
+    if (!d.children.length && !d.documents.length) html += '<p>(空目录)</p>';
+    if (meAdmin()) html += `<hr><h4>ACL 管理</h4><div id="aclBox"></div>` + aclForm(id);
+    showMain(html);
+    if (meAdmin()) loadAcl(id);
+  } catch (e) { showMain(`<p class="deny">无法打开目录:${e.message}</p>`); }
+}
+
+function aclForm(dirId) {
+  const gopts = groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+  return `<div>
+    <select id="aclGroup">${gopts}</select>
+    <select id="aclPerm"><option value="view">view</option><option value="edit">edit</option></select>
+    <select id="aclEffect"><option value="allow">allow</option><option value="deny">deny</option></select>
+    <button onclick="addAcl(${dirId})">添加</button>
+  </div>`;
+}
+
+async function loadAcl(dirId) {
+  const list = await api('/api/acl?directory_id=' + dirId);
+  const box = document.getElementById('aclBox');
+  box.innerHTML = list.map(a =>
+    `<div>[#${a.id}] ${a.group_name} — ${a.permission} — <b class="${a.effect === 'deny' ? 'deny' : 'allow'}">${a.effect}</b>
+     <button onclick="delAcl(${a.id}, ${dirId})">删除</button></div>`).join('') || '<i>无条目</i>';
+}
+
+async function addAcl(dirId) {
+  await api('/api/acl', { method: 'POST', body: JSON.stringify({
+    directory_id: dirId,
+    group_id: parseInt(document.getElementById('aclGroup').value),
+    permission: document.getElementById('aclPerm').value,
+    effect: document.getElementById('aclEffect').value }) });
+  loadAcl(dirId);
+}
+
+async function delAcl(id, dirId) {
+  await api('/api/acl/' + id, { method: 'DELETE' });
+  loadAcl(dirId);
+}
+
+async function openDoc(id) {
+  try {
+    const d = await api('/api/documents/' + id);
+    const perm = await api(`/api/documents/${id}/permission?action=view`);
+    showMain(`<h3>📄 ${d.title}</h3><pre>${escapeHtml(d.content)}</pre>
+      <p><a href="/api/documents/${id}/download" onclick="return download(${id})">下载</a></p>
+      ${permHtml(perm)}`);
+  } catch (e) {
+    let permHtmlStr = '';
+    try {
+      const perm = await api(`/api/documents/${id}/permission?action=view`);
+      permHtmlStr = permHtml(perm);
+    } catch (e2) {}
+    showMain(`<p class="deny">访问被拒绝:${e.message}</p>${permHtmlStr}`);
+  }
+}
+
+function permHtml(perm) {
+  let html = `<h4>权限详情</h4><p class="${perm.allowed ? 'allow' : 'deny'}">${perm.allowed ? '✔ 允许' : '✘ 拒绝'} — ${perm.reason}</p><ul>`;
+  perm.chain.forEach(level => {
+    const entries = level.entries.map(e =>
+      `${e.group_name}: ${e.permission}/${e.effect}`).join(', ') || '无命中条目';
+    html += `<li>目录「${level.directory_name}」: ${entries}</li>`;
+  });
+  return html + '</ul>';
+}
+
+async function download(id) {
+  try {
+    const r = await fetch('/api/documents/' + id + '/download', { headers: { 'X-User-Id': me.id } });
+    if (!r.ok) { alert('下载被拒绝:' + (await r.json()).detail); return false; }
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'document.md'; a.click();
+  } catch (e) { alert('下载失败'); }
+  return false;
+}
+
+async function doSearch() {
+  const q = document.getElementById('searchBox').value;
+  const results = await api('/api/search?q=' + encodeURIComponent(q));
+  let html = `<h3>搜索「${escapeHtml(q)}」(${results.length} 条)</h3>`;
+  results.forEach(r => html += `<div class="doc" onclick="openDoc(${r.id})">📄 ${r.title}</div><small>${escapeHtml(r.snippet)}</small>`);
+  if (!results.length) html += '<p>无结果(受限文档已被过滤)。</p>';
+  showMain(html);
+}
+
+function meAdmin() { const u = users.find(u => u.id === me.id); return u && u.is_admin; }
+function showMain(html) { document.getElementById('main').innerHTML = html; }
+function escapeHtml(s) { return s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+init();
+</script>
+</body>
+</html>
