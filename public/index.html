@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>客服工作台 · 本地演示</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="launcher">
+  <main>
+    <header class="hero">
+      <p class="eyebrow">本地演示后台</p>
+      <h1>一个客服账号，两个组织，一个撞号客户</h1>
+      <p class="lede">
+        同一个客服账号同时属于甲、乙两个组织，两边都有编号为 <code>C01</code> 的客户。
+        每个标签页的组织由它自己的地址绑定；切换一个标签的组织，不会影响另一个标签。
+      </p>
+    </header>
+
+    <section class="panel" id="login-panel">
+      <h2>1. 以演示账号登录</h2>
+      <p class="hint">登录状态由 Cookie 保存，因此两个标签共享同一个“人”；但“当前组织”不存放在会话里，只存在于各标签自己的地址中。</p>
+      <div class="row" id="identity-row">
+        <button class="btn primary" data-login="u-agent">登录为「客服小李」（甲 + 乙）</button>
+        <button class="btn" data-login="u-outsider">切换为「已离职客服」（无组织权限）</button>
+      </div>
+      <p class="session-line" id="session-line">正在检查登录状态…</p>
+    </section>
+
+    <section class="panel">
+      <h2>2. 并排打开两个标签</h2>
+      <div class="tab-cards">
+        <article class="tab-card jia">
+          <h3>甲公司 · C01</h3>
+          <p>王女士 · 甲公司的客户记录</p>
+          <a class="btn primary" id="open-jia" href="/o/jia/customers/C01" target="_blank" rel="noopener">打开甲标签</a>
+        </article>
+        <article class="tab-card yi">
+          <h3>乙公司 · C01</h3>
+          <p>王先生 · 乙公司的客户记录</p>
+          <a class="btn primary" id="open-yi" href="/o/yi/customers/C01" target="_blank" rel="noopener">打开乙标签</a>
+        </article>
+      </div>
+      <p class="hint">
+        想快速复现：先点“打开甲标签”，再点“打开乙标签”，然后把两个窗口并排。
+        也可以在同一个标签里切换组织——地址会随之变化，另一个标签纹丝不动。
+      </p>
+    </section>
+
+    <section class="panel">
+      <h2>3. 演示脚本</h2>
+      <ol class="steps">
+        <li>甲标签打开 <code>/o/jia/customers/C01</code>，乙标签打开 <code>/o/yi/customers/C01</code>。</li>
+        <li>在乙标签把备注改成一份内容并保存。</li>
+        <li>回到甲标签，保存另一份备注。</li>
+        <li>刷新甲标签的原地址：看到的仍是甲自己的备注，看不到乙的；保存也只落到甲的记录。</li>
+        <li>勾选“模拟慢查询”，在甲标签快速切换到乙再切回甲，观察晚到的旧结果被丢弃的日志。</li>
+        <li>点“切换为已离职客服”，再在任何标签读取或保存，都会被服务端拒绝。</li>
+      </ol>
+    </section>
+  </main>
+  <script type="module" src="/launcher.js"></script>
+</body>
+</html>

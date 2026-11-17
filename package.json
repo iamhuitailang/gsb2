@@ -1,0 +1,15 @@
+{
+  "name": "gsb2-org-bound-desk",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "本地演示：同一客服账号在甲乙两个组织间并行处理撞号客户 C01",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js",
+    "smoke": "node test/smoke.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

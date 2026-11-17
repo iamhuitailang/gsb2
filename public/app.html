@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>客户页 · 客服工作台</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="desk">
+  <header class="topbar">
+    <div class="brand">
+      <span class="dot"></span>
+      <strong>客服工作台</strong>
+      <span class="muted">本地演示</span>
+    </div>
+    <div class="identity" id="identity">…</div>
+  </header>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <h2>组织</h2>
+      <div class="org-switch" id="org-switch" role="tablist" aria-label="切换组织"></div>
+      <p class="hint tiny">
+        组织由当前标签页的地址绑定，只影响本标签。
+      </p>
+
+      <h2>客户</h2>
+      <ul class="customer-list" id="customer-list"></ul>
+    </aside>
+
+    <section class="content" id="content">
+      <div class="placeholder">正在加载客户页…</div>
+    </section>
+
+    <aside class="activity">
+      <div class="activity-head">
+        <h2>请求日志</h2>
+        <button class="btn tiny" id="clear-log">清空</button>
+      </div>
+      <label class="checkline">
+        <input type="checkbox" id="slow-mode" />
+        模拟慢查询（3 秒）
+      </label>
+      <ol class="log" id="log"></ol>
+      <p class="hint tiny">
+        切换组织会作废上一轮请求。晚到的旧组织结果会标记为“已丢弃”，不会覆盖当前页面。
+      </p>
+    </aside>
+  </main>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
