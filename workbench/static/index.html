@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>归档清理工作台</title>
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+<!-- 登录 -->
+<section id="login-view" class="login-view" hidden>
+  <form id="login-form" class="login-card" autocomplete="off">
+    <h1>归档清理工作台</h1>
+    <p class="muted">登录后可整理目录；正式清空归档需要再次确认身份。</p>
+    <label for="login-username">账号</label>
+    <input id="login-username" name="username" autocomplete="username" required>
+    <label for="login-password">密码</label>
+    <input id="login-password" name="password" type="password" autocomplete="current-password" required>
+    <p id="login-error" class="error" role="alert"></p>
+    <button type="submit" class="primary">登录</button>
+  </form>
+</section>
+
+<!-- 工作台 -->
+<section id="app-view" hidden>
+  <header class="topbar">
+    <div class="brand">
+      <span class="dot"></span>
+      <strong>归档清理工作台</strong>
+      <span class="tag">本地</span>
+    </div>
+    <div class="topbar-right">
+      <span id="whoami" class="muted"></span>
+      <button id="logout-btn" class="ghost" type="button">退出</button>
+    </div>
+  </header>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="cleanup" type="button">清理</button>
+    <button class="tab" data-tab="history" type="button">清理记录</button>
+  </nav>
+
+  <main>
+    <!-- 清理页 -->
+    <div id="tab-cleanup" class="tab-panel">
+      <aside class="sidebar">
+        <h2>目录</h2>
+        <ul id="folder-list" class="folder-list"></ul>
+
+        <h2>筛选</h2>
+        <form id="scope-form" autocomplete="off">
+          <label for="scope-batch">批次</label>
+          <select id="scope-batch"></select>
+          <label for="scope-keyword">关键字</label>
+          <input id="scope-keyword" placeholder="按标题筛选，可留空">
+          <button type="submit" class="primary">应用筛选</button>
+        </form>
+        <p class="hint">修改筛选或点“刷新清单”都会重新取回当前范围。</p>
+      </aside>
+
+      <div class="content">
+        <div id="banner" class="banner" hidden></div>
+
+        <section class="card">
+          <div class="card-head">
+            <div>
+              <h2 id="manifest-title">清理范围</h2>
+              <p id="manifest-meta" class="muted">正在加载…</p>
+            </div>
+            <div class="card-actions">
+              <button id="refresh-btn" class="ghost" type="button">刷新清单</button>
+              <button id="open-confirm" class="danger" type="button" disabled>确认清理</button>
+            </div>
+          </div>
+          <div class="count-strip">
+            <div class="count-box">
+              <span class="count-label">待清理条数</span>
+              <strong id="record-count">0</strong>
+            </div>
+            <div class="count-box wide">
+              <span class="count-label">清单摘要</span>
+              <code id="record-digest">—</code>
+            </div>
+          </div>
+          <table class="records">
+            <thead>
+              <tr><th class="col-id">编号</th><th>标题</th><th class="col-batch">批次</th></tr>
+            </thead>
+            <tbody id="record-rows"></tbody>
+          </table>
+          <p id="empty-scope" class="empty" hidden>当前筛选范围没有资料。</p>
+        </section>
+
+        <section id="permit-card" class="card permit-card" hidden>
+          <div class="card-head">
+            <div>
+              <h2>短期许可已生成</h2>
+              <p class="muted">
+                仅限当前会话、本次操作、以及刚才确认的那组记录使用。
+                <span id="permit-countdown"></span>
+              </p>
+            </div>
+          </div>
+          <div class="permit-row">
+            <div>
+              <span class="count-label">操作编号</span>
+              <code id="permit-operation">—</code>
+            </div>
+            <div>
+              <span class="count-label">确认条数</span>
+              <strong id="permit-count">0</strong>
+            </div>
+            <div>
+              <span class="count-label">失效时间</span>
+              <code id="permit-expiry">—</code>
+            </div>
+          </div>
+          <div class="permit-actions">
+            <button id="submit-btn" class="danger" type="button">提交清理（核销许可）</button>
+            <button id="discard-permit" class="ghost" type="button">放弃许可</button>
+          </div>
+          <p class="hint">提交时会再次核对清单：条数或记录有任何变化，许可作废并要求重新确认。</p>
+        </section>
+      </div>
+    </div>
+
+    <!-- 记录页 -->
+    <div id="tab-history" class="tab-panel" hidden>
+      <div class="content full">
+        <section class="card">
+          <div class="card-head">
+            <div>
+              <h2>清理记录</h2>
+              <p class="muted">每次实际删除的清单与操作者。</p>
+            </div>
+            <button id="history-refresh" class="ghost" type="button">刷新</button>
+          </div>
+          <table class="records">
+            <thead>
+              <tr>
+                <th class="col-time">完成时间</th>
+                <th>范围</th>
+                <th class="col-count">条数</th>
+                <th class="col-user">操作者</th>
+                <th class="col-action"></th>
+              </tr>
+            </thead>
+            <tbody id="history-rows"></tbody>
+          </table>
+          <p id="history-empty" class="empty" hidden>还没有完成过清理。</p>
+        </section>
+        <section id="history-detail" class="card" hidden>
+          <div class="card-head">
+            <div>
+              <h2>本次清单</h2>
+              <p id="history-detail-meta" class="muted"></p>
+            </div>
+          </div>
+          <table class="records">
+            <thead>
+              <tr><th class="col-id">编号</th><th>标题</th><th class="col-batch">批次</th></tr>
+            </thead>
+            <tbody id="history-detail-rows"></tbody>
+          </table>
+          <h3>操作流水</h3>
+          <ol id="history-audit" class="audit"></ol>
+        </section>
+      </div>
+    </div>
+  </main>
+</section>
+
+<!-- 确认对话框 -->
+<div id="confirm-modal" class="modal" hidden>
+  <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <h2 id="confirm-title">确认清理</h2>
+    <p class="danger-text">
+      这一步会永久删除下列资料。请核对范围与条数，然后重新输入密码确认身份。
+    </p>
+    <dl class="confirm-meta">
+      <div><dt>目录</dt><dd id="confirm-folder">—</dd></div>
+      <div><dt>筛选</dt><dd id="confirm-filter">—</dd></div>
+      <div><dt>条数</dt><dd id="confirm-count">0</dd></div>
+    </dl>
+    <div class="confirm-list-wrap">
+      <table class="records compact">
+        <thead>
+          <tr><th class="col-id">编号</th><th>标题</th></tr>
+        </thead>
+        <tbody id="confirm-rows"></tbody>
+      </table>
+    </div>
+    <p id="confirm-note" class="hint"></p>
+    <form id="confirm-form" autocomplete="off">
+      <label for="confirm-password">输入登录密码以再次确认身份</label>
+      <input id="confirm-password" type="password" autocomplete="current-password" required>
+      <p id="confirm-error" class="error" role="alert"></p>
+      <div class="modal-actions">
+        <button type="button" id="confirm-cancel" class="ghost">取消</button>
+        <button type="submit" class="danger">验证并生成短期许可</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
