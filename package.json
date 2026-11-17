@@ -1,0 +1,15 @@
+{
+  "name": "csrf-booking-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "双来源预约演示：带会话登录的预约后台 + 通知页，演示 CSRF 来源/校验值防护",
+  "scripts": {
+    "start": "node start-all.js",
+    "start:backend": "node backend/server.js",
+    "start:notification": "node notification/server.js",
+    "verify": "node verify.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
