@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>项目面板</title>
+<style>
+  body { font-family: -apple-system, "PingFang SC", sans-serif; max-width: 860px; margin: 24px auto; padding: 0 16px; color: #222; }
+  h1 { font-size: 20px; }
+  .badge { background: #d33; color: #fff; border-radius: 10px; padding: 1px 8px; font-size: 12px; }
+  .card { border: 1px solid #ddd; border-radius: 8px; padding: 12px 16px; margin: 12px 0; }
+  .muted { color: #888; font-size: 13px; }
+  ul { padding-left: 18px; }
+  li { margin: 4px 0; }
+  .status { font-size: 12px; padding: 1px 6px; border: 1px solid #999; border-radius: 4px; margin-left: 6px; }
+  #conn { font-size: 13px; }
+  .ok { color: #080; } .bad { color: #d33; }
+  button { padding: 4px 12px; }
+  input { padding: 4px 8px; margin-right: 6px; }
+</style>
+</head>
+<body>
+<h1>项目面板 <span id="unread" class="badge" style="display:none"></span></h1>
+<div id="conn" class="muted">未连接</div>
+
+<div id="login" class="card" style="display:none">
+  <input id="u" placeholder="用户名" value="alice">
+  <input id="p" placeholder="密码" type="password" value="alice123">
+  <button onclick="login()">登录</button>
+  <div class="muted">演示账号：alice / alice123（甲+乙），bob / bob123（仅乙）</div>
+</div>
+
+<div id="main" style="display:none">
+  <div class="card">
+    <b>我的项目与任务</b> <span class="muted">（由服务端权限决定，客户端无法自行扩大）</span>
+    <div id="tasks"></div>
+  </div>
+  <div class="card">
+    <b>任务动态</b>
+    <button onclick="markAllRead()">全部标记已读</button>
+    <ul id="events"></ul>
+  </div>
+</div>
+
+<script>
+let maxEventId = 0;
+let es = null;
+
+async function api(path, opts) {
+  const r = await fetch(path, opts);
+  if (r.status === 401) { showLogin(); throw new Error('unauthorized'); }
+  return r.json();
+}
+
+function showLogin() {
+  document.getElementById('login').style.display = 'block';
+  document.getElementById('main').style.display = 'none';
+}
+
+async function login() {
+  const r = await fetch('/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user: u.value, password: p.value }),
+  });
+  if (!r.ok) { alert('登录失败'); return; }
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('main').style.display = 'block';
+  await reloadAll();
+  connect();
+}
+
+function connect() {
+  if (es) es.close();
+  es = new EventSource('/stream');
+  es.onopen = () => setConn(true);
+  es.onerror = () => setConn(false);
+  // 补发与实时推送都走 task 事件；重连后先整体刷新，避免重复
+  es.addEventListener('task', async (e) => {
+    const ev = JSON.parse(e.data);
+    maxEventId = Math.max(maxEventId, ev.id);
+    prependEvent(ev);
+    refreshUnread();
+  });
+  // 权限变化：丢弃本地全部数据，按服务端最新权限重新拉取
+  es.addEventListener('sync', () => reloadAll());
+}
+
+function setConn(ok) {
+  const el = document.getElementById('conn');
+  el.textContent = ok ? '已连接实时推送' : '连接断开，重连中…';
+  el.className = ok ? 'ok' : 'bad';
+}
+
+async function reloadAll() {
+  const [taskMap, evRes] = await Promise.all([api('/api/tasks'), api('/api/events')]);
+  renderTasks(taskMap);
+  const list = document.getElementById('events');
+  list.innerHTML = '';
+  maxEventId = 0;
+  // 事件列表完全以服务端返回为准：被撤权项目的旧标题不会再出现
+  for (const ev of evRes.events) {
+    maxEventId = Math.max(maxEventId, ev.id);
+    prependEvent(ev);
+  }
+  refreshUnread();
+}
+
+function renderTasks(taskMap) {
+  const el = document.getElementById('tasks');
+  el.innerHTML = '';
+  for (const { project, tasks } of Object.values(taskMap)) {
+    const div = document.createElement('div');
+    div.innerHTML = `<b>${project.name}</b><ul>` +
+      tasks.map(t => `<li>${t.title}<span class="status">${t.status}</span></li>`).join('') +
+      `</ul>`;
+    el.appendChild(div);
+  }
+}
+
+function prependEvent(ev) {
+  const li = document.createElement('li');
+  li.textContent = `[${new Date(ev.ts).toLocaleTimeString()}] ${ev.title} → ${ev.status}`;
+  document.getElementById('events').prepend(li);
+}
+
+async function refreshUnread() {
+  const u = await api('/api/unread');
+  const badge = document.getElementById('unread');
+  badge.style.display = u.total ? 'inline' : 'none';
+  badge.textContent = `未读 ${u.total}`;
+}
+
+async function markAllRead() {
+  await api('/api/read', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: maxEventId }),
+  });
+  refreshUnread();
+}
+
+// 已登录则直接进入
+api('/api/me').then(() => {
+  document.getElementById('login').style.display = 'none';
+  document.getElementById('main').style.display = 'block';
+  reloadAll();
+  connect();
+}).catch(() => showLogin());
+</script>
+</body>
+</html>
