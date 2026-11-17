@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>工单服务台 · 敏感字段授权演示</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <!-- 登录页 -->
+  <section id="login-view" class="login-wrap hidden">
+    <div class="login-card">
+      <h1>工单服务台</h1>
+      <p class="subtitle">选择身份进入（演示环境免密码）</p>
+      <div id="login-buttons" class="login-buttons"></div>
+      <p class="hint">
+        联系方式默认脱敏展示；客服可就单张工单的单个电话字段申请临时查看，主管批准后限时生效。
+      </p>
+    </div>
+  </section>
+
+  <!-- 主应用 -->
+  <section id="app-view" class="hidden">
+    <header class="topbar">
+      <div class="brand">工单服务台</div>
+      <nav class="nav">
+        <a href="#/tickets" data-nav="tickets">工单列表</a>
+        <a href="#/my-grants" data-nav="my-grants" id="nav-my-grants">我的申请</a>
+        <a href="#/approvals" data-nav="approvals" class="supervisor-only hidden">审批中心</a>
+        <a href="#/audit" data-nav="audit" class="supervisor-only hidden">审计日志</a>
+      </nav>
+      <div class="user-box">
+        <span id="current-user"></span>
+        <button id="logout-btn" class="btn btn-ghost">退出</button>
+      </div>
+    </header>
+
+    <main id="main" class="main"></main>
+  </section>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="/app.js"></script>
+</body>
+</html>

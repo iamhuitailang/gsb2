@@ -1,0 +1,11 @@
+{
+  "name": "ticket-pii-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "本地工单系统：联系方式后端脱敏 + 字段级临时授权审批演示",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js"
+  }
+}
