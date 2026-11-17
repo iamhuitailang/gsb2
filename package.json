@@ -1,0 +1,14 @@
+{
+  "name": "after-sales-delegation-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "客服代客户提交售后申请的本地演示后台",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
