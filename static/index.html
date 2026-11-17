@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>本地网页资源安全策略分析台</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>本地网页资源安全策略分析台</h1>
+      <p class="subtitle">离线运行 · 不联网 · 不采集输入 · 数据仅保存在本机 data/ 目录</p>
+    </div>
+    <div id="health" class="health-pill">检查本地服务…</div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="policies" role="tab">① 策略管理</button>
+    <button class="tab" data-tab="analyze" role="tab">② 新建分析</button>
+    <button class="tab" data-tab="records" role="tab">③ 分析记录</button>
+    <button class="tab" data-tab="samples" role="tab">④ 本地样例</button>
+  </nav>
+
+  <main>
+    <!-- ================= 策略管理 ================= -->
+    <section id="tab-policies" class="tab-panel active">
+      <div class="grid-2">
+        <div class="card">
+          <h2 id="policy-form-title">新建策略</h2>
+          <label>策略名称
+            <input id="p-name" type="text" placeholder="例如：线上主站 CSP" />
+          </label>
+          <label>模式
+            <select id="p-mode">
+              <option value="enforce">拦截模式（实际拦截）</option>
+              <option value="report">仅报告模式（只记录不拦截）</option>
+            </select>
+          </label>
+          <label>策略文本（CSP 指令，分号分隔）
+            <textarea id="p-text" rows="9" spellcheck="false"
+              placeholder="default-src 'none'; img-src 'self' https://cdn.example.com; script-src 'nonce-xxxx'"></textarea>
+          </label>
+          <div class="row gap">
+            <button id="p-save" class="primary">保存策略</button>
+            <button id="p-validate">仅校验（不保存）</button>
+            <button id="p-reset">清空表单</button>
+            <input id="p-file-import" type="file" accept=".txt,.csp,.policy,text/plain" hidden />
+            <button id="p-import-file">从文件导入</button>
+            <button id="p-export-file">导出所选为文本</button>
+          </div>
+          <p class="hint">保存时若存在错误会被拒绝并逐条指出位置，错误规则不会被当成空策略入库。</p>
+          <div id="p-issues" class="issues"></div>
+        </div>
+
+        <div class="card">
+          <h2>已保存策略（<span id="p-count">0</span>）</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>选择</th><th>名称</th><th>模式</th><th>策略文本</th><th>提示</th><th>操作</th></tr>
+              </thead>
+              <tbody id="policy-tbody"></tbody>
+            </table>
+          </div>
+          <p class="hint">删除或替换策略不会改写历史记录——每条记录都保存了当时的策略快照。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 新建分析 ================= -->
+    <section id="tab-analyze" class="tab-panel">
+      <div class="grid-2">
+        <div class="card">
+          <h2>请求信息</h2>
+          <label>页面地址（document URL）
+            <input id="r-page" type="text" value="https://shop.example/index.html" />
+          </label>
+          <div class="row gap">
+            <label class="grow">资源类别
+              <select id="r-type">
+                <option value="img">图片 img</option>
+                <option value="script">脚本 script</option>
+                <option value="style">样式 style</option>
+                <option value="font">字体 font</option>
+                <option value="media">媒体 media</option>
+                <option value="frame">子页面 frame/iframe</option>
+                <option value="connect">接口连接 connect（扩展）</option>
+                <option value="worker">Worker（扩展）</option>
+                <option value="object">插件对象 object（扩展）</option>
+              </select>
+            </label>
+            <label class="grow">发起方
+              <select id="r-initiator">
+                <option value="page">页面本身发起</option>
+                <option value="script">脚本动态发起</option>
+              </select>
+            </label>
+          </div>
+          <label class="check"><input id="r-inline" type="checkbox" /> 内联内容（&lt;script&gt;/&lt;style&gt;）</label>
+          <label>资源地址（外部 URL；内联时可留空）
+            <input id="r-url" type="text" placeholder="https://cdn.example.com/app.js" />
+          </label>
+          <div id="inline-box" class="sub-box" hidden>
+            <label>nonce 随机标记（元素上的 nonce 属性值，不带引号）
+              <input id="r-nonce" type="text" placeholder="r4nd0m" />
+            </label>
+            <label>内联原文（提交后由本机计算 sha256/384/512 摘要，不发送到任何地方）
+              <textarea id="r-content" rows="4" spellcheck="false" placeholder="console.log(1)"></textarea>
+            </label>
+            <label>或直接填写摘要（sha256-/sha384-/sha512- 开头，可留空）
+              <input id="r-digest" type="text" placeholder="sha256-..." />
+            </label>
+          </div>
+          <label class="check"><input id="r-parent-trusted" type="checkbox" />
+            发起该加载的父脚本受信任（仅 strict-dynamic 场景需要）
+          </label>
+          <div class="row gap">
+            <button id="r-run" class="primary">运行判定</button>
+            <button id="r-clear">清空结果</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>参与判定的策略（可多选，叠加生效）</h2>
+          <div id="r-policy-picker" class="policy-picker"></div>
+          <p class="hint">多份拦截模式策略为「与」关系，全部放行才放行；仅报告模式只产生报告记录。</p>
+          <div id="analyze-result"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 分析记录 ================= -->
+    <section id="tab-records" class="tab-panel">
+      <div class="card">
+        <h2>历史判定记录</h2>
+        <div class="row gap wrap filters">
+          <label>判定结果
+            <select id="f-decision">
+              <option value="">全部</option>
+              <option value="allow">放行</option>
+              <option value="block">拦截</option>
+            </select>
+          </label>
+          <label>资源类别
+            <select id="f-type">
+              <option value="">全部</option>
+            </select>
+          </label>
+          <label>策略快照
+            <select id="f-policy"><option value="">全部</option></select>
+          </label>
+          <label>模式
+            <select id="f-mode">
+              <option value="">全部</option>
+              <option value="enforce">拦截模式</option>
+              <option value="report">仅报告模式</option>
+            </select>
+          </label>
+          <label class="grow">关键字（地址/依据/策略全文）
+            <input id="f-keyword" type="text" placeholder="输入关键字过滤" />
+          </label>
+          <button id="f-apply" class="primary">筛选</button>
+          <button id="f-reset">重置</button>
+          <button id="f-export-csv">导出 CSV</button>
+          <button id="f-export-json">导出 JSON</button>
+          <button id="f-clear" class="danger">清空记录</button>
+        </div>
+        <div id="records-list" class="records"></div>
+      </div>
+    </section>
+
+    <!-- ================= 样例 ================= -->
+    <section id="tab-samples" class="tab-panel">
+      <div class="card">
+        <h2>可重复运行的本地样例</h2>
+        <p class="hint">样例使用固定输入与预期结果，点击「运行全部样例」可一键核对引擎判定；
+          「导入策略到策略库」会把样例策略按当前模式保存，便于在「新建分析」里手工复现。</p>
+        <div class="row gap">
+          <button id="s-run-all" class="primary">运行全部样例</button>
+          <span id="s-summary" class="summary"></span>
+        </div>
+        <div id="samples-list" class="samples"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    纯本地演示：所有计算发生在本机进程内，页面不引用任何外部资源，刷新/重启后数据仍保留在 data/csp-console.json。
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
