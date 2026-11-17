@@ -1,0 +1,5 @@
+{
+  "trusted_proxies": ["127.0.0.1/32", "::1/128"],
+  "proxy_token": "demo-shared-secret-change-me",
+  "allow_ranges": ["192.168.1.0/24", "::1/128"]
+}
