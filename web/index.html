@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>本地账号登录服务 · 双层限流演示</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --card: #ffffff; --ink: #1f2430; --muted: #6b7280;
+    --line: #e3e6eb; --brand: #2f5fb3; --ok: #1f7a4d; --warn: #b45309;
+    --bad: #b42318; --chip: #eef2ff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 14px/1.6 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  header { padding: 20px 28px 8px; }
+  header h1 { margin: 0 0 4px; font-size: 20px; }
+  header p { margin: 0; color: var(--muted); }
+  main { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 16px 28px 40px; max-width: 1180px; margin: 0 auto; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 18px; }
+  .card.full { grid-column: 1 / -1; }
+  .card h2 { margin: 0 0 12px; font-size: 15px; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 4px; }
+  input, select { width: 100%; padding: 7px 9px; border: 1px solid var(--line);
+    border-radius: 7px; font-size: 14px; background: #fff; color: var(--ink); }
+  button { margin-top: 10px; padding: 7px 14px; border: 1px solid var(--brand);
+    background: var(--brand); color: #fff; border-radius: 7px; cursor: pointer; font-size: 13px; }
+  button.secondary { background: #fff; color: var(--brand); }
+  button.danger { border-color: var(--bad); background: #fff; color: var(--bad); }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .row > * { margin-top: 0; }
+  .muted { color: var(--muted); font-size: 12px; }
+  .chip { display: inline-block; padding: 1px 8px; border-radius: 999px;
+    background: var(--chip); color: var(--brand); font-size: 12px; }
+  .ok { color: var(--ok); } .bad { color: var(--bad); } .warn { color: var(--warn); }
+  .win { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; margin-top: 10px; }
+  .win h3 { margin: 0 0 6px; font-size: 13px; display: flex; justify-content: space-between; }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 2px 14px; font-size: 13px; }
+  .kv dt { color: var(--muted); } .kv dd { margin: 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line);
+    vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  .layer-account { color: var(--bad); font-weight: 600; }
+  .layer-source { color: var(--warn); font-weight: 600; }
+  #result { margin-top: 10px; padding: 9px 12px; border-radius: 8px;
+    background: #f8fafc; border: 1px solid var(--line); white-space: pre-wrap; font-size: 13px; }
+  .switch { display: flex; gap: 14px; margin: 8px 0; }
+  .switch label { display: flex; align-items: center; gap: 5px; color: var(--ink); margin: 0; }
+  .switch input { width: auto; }
+  code { background: #f1f3f7; padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>本地账号登录服务 · 双层失败限流演示</h1>
+  <p>账号上限 3 次 / 来源上限 5 次，两套窗口各有独立截止时间；对外失败提示始终一致，管理员日志标注生效的限制层。</p>
+</header>
+
+<main>
+  <section class="card">
+    <h2>① 演示时钟 <span class="chip" id="clockNow">--</span></h2>
+    <p class="muted">时钟偏移会持久化，服务重启后仍按推进后的时间判断窗口截止。</p>
+    <div class="row">
+      <button onclick="clockAdvance(60)">+60 秒</button>
+      <button onclick="clockAdvance(300)">+300 秒（过账号窗口）</button>
+      <button onclick="clockAdvance(600)">+600 秒（过来源窗口）</button>
+    </div>
+    <label for="customSec">自定义秒数（负数回拨）</label>
+    <div class="row">
+      <input id="customSec" type="number" value="120" style="max-width:160px" />
+      <button class="secondary" onclick="clockCustom()">推进/回拨</button>
+      <button class="danger" onclick="clockReset()">时钟归零</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>② 登录尝试</h2>
+    <div class="switch">
+      <label><input type="radio" name="ep" value="demo" checked /> 本地测试入口 <code>/api/demo/login</code>（可模拟来源）</label>
+      <label><input type="radio" name="ep" value="normal" /> 普通接口 <code>/api/login</code>（来源由服务端取连接地址，填写也忽略）</label>
+    </div>
+    <label for="username">账号（演示：jia / yi）</label>
+    <input id="username" value="jia" />
+    <label for="password">密码（jia-pass-123 / yi-pass-123）</label>
+    <input id="password" type="text" value="wrong" />
+    <label for="source">来源（仅测试入口生效）</label>
+    <select id="source">
+      <option value="demo-src-A">demo-src-A</option>
+      <option value="demo-src-B">demo-src-B</option>
+      <option value="demo-src-C">demo-src-C（新来源）</option>
+    </select>
+    <div class="row">
+      <button onclick="doLogin()">提交登录</button>
+      <button class="secondary" onclick="refreshStatus()">刷新窗口状态</button>
+      <button class="secondary" onclick="refreshLog()">刷新管理员日志</button>
+    </div>
+    <div id="result">尚未提交。</div>
+  </section>
+
+  <section class="card full">
+    <h2>③ 两套窗口的截止时间（页面用演示时钟判断何时能再试）</h2>
+    <div class="row">
+      <span class="muted">查询目标：账号</span>
+      <input id="qUser" value="jia" style="max-width:160px" />
+      <span class="muted">来源</span>
+      <input id="qSource" value="demo-src-A" style="max-width:200px" />
+      <button class="secondary" onclick="refreshStatus()">查询</button>
+      <label class="muted" style="display:flex;align-items:center;gap:4px;margin:0">
+        <input type="checkbox" id="autoRefresh" checked style="width:auto" /> 每秒自动刷新
+      </label>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="win" id="acctWin"></div>
+      <div class="win" id="srcWin"></div>
+    </div>
+  </section>
+
+  <section class="card full">
+    <h2>④ 管理员日志（标注拦截生效层：<span class="layer-account">account</span> / <span class="layer-source">source</span>）</h2>
+    <table>
+      <thead><tr><th>时间(演示时钟)</th><th>事件</th><th>账号</th><th>来源</th><th>生效层</th><th>详情</th></tr></thead>
+      <tbody id="logBody"><tr><td colspan="6" class="muted">暂无</td></tr></tbody>
+    </table>
+  </section>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+async function postJSON(url, body) {
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  return { status: resp.status, data: await resp.json() };
+}
+
+async function refreshClock() {
+  const resp = await fetch("/health");
+  const data = await resp.json();
+  $("clockNow").textContent = "now = " + data.now;
+}
+
+async function clockAdvance(seconds) {
+  await postJSON("/api/demo/clock", { action: "advance", seconds });
+  await refreshClock(); await refreshStatus();
+}
+async function clockCustom() {
+  const seconds = parseInt($("customSec").value, 10) || 0;
+  await postJSON("/api/demo/clock", { action: "advance", seconds });
+  await refreshClock(); await refreshStatus();
+}
+async function clockReset() {
+  await postJSON("/api/demo/clock", { action: "reset" });
+  await refreshClock(); await refreshStatus();
+}
+
+async function doLogin() {
+  const useDemo = document.querySelector('input[name="ep"]:checked').value === "demo";
+  const url = useDemo ? "/api/demo/login" : "/api/login";
+  const body = {
+    username: $("username").value.trim(),
+    password: $("password").value,
+  };
+  if (useDemo) body.source = $("source").value;
+  // 普通接口故意也带上 source，验证服务端会忽略用户自填来源
+  else body.source = "user-forged-source";
+
+  const { status, data } = await postJSON(url, body);
+  $("result").className = data.success ? "ok" : "bad";
+  $("result").textContent =
+    `HTTP ${status}\n` + JSON.stringify(data, null, 2) +
+    (useDemo ? "" : "\n（普通接口实际来源为服务端连接地址 ip:127.0.0.1，自填 source 已忽略）");
+  await refreshStatus(); await refreshLog();
+}
+
+function renderWindow(elId, w, now) {
+  const blockedBadge = w.blocked
+    ? `<span class="bad">已锁定 · ${w.retry_after} 秒后可重试</span>`
+    : `<span class="ok">未锁定</span>`;
+  const deadline = w.deadline === null ? "—（无活动窗口）"
+    : `${w.deadline}（${w.blocked ? "还剩 " + w.retry_after + " 秒" : "窗口进行中"}）`;
+  $(elId).innerHTML = `
+    <h3><span>${w.scope === "account" ? "账号层窗口 · " + w.key : "来源层窗口 · " + w.key}</span>${blockedBadge}</h3>
+    <dl class="kv">
+      <dt>失败次数</dt><dd>${w.failures} / ${w.limit}</dd>
+      <dt>窗口长度</dt><dd>${w.window_seconds} 秒</dd>
+      <dt>截止时间</dt><dd>${deadline}</dd>
+      <dt>当前时钟</dt><dd>${now}</dd>
+    </dl>`;
+}
+
+async function refreshStatus() {
+  const username = encodeURIComponent($("qUser").value.trim());
+  const source = encodeURIComponent($("qSource").value.trim());
+  if (!username || !source) return;
+  const resp = await fetch(`/api/demo/status?username=${username}&source=${source}`);
+  if (!resp.ok) return;
+  const data = await resp.json();
+  renderWindow("acctWin", data.account_window, data.now);
+  renderWindow("srcWin", data.source_window, data.now);
+}
+
+async function refreshLog() {
+  const resp = await fetch("/api/demo/admin-log");
+  const data = await resp.json();
+  const rows = (data.entries || []).slice().reverse();
+  if (!rows.length) {
+    $("logBody").innerHTML = '<tr><td colspan="6" class="muted">暂无</td></tr>';
+    return;
+  }
+  $("logBody").innerHTML = rows.map((e) => {
+    const layer = e.layer
+      ? `<span class="layer-${e.layer}">${e.layer}</span>` : '<span class="muted">—</span>';
+    const kindBadge = e.kind === "login_success" ? '<span class="ok">success</span>'
+      : e.kind === "login_blocked" ? '<span class="bad">blocked</span>'
+      : '<span class="warn">failure</span>';
+    return `<tr><td>${e.ts}</td><td>${kindBadge}</td><td>${e.username ?? ""}</td>
+      <td>${e.source ?? ""}</td><td>${layer}</td><td>${e.detail ?? ""}</td></tr>`;
+  }).join("");
+}
+
+setInterval(() => { refreshClock(); if ($("autoRefresh").checked) refreshStatus(); }, 1000);
+refreshClock(); refreshStatus(); refreshLog();
+</script>
+</body>
+</html>

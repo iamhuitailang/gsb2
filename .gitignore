@@ -45,3 +45,6 @@ coverage/
 
 # 生成的示例素材(可用 npm run generate:samples 恢复)
 public/samples/
+
+# ---- 本服务运行期数据 ----
+data/
