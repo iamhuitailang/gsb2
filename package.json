@@ -1,0 +1,14 @@
+{
+  "name": "gsb2-org-scoped-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "本地演示后台：同一客服账号多组织、多标签页下的组织绑定与数据隔离",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test tests/"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
