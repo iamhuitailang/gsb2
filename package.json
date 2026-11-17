@@ -1,0 +1,15 @@
+{
+  "name": "payment-review-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "演示财务系统：付款指令复核页（版本化复核 + 双人同意 + 乐观并发控制）",
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.js",
+    "test": "node --disable-warning=ExperimentalWarning --test"
+  },
+  "license": "UNLICENSED"
+}

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>付款指令复核系统（演示）</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <span class="brand-mark">财</span>
+        <div>
+          <h1>付款指令复核系统</h1>
+          <p class="brand-sub">演示环境 · 仅保存样例数据</p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <label class="user-switch">
+          <span>当前身份</span>
+          <select id="user-select" aria-label="切换当前登录用户"></select>
+        </label>
+        <button id="reset-btn" class="btn btn-ghost" type="button">重置样例数据</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="view" class="container" aria-live="polite">
+    <!-- 列表视图 / 详情视图由 app.js 渲染 -->
+  </main>
+
+  <div id="toast" class="toast" role="alert" hidden></div>
+  <script src="/app.js"></script>
+</body>
+</html>
