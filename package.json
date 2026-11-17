@@ -1,0 +1,14 @@
+{
+  "name": "duty-login-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "本地值班账号后台：密码 + 新浏览器收件箱设备确认 + 可信设备管理",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node scripts/e2e-test.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
