@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>订单查看与异步导出 · GSB2</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">GS</span>
+        <div>
+          <h1>订单查看与异步导出</h1>
+          <p class="brand-sub">字段权限 · 站点范围 · 文件失效演示</p>
+        </div>
+      </div>
+
+      <div class="account-bar">
+        <label class="field account-field">
+          <span class="field-label">当前演示账号</span>
+          <select id="account-select" class="control"></select>
+        </label>
+        <div id="account-summary" class="account-summary" aria-live="polite"></div>
+        <button type="button" id="reset-demo" class="btn btn-ghost" title="恢复初始账号权限与订单数据">重置演示数据</button>
+      </div>
+    </header>
+
+    <div id="flash" class="flash" role="status" aria-live="polite" hidden></div>
+
+    <main class="grid">
+      <section class="panel panel-orders" aria-labelledby="orders-title">
+        <div class="panel-head">
+          <div>
+            <h2 id="orders-title">订单</h2>
+            <p class="panel-sub">仅展示你当前有权查看的字段；站点范围由服务端核对。</p>
+          </div>
+          <span id="order-count" class="pill">—</span>
+        </div>
+        <div class="table-wrap">
+          <table id="orders-table" class="data-table">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel panel-export" aria-labelledby="export-title">
+        <div class="panel-head">
+          <div>
+            <h2 id="export-title">新建导出</h2>
+            <p class="panel-sub">筛选条件和选中的列会冻结进任务；执行前会再次核对权限。</p>
+          </div>
+        </div>
+
+        <form id="export-form" class="export-form" novalidate>
+          <fieldset class="form-block">
+            <legend>站点范围</legend>
+            <div id="site-options" class="option-grid"></div>
+            <p class="hint">只能选择你账号当前可访问的站点。</p>
+          </fieldset>
+
+          <fieldset class="form-block">
+            <legend>订单状态</legend>
+            <div id="status-options" class="option-row"></div>
+            <p class="hint">不勾选表示全部状态。</p>
+          </fieldset>
+
+          <div class="form-row">
+            <label class="field">
+              <span class="field-label">搜索（订单号 / 当前可见字段）</span>
+              <input id="search-input" class="control" type="search" maxlength="50" placeholder="例如 A2026 或 待发货">
+            </label>
+          </div>
+
+          <fieldset class="form-block">
+            <legend>导出列</legend>
+            <div id="column-options" class="option-grid column-grid"></div>
+            <p id="column-hint" class="hint">灰掉的列是当前账号无权查看的字段。</p>
+          </fieldset>
+
+          <div class="actions">
+            <button type="button" id="preview-button" class="btn btn-secondary">预览前 10 行</button>
+            <button type="submit" class="btn btn-primary">排队导出</button>
+          </div>
+        </form>
+
+        <div id="preview-wrap" class="preview-wrap" hidden>
+          <div class="preview-head">
+            <h3>导出预览</h3>
+            <span id="preview-summary" class="pill"></span>
+          </div>
+          <div class="table-wrap table-wrap-compact">
+            <table id="preview-table" class="data-table">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel panel-jobs" aria-labelledby="jobs-title">
+        <div class="panel-head">
+          <div>
+            <h2 id="jobs-title">导出任务</h2>
+            <p class="panel-sub">文件生成后仍需满足当前权限才能下载；权限变化会使旧文件失效。</p>
+          </div>
+          <button type="button" id="refresh-jobs" class="btn btn-ghost">刷新</button>
+        </div>
+        <ul id="jobs-list" class="jobs-list"></ul>
+      </section>
+
+      <section id="admin-panel" class="panel panel-admin" aria-labelledby="admin-title" hidden>
+        <div class="panel-head">
+          <div>
+            <h2 id="admin-title">账号权限</h2>
+            <p class="panel-sub">调整后旧文件立即失效；申请人需要按新范围重新申请。</p>
+          </div>
+        </div>
+        <div id="admin-users" class="admin-users"></div>
+      </section>
+    </main>
+
+    <footer class="footnote">
+      演示数据均为虚构。CSV 采用 UTF-8 BOM 与 CRLF，可直接用表格软件打开。
+    </footer>
+  </div>
+
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

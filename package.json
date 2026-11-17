@@ -1,0 +1,15 @@
+{
+  "name": "gsb2-order-export",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "GSB2 订单查看与异步导出（字段权限、站点范围与文件失效演示）",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test tests/*.test.js",
+    "demo": "node scripts/demo.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
