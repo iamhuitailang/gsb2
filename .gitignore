@@ -43,5 +43,7 @@ coverage/
 .vscode/
 *.swp
 
-# 生成的示例素材(可用 npm run generate:samples 恢复)
+# 生成的示例素材(可用 go run ./cmd/gencerts 恢复)
+demo/certs/*
+!demo/certs/.gitkeep
 public/samples/
