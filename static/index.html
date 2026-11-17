@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>访问策略管理</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "PingFang SC", sans-serif; margin: 0; background: #f5f6f8; color: #222; }
+  header { background: #1f2937; color: #fff; padding: 12px 24px; display: flex; align-items: center; gap: 16px; }
+  header h1 { font-size: 17px; margin: 0; }
+  header .op { margin-left: auto; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  header input { padding: 4px 8px; border-radius: 4px; border: none; }
+  nav { background: #fff; border-bottom: 1px solid #e5e7eb; padding: 0 24px; display: flex; gap: 4px; }
+  nav button { background: none; border: none; padding: 12px 16px; font-size: 14px; cursor: pointer; border-bottom: 2px solid transparent; color: #555; }
+  nav button.active { color: #1d4ed8; border-bottom-color: #1d4ed8; font-weight: 600; }
+  main { max-width: 1000px; margin: 24px auto; padding: 0 16px; }
+  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 16px; }
+  .card h2 { margin: 0 0 12px; font-size: 15px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #eee; }
+  th { color: #666; font-weight: 600; background: #fafafa; }
+  select, input[type=text] { padding: 5px 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; }
+  button.btn { background: #1d4ed8; color: #fff; border: none; border-radius: 5px; padding: 7px 14px; font-size: 13px; cursor: pointer; }
+  button.btn.secondary { background: #fff; color: #1d4ed8; border: 1px solid #1d4ed8; }
+  button.btn.danger { background: #fff; color: #b91c1c; border: 1px solid #b91c1c; }
+  button.btn:disabled { opacity: .45; cursor: not-allowed; }
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 12px; }
+  .tag.allow { background: #dcfce7; color: #15803d; }
+  .tag.deny { background: #fee2e2; color: #b91c1c; }
+  .tag.live { background: #dbeafe; color: #1d4ed8; }
+  .muted { color: #888; font-size: 12px; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .banner { padding: 10px 14px; border-radius: 6px; font-size: 13px; margin-bottom: 12px; }
+  .banner.warn { background: #fef3c7; color: #92400e; }
+  .banner.ok { background: #dcfce7; color: #15803d; }
+  .hidden { display: none; }
+  .result { font-size: 15px; font-weight: 600; margin-top: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>访问策略管理</h1>
+  <span class="muted" id="liveVersion" style="color:#9ca3af"></span>
+  <div class="op">操作者 <input type="text" id="operator" placeholder="你的名字" size="8"></div>
+</header>
+<nav>
+  <button data-tab="demo" class="active">演示入口(线上)</button>
+  <button data-tab="editor">规则编辑(草稿)</button>
+  <button data-tab="report">试算报告</button>
+  <button data-tab="history">发布历史</button>
+</nav>
+<main>
+  <!-- 演示入口 -->
+  <section id="tab-demo" class="card">
+    <h2>线上演示入口 <span class="muted">— 始终按当前已发布版本判断</span></h2>
+    <div class="row">
+      <label>账号 <select id="demoAccount"></select></label>
+      <label>资料 <select id="demoResource"></select></label>
+      <label>动作 <select id="demoAction"></select></label>
+      <button class="btn" onclick="runDemo()">发起请求</button>
+    </div>
+    <div id="demoResult"></div>
+  </section>
+
+  <!-- 规则编辑 -->
+  <section id="tab-editor" class="card hidden">
+    <h2>规则编辑</h2>
+    <div id="noDraft">
+      <p class="muted">当前没有草稿。草稿只用于试算,发布后才影响线上演示入口。</p>
+      <button class="btn" onclick="beginDraft()">基于线上版本创建草稿</button>
+    </div>
+    <div id="draftEditor" class="hidden">
+      <div class="banner warn" id="draftInfo"></div>
+      <table>
+        <thead><tr><th>效果</th><th>部门</th><th>资料类别</th><th>动作</th><th>限定标记</th><th>备注</th><th></th></tr></thead>
+        <tbody id="ruleRows"></tbody>
+      </table>
+      <div class="row" style="margin-top:12px">
+        <button class="btn secondary" onclick="addRule()">+ 添加规则</button>
+        <button class="btn secondary" onclick="saveDraft()">保存草稿</button>
+        <button class="btn secondary" onclick="runSimulate()">试算对比</button>
+        <button class="btn" onclick="publishDraft()">发布</button>
+      </div>
+      <p class="muted">求值顺序:命中禁止 → 拒绝;否则命中允许 → 允许;都不命中 → 默认拒绝。</p>
+    </div>
+  </section>
+
+  <!-- 试算报告 -->
+  <section id="tab-report" class="card hidden">
+    <h2>试算报告 <span class="muted">— 线上版本 vs 草稿(全部账号 × 资料 × 动作)</span></h2>
+    <div id="reportBody"><p class="muted">还没有试算结果。请在「规则编辑」中点击「试算对比」。</p></div>
+  </section>
+
+  <!-- 发布历史 -->
+  <section id="tab-history" class="card hidden">
+    <h2>发布历史</h2>
+    <table>
+      <thead><tr><th>版本</th><th>发布者</th><th>发布时间</th><th>说明</th><th>规则数</th><th>状态</th><th></th></tr></thead>
+      <tbody id="historyRows"></tbody>
+    </table>
+  </section>
+</main>
+
+<script>
+let S = null;            // /api/state 快照
+let draftRules = [];     // 编辑器中的规则(本地副本)
+let lastReport = null;
+
+const $ = id => document.getElementById(id);
+const operator = () => $('operator').value.trim() || '匿名';
+$('operator').value = localStorage.getItem('operator') || '';
+$('operator').addEventListener('change', e => localStorage.setItem('operator', e.target.value));
+
+async function api(path, method = 'GET', body) {
+  const res = await fetch(path, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    if (res.status === 409) {
+      alert('冲突:' + data.error);
+      await refresh();
+    }
+    throw new Error(data.error || res.statusText);
+  }
+  return data;
+}
+
+async function refresh() {
+  S = await api('/api/state');
+  renderAll();
+}
+
+// ---------- 通用渲染 ----------
+
+function ruleText(r) {
+  if (!r) return '默认拒绝(无规则命中)';
+  const eff = r.effect === 'allow' ? '允许' : '禁止';
+  let t = `${eff} | ${r.department} | ${r.category} | ${r.action}`;
+  if (r.tag) t += ` | 标记:${r.tag}`;
+  return t;
+}
+
+function options(list, current, anyLabel) {
+  let h = anyLabel ? `<option value="*">*(全部)</option>` : '';
+  for (const x of list) h += `<option ${x === current ? 'selected' : ''} value="${x}">${x}</option>`;
+  return h;
+}
+
+function renderAll() {
+  const live = S.versions.find(v => v.id === S.active_version);
+  $('liveVersion').textContent = `线上版本 v${live.n}(发布者:${live.published_by})`;
+  renderDemo(); renderEditor(); renderHistory();
+  if (lastReport) renderReport(lastReport);
+}
+
+// ---------- 演示入口 ----------
+
+function renderDemo() {
+  $('demoAccount').innerHTML = S.accounts.map(a =>
+    `<option value="${a.id}">${a.name}(${a.department})</option>`).join('');
+  $('demoResource').innerHTML = S.resources.map(r =>
+    `<option value="${r.id}">${r.name}(${r.category}${r.tags.length ? ', 标记:' + r.tags.join('/') : ''})</option>`).join('');
+  $('demoAction').innerHTML = S.actions.map(a => `<option>${a}</option>`).join('');
+}
+
+async function runDemo() {
+  const res = await api('/api/evaluate', 'POST', {
+    account_id: $('demoAccount').value,
+    resource_id: $('demoResource').value,
+    action: $('demoAction').value,
+  });
+  const allow = res.decision === 'allow';
+  $('demoResult').innerHTML = `
+    <div class="banner ${allow ? 'ok' : 'warn'} result">
+      ${allow ? '✅ 允许' : '⛔ 拒绝'} — 依据:${ruleText(res.rule)}
+      <span class="muted">(线上版本 v${res.version.n})</span>
+    </div>`;
+}
+
+// ---------- 规则编辑 ----------
+
+function renderEditor() {
+  const draft = S.draft;
+  $('noDraft').classList.toggle('hidden', !!draft);
+  $('draftEditor').classList.toggle('hidden', !draft);
+  if (!draft) return;
+  if (!renderEditor.loaded || renderEditor.loaded !== draft.revision) {
+    draftRules = JSON.parse(JSON.stringify(draft.rules));
+    renderEditor.loaded = draft.revision;
+  }
+  $('draftInfo').textContent =
+    `草稿修订号 #${draft.revision},最近编辑:${draft.updated_by}。保存与发布都会校验该修订号,他人先改动后你的提交会被拒绝并提示。`;
+  $('ruleRows').innerHTML = draftRules.map((r, i) => `
+    <tr>
+      <td><select onchange="draftRules[${i}].effect=this.value">
+        <option value="allow" ${r.effect === 'allow' ? 'selected' : ''}>允许</option>
+        <option value="deny" ${r.effect === 'deny' ? 'selected' : ''}>禁止</option>
+      </select></td>
+      <td><select onchange="draftRules[${i}].department=this.value">${options(S.departments, r.department, true)}</select></td>
+      <td><select onchange="draftRules[${i}].category=this.value">${options(S.categories, r.category, true)}</select></td>
+      <td><select onchange="draftRules[${i}].action=this.value">${options(S.actions, r.action, true)}</select></td>
+      <td><select onchange="draftRules[${i}].tag=this.value">
+        <option value="">(不限)</option>
+        ${S.tags.map(t => `<option ${t === r.tag ? 'selected' : ''}>${t}</option>`).join('')}
+      </select></td>
+      <td><input type="text" value="${r.note || ''}" onchange="draftRules[${i}].note=this.value" placeholder="备注"></td>
+      <td><button class="btn danger" onclick="draftRules.splice(${i},1);renderEditor()">删除</button></td>
+    </tr>`).join('');
+}
+
+async function beginDraft() {
+  S = await api('/api/draft/begin', 'POST', { by: operator() });
+  renderEditor.loaded = null;
+  renderAll();
+}
+
+function addRule() {
+  draftRules.push({ id: 'new-' + Math.random().toString(36).slice(2, 8),
+    effect: 'deny', department: '*', category: '*', action: '*', tag: '', note: '' });
+  renderEditor();
+}
+
+async function saveDraft() {
+  S = await api('/api/draft', 'PUT', { rules: draftRules, base_revision: S.draft.revision, by: operator() });
+  renderEditor.loaded = null;
+  renderAll();
+  alert('草稿已保存(仅用于试算,不影响线上)');
+}
+
+async function publishDraft() {
+  if (!confirm('发布后线上演示入口立即按新版判断,确认发布?')) return;
+  S = await api('/api/draft/publish', 'POST', { base_revision: S.draft.revision, by: operator() });
+  renderEditor.loaded = null;
+  lastReport = null;
+  renderAll();
+  alert('已发布,线上版本已切换');
+}
+
+// ---------- 试算 ----------
+
+async function runSimulate() {
+  lastReport = await api('/api/simulate', 'POST', { rules: draftRules });
+  switchTab('report');
+  renderReport(lastReport);
+}
+
+function renderReport(rep) {
+  if (rep.changed === 0) {
+    $('reportBody').innerHTML = `<div class="banner ok">共 ${rep.total} 项请求,新旧版本结果完全一致,无人失去或获得权限。</div>`;
+    return;
+  }
+  $('reportBody').innerHTML = `
+    <div class="banner warn">共 ${rep.total} 项请求,发现 <b>${rep.changed}</b> 项结果变更:</div>
+    <table>
+      <thead><tr><th>账号</th><th>资料</th><th>动作</th><th>旧结果</th><th>新结果</th><th>新结果命中规则</th></tr></thead>
+      <tbody>${rep.changes.map(c => `
+        <tr>
+          <td>${c.account.name}(${c.account.department})</td>
+          <td>${c.resource.name}</td>
+          <td>${c.action}</td>
+          <td><span class="tag ${c.old.decision}">${c.old.decision === 'allow' ? '允许' : '拒绝'}</span></td>
+          <td><span class="tag ${c.new.decision}">${c.new.decision === 'allow' ? '允许' : '拒绝'}</span></td>
+          <td>${ruleText(c.new.rule)}</td>
+        </tr>`).join('')}</tbody>
+    </table>`;
+}
+
+// ---------- 发布历史 / 回滚 ----------
+
+function renderHistory() {
+  $('historyRows').innerHTML = S.versions.map(v => `
+    <tr>
+      <td>v${v.n}</td>
+      <td>${v.published_by}</td>
+      <td>${v.published_at}</td>
+      <td>${v.note || ''}</td>
+      <td>${v.rules.length}</td>
+      <td>${v.id === S.active_version ? '<span class="tag live">线上生效</span>' : ''}</td>
+      <td>${v.id === S.active_version ? '' :
+        `<button class="btn secondary" onclick="rollback('${v.id}', ${v.n})">回滚到此版</button>`}</td>
+    </tr>`).join('');
+}
+
+async function rollback(versionId, n) {
+  if (!confirm(`确认回滚到 v${n}?线上演示入口将立即按该版判断。`)) return;
+  S = await api('/api/rollback', 'POST', { version_id: versionId, by: operator() });
+  renderEditor.loaded = null;
+  renderAll();
+}
+
+// ---------- 页签 ----------
+
+function switchTab(name) {
+  document.querySelectorAll('nav button').forEach(b =>
+    b.classList.toggle('active', b.dataset.tab === name));
+  ['demo', 'editor', 'report', 'history'].forEach(t =>
+    $('tab-' + t).classList.toggle('hidden', t !== name));
+}
+document.querySelectorAll('nav button').forEach(b =>
+  b.addEventListener('click', () => switchTab(b.dataset.tab)));
+
+refresh();
+</script>
+</body>
+</html>
