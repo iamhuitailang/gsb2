@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>知识库负责人交接</title>
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, "PingFang SC", sans-serif; margin: 0; background: #f5f6f8; color: #222; }
+  header { background: #2b3a55; color: #fff; padding: 12px 20px; display: flex; align-items: center; gap: 16px; }
+  header h1 { font-size: 17px; margin: 0; flex: 1; }
+  .who { font-size: 13px; opacity: .8; }
+  .user-btns button { margin-left: 6px; padding: 5px 14px; border: 1px solid #8899bb; background: transparent; color: #fff; border-radius: 4px; cursor: pointer; }
+  .user-btns button.active { background: #fff; color: #2b3a55; font-weight: 600; }
+  main { display: flex; gap: 16px; padding: 16px 20px; align-items: flex-start; }
+  .panel { background: #fff; border: 1px solid #e2e5ea; border-radius: 8px; padding: 14px 16px; }
+  #libs { width: 240px; flex-shrink: 0; }
+  #libs h3, #detail h3 { margin: 0 0 10px; font-size: 14px; color: #555; }
+  .lib-item { padding: 9px 10px; border-radius: 6px; cursor: pointer; margin-bottom: 6px; border: 1px solid transparent; }
+  .lib-item:hover { background: #f0f3f8; }
+  .lib-item.sel { border-color: #2b3a55; background: #eef2f9; }
+  .lib-item .role { font-size: 12px; color: #777; }
+  .badge { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 8px; margin-left: 6px; }
+  .b-pending { background: #fff3cd; color: #8a6d00; }
+  .b-owner { background: #d8ecff; color: #14508c; }
+  .b-readonly { background: #eee; color: #666; }
+  #detail { flex: 1; min-height: 300px; }
+  section { margin-bottom: 18px; }
+  section h4 { margin: 0 0 8px; font-size: 13px; color: #2b3a55; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+  ul { margin: 0; padding-left: 18px; }
+  li { margin: 3px 0; font-size: 13px; }
+  button.act { padding: 4px 12px; border: 1px solid #2b3a55; background: #2b3a55; color: #fff; border-radius: 4px; cursor: pointer; font-size: 13px; }
+  button.ghost { padding: 4px 12px; border: 1px solid #bbb; background: #fff; border-radius: 4px; cursor: pointer; font-size: 13px; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  select { padding: 4px 6px; font-size: 13px; }
+  .draft { display: flex; align-items: center; gap: 8px; }
+  .draft .lock { color: #999; }
+  textarea { width: 100%; min-height: 90px; margin: 8px 0; padding: 8px; font-size: 13px; border: 1px solid #ccc; border-radius: 4px; }
+  .transfer-box { background: #f7f9fc; border: 1px dashed #b9c4d6; border-radius: 6px; padding: 10px 12px; font-size: 13px; }
+  .member-chip { display: inline-block; background: #eef2f9; border-radius: 10px; padding: 2px 10px; font-size: 12px; margin: 2px 4px 2px 0; }
+  .member-chip a { color: #c00; text-decoration: none; margin-left: 5px; cursor: pointer; }
+  #toast { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); padding: 9px 18px; border-radius: 6px; color: #fff; font-size: 13px; display: none; z-index: 9; }
+  #toast.ok { background: #2e7d32; } #toast.err { background: #c62828; } #toast.info { background: #2b3a55; }
+  .history { font-size: 12px; color: #666; }
+  .history .st-completed { color: #2e7d32; } .history .st-cancelled { color: #999; } .history .st-pending { color: #b58900; }
+  .hint { font-size: 12px; color: #888; margin-top: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>📚 知识库负责人交接（本地演示）</h1>
+  <span class="who">当前身份：</span>
+  <span class="user-btns" id="userBtns"></span>
+  <button class="ghost" style="margin-left:14px" onclick="resetAll()">重置演示数据</button>
+</header>
+<div id="toast"></div>
+<main>
+  <div class="panel" id="libs"><h3>我的资料库</h3><div id="libList"></div></div>
+  <div class="panel" id="detail"><p style="color:#999;font-size:13px">请选择左侧资料库</p></div>
+</main>
+
+<script>
+let me = "甲", state = null, selLib = null, editing = null;
+
+const $ = s => document.querySelector(s);
+const api = async (path, body) => {
+  const opt = body ? { method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body) } : {};
+  const r = await fetch(path, opt);
+  const j = await r.json();
+  if (!r.ok) { const e = new Error(j.error || r.statusText); e.status = r.status; throw e; }
+  return j;
+};
+const toast = (msg, kind = "info") => {
+  const t = $("#toast"); t.textContent = msg; t.className = kind; t.style.display = "block";
+  clearTimeout(t._h); t._h = setTimeout(() => t.style.display = "none", 3200);
+};
+
+async function refresh(keepSel = true) {
+  state = await api(`/api/state?user=${encodeURIComponent(me)}`);
+  if (!keepSel || !state.libraries.some(l => l.id === selLib)) selLib = state.libraries[0]?.id ?? null;
+  render();
+}
+
+function render() {
+  const draftBuf = $("#draftContent")?.value; // 轮询重绘时保留正在输入的内容
+  $("#userBtns").innerHTML = state.users.map(u =>
+    `<button class="${u === me ? "active" : ""}" onclick="switchUser('${u}')">${u}</button>`).join("");
+  $("#libList").innerHTML = state.libraries.map(l => `
+    <div class="lib-item ${l.id === selLib ? "sel" : ""}" onclick="selectLib('${l.id}')">
+      <div>${l.name}
+        <span class="badge ${l.my_role === "owner" ? "b-owner" : "b-readonly"}">${l.my_role === "owner" ? "负责人" : "只读"}</span>
+        ${l.pending_transfer ? `<span class="badge b-pending">交接待接受</span>` : ""}
+      </div>
+      <div class="role">负责人：${l.owner}</div>
+    </div>`).join("") || '<p class="hint">没有可见的资料库</p>';
+  renderDetail();
+}
+
+function renderDetail() {
+  const lib = state.libraries.find(l => l.id === selLib);
+  const box = $("#detail");
+  if (!lib) { box.innerHTML = '<p style="color:#999;font-size:13px">没有可见的资料库</p>'; return; }
+  const isOwner = lib.my_role === "owner";
+  const pt = lib.pending_transfer;
+
+  const drafts = lib.drafts.map(d => `
+    <li class="draft">
+      ${d.locked ? '<span class="lock">🔒</span>' : "📝"} ${d.title}
+      ${d.locked
+        ? `<button class="ghost" onclick="tryOpenDraft('${lib.id}','${d.id}')">尝试打开</button>`
+        : `<button class="ghost" onclick="openDraft('${lib.id}','${d.id}')">编辑</button>`}
+    </li>`).join("") || '<li class="hint">无草稿</li>';
+
+  const members = lib.members.map(m => `
+    <span class="member-chip">${m}${m === lib.owner ? "（负责人）" : ""}
+      ${isOwner && m !== lib.owner ? `<a onclick="removeMember('${lib.id}','${m}')">×</a>` : ""}
+    </span>`).join("");
+
+  let transferHtml = "";
+  if (pt && pt.from_user === me) {
+    transferHtml = `<div class="transfer-box">⏳ 已发起交接给 <b>${pt.to_user}</b>，等待对方接受。接受前你仍是负责人。
+      <button class="ghost" onclick="cancelTransfer('${pt.id}')">取消交接</button></div>`;
+  } else if (pt && pt.to_user === me) {
+    transferHtml = `<div class="transfer-box">📨 <b>${pt.from_user}</b> 邀请你接任「${lib.name}」。
+      <button class="act" onclick="acceptTransfer('${pt.id}')">接受交接</button>
+      <button class="ghost" onclick="doubleAccept('${pt.id}')">模拟两个确认同时到达</button>
+      <div class="hint">接受后目录、草稿、成员管理权限将一并切换给你。</div></div>`;
+  } else if (isOwner) {
+    const candidates = state.users.filter(u => u !== me);
+    transferHtml = `<div class="transfer-box">发起负责人交接：
+      <select id="successor">${candidates.map(u => `<option>${u}</option>`).join("")}</select>
+      <button class="act" onclick="initiate('${lib.id}')">发起交接</button></div>`;
+  } else {
+    transferHtml = `<div class="transfer-box hint">你是只读成员，无交接操作。</div>`;
+  }
+
+  const history = state.transfers.filter(t => t.lib_id === lib.id).map(t =>
+    `<div class="history">交接单 ${t.id}：${t.from_user} → ${t.to_user}
+      <span class="st-${t.status}">${{pending: "待接受", completed: "已完成", cancelled: "已取消"}[t.status]}</span>
+      ${t.status !== "pending" && t.to_user === me ? `<button class="ghost" onclick="acceptTransfer('${t.id}')">用旧确认页再次接受</button>` : ""}
+    </div>`).join("");
+
+  box.innerHTML = `
+    <h3>${lib.name} <span class="badge ${isOwner ? "b-owner" : "b-readonly"}">${isOwner ? "我是负责人" : "只读"}</span></h3>
+    <section><h4>目录</h4><ul>${lib.catalog.map(c => `<li>${c}</li>`).join("")}</ul></section>
+    <section><h4>未发布草稿${isOwner ? "" : "（仅负责人可见）"}</h4><ul>${drafts}</ul>
+      <div id="editor"></div></section>
+    <section><h4>成员管理</h4>${members}
+      ${isOwner ? `<div style="margin-top:6px"><select id="newMember">${state.users.filter(u => !lib.members.includes(u)).map(u => `<option>${u}</option>`).join("")}</select>
+        <button class="ghost" onclick="addMember('${lib.id}')">添加成员</button></div>` : '<div class="hint">仅负责人可管理成员</div>'}
+    </section>
+    <section><h4>负责人交接</h4>${transferHtml}${history}</section>`;
+  if (editing && editing.libId === lib.id) showEditor(lib, isOwner);
+  if (draftBuf !== undefined && $("#draftContent")) $("#draftContent").value = draftBuf;
+}
+
+// ---------- 动作 ----------
+function switchUser(u) { me = u; editing = null; refresh(); }
+function selectLib(id) { selLib = id; editing = null; render(); }
+
+async function guard(p, okMsg) {
+  try { await p; if (okMsg) toast(okMsg, "ok"); await refresh(); }
+  catch (e) { toast(`已拒绝（${e.status}）：${e.message}`, "err"); await refresh(); }
+}
+
+const initiate = libId => guard(api("/api/transfer/initiate", { user: me, lib_id: libId, to_user: $("#successor").value }), "交接已发起，等待对方接受");
+const acceptTransfer = tid => guard(api("/api/transfer/accept", { user: me, transfer_id: tid }), "交接完成，你已成为负责人");
+const cancelTransfer = tid => guard(api("/api/transfer/cancel", { user: me, transfer_id: tid }), "交接已取消");
+const addMember = libId => guard(api("/api/members/add", { user: me, lib_id: libId, member: $("#newMember").value }), "成员已添加");
+const removeMember = (libId, m) => guard(api("/api/members/remove", { user: me, lib_id: libId, member: m }), "成员已移除");
+
+async function tryOpenDraft(libId, draftId) { // 非负责人尝试打开草稿，预期被服务端拒绝
+  await guard(api(`/api/draft?user=${me}&lib=${libId}&draft=${draftId}`));
+}
+
+async function openDraft(libId, draftId) {
+  const lib = state.libraries.find(l => l.id === libId);
+  const d = lib?.drafts.find(x => x.id === draftId);
+  if (!d) return;
+  editing = { libId, draftId, title: d.title, content: d.content ?? "" }; // 本地快照：交接后页面保留，但保存会被拒
+  render();
+}
+
+function showEditor(lib, isOwner) {
+  $("#editor").innerHTML = `
+    <div style="margin-top:8px"><b>${editing.title}</b>
+      ${isOwner ? "" : '<div class="hint" style="color:#c62828">⚠️ 你已不再是负责人，这个已打开的编辑页保存时将被服务端拒绝。</div>'}
+      <textarea id="draftContent">${editing.content}</textarea>
+      <button class="act" onclick="saveDraft('${lib.id}','${editing.draftId}')">保存</button>
+      ${isOwner ? '<span class="hint">提示：交接完成后，这个已打开的页面再点保存会被服务端拒绝。</span>' : ""}
+    </div>`;
+}
+
+const saveDraft = async (libId, draftId) => {
+  const content = $("#draftContent").value;
+  await guard(api("/api/draft/save", { user: me, lib_id: libId, draft_id: draftId, content }), "草稿已保存");
+  if (editing) editing.content = content;
+};
+
+// 并发演示：同一交接单同时发出两个接受请求，只能落一次
+async function doubleAccept(tid) {
+  const [r1, r2] = await Promise.allSettled([
+    api("/api/transfer/accept", { user: me, transfer_id: tid }),
+    api("/api/transfer/accept", { user: me, transfer_id: tid }),
+  ]);
+  const desc = r => r.status === "fulfilled" ? "✅ 成功" : `❌ ${r.reason.status} ${r.reason.message}`;
+  toast(`并发确认结果 —— 请求1：${desc(r1)}；请求2：${desc(r2)}`, "info");
+  await refresh();
+}
+
+async function resetAll() {
+  await api("/api/reset", {});
+  editing = null;
+  toast("已恢复初始数据", "info");
+  await refresh(false);
+}
+
+setInterval(() => refresh(), 2500); // 轮询，模拟对方操作后的视图更新
+refresh();
+</script>
+</body>
+</html>
