@@ -1,0 +1,17 @@
+{
+  "name": "gsb2-report-library",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "采购系统本地供应商报告库：隔离预览、外部资源检查、会话保持",
+  "scripts": {
+    "start": "node src/main.js",
+    "test": "node test/run.mjs",
+    "test:sanitize": "node --test test/sanitize.test.mjs",
+    "test:unit": "node --test test/unit.test.mjs",
+    "test:e2e": "node --test test/e2e.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
