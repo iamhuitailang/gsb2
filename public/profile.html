@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>我的资料</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <nav class="nav">
+    <a class="brand" href="/">账号系统</a>
+    <span class="spacer"></span>
+    <a href="/inbox.html">收件箱</a>
+    <a href="#" id="logout-link">退出登录</a>
+  </nav>
+  <main class="container">
+    <div class="card">
+      <h1>我的资料</h1>
+      <p class="subtitle">
+        本页数据由服务端根据会话判断返回；会话失效后保存会被服务端拒绝。
+      </p>
+      <div id="denied" class="message error" style="display:none;"></div>
+      <form id="profile-form">
+        <label for="email">邮箱（不可修改）</label>
+        <input id="email" type="email" disabled />
+        <label for="name">昵称</label>
+        <input id="name" type="text" autocomplete="nickname" />
+        <label for="bio">个人简介</label>
+        <textarea id="bio"></textarea>
+        <button type="submit">保存资料</button>
+        <div id="msg" class="message"></div>
+      </form>
+      <p class="hint">需要改密码？<a href="/forgot.html">通过邮箱重置密码</a></p>
+    </div>
+  </main>
+  <script type="module">
+    import { api, showMessage } from '/common.js';
+    const msg = document.getElementById('msg');
+    const denied = document.getElementById('denied');
+    const form = document.getElementById('profile-form');
+
+    function blockAccess(text) {
+      denied.textContent = text;
+      denied.style.display = 'block';
+      form.style.display = 'none';
+    }
+
+    // 每次进入页面都向服务端确认会话状态
+    const me = await api('/api/me');
+    if (!me.ok) {
+      blockAccess(me.data.error || '未登录或会话已失效，请重新登录。');
+    } else {
+      document.getElementById('email').value = me.data.user.email;
+      document.getElementById('name').value = me.data.user.name;
+      document.getElementById('bio').value = me.data.user.bio;
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const res = await api('/api/profile', {
+        method: 'POST',
+        body: {
+          name: document.getElementById('name').value,
+          bio: document.getElementById('bio').value,
+        },
+      });
+      if (res.ok) {
+        showMessage(msg, '资料已保存。', 'ok');
+      } else {
+        // 旧会话在密码重置后已失效：服务端拒绝保存
+        showMessage(msg, res.data.error || '保存失败，请重新登录。');
+      }
+    });
+
+    document.getElementById('logout-link').addEventListener('click', async (e) => {
+      e.preventDefault();
+      await api('/api/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>设置新密码</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <nav class="nav">
+    <a class="brand" href="/">账号系统</a>
+    <span class="spacer"></span>
+    <a href="/inbox.html">收件箱</a>
+  </nav>
+  <main class="container">
+    <div class="card">
+      <h1>设置新密码</h1>
+
+      <!-- 链接有效时显示的表单 -->
+      <div id="reset-panel">
+        <p class="subtitle">链接仅在有效期内可用，且只能成功使用一次。</p>
+        <form id="reset-form">
+          <label for="password">新密码（至少 8 位）</label>
+          <input id="password" type="password" autocomplete="new-password" minlength="8" required />
+          <label for="password2">确认新密码</label>
+          <input id="password2" type="password" autocomplete="new-password" minlength="8" required />
+          <button type="submit">更新密码</button>
+          <div id="msg" class="message"></div>
+        </form>
+      </div>
+
+      <!-- 链接无效 / 过期 / 用过时显示统一失败面板，不区分原因 -->
+      <div id="invalid-panel" style="display:none;">
+        <div class="message error show">
+          重置链接无效、已过期或已经使用过。为保证账号安全，请重新申请一封重置邮件。
+        </div>
+        <div class="actions-row">
+          <button type="button" onclick="location.href='/forgot.html'">重新申请</button>
+          <button type="button" class="secondary" onclick="location.href='/login.html'">去登录</button>
+        </div>
+      </div>
+
+      <!-- 成功面板 -->
+      <div id="done-panel" style="display:none;">
+        <div class="message ok show">密码已更新。所有旧登录会话与其它重置链接均已失效，请使用新密码登录。</div>
+        <button type="button" onclick="location.href='/login.html'">前往登录</button>
+      </div>
+    </div>
+  </main>
+  <script type="module">
+    import { api, showMessage, queryParam } from '/common.js';
+    const token = queryParam('token');
+    const resetPanel = document.getElementById('reset-panel');
+    const invalidPanel = document.getElementById('invalid-panel');
+    const donePanel = document.getElementById('done-panel');
+    const form = document.getElementById('reset-form');
+    const msg = document.getElementById('msg');
+
+    if (!token) {
+      resetPanel.style.display = 'none';
+      invalidPanel.style.display = 'block';
+    } else {
+      // 打开链接先由服务端判断令牌状态
+      const check = await api(`/api/password/reset?token=${encodeURIComponent(token)}`);
+      if (!check.ok || !check.data.valid) {
+        resetPanel.style.display = 'none';
+        invalidPanel.style.display = 'block';
+      }
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const password = document.getElementById('password').value;
+      const password2 = document.getElementById('password2').value;
+      if (password !== password2) {
+        return showMessage(msg, '两次输入的密码不一致');
+      }
+      const res = await api('/api/password/reset', {
+        method: 'POST',
+        body: { token, password },
+      });
+      if (res.ok) {
+        resetPanel.style.display = 'none';
+        donePanel.style.display = 'block';
+      } else {
+        // 失败后链接可能已被使用 / 失效，直接切到统一失败面板
+        showMessage(msg, res.data.error || '重置失败');
+        resetPanel.style.display = 'none';
+        invalidPanel.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

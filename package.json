@@ -1,0 +1,14 @@
+{
+  "name": "gsb2",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "本地账号系统：带内置收件箱的密码恢复流程演示",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node test/flow.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

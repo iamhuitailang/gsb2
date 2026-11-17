@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>忘记密码</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <nav class="nav">
+    <a class="brand" href="/">账号系统</a>
+    <span class="spacer"></span>
+    <a href="/login.html">登录</a>
+    <a href="/inbox.html">收件箱</a>
+  </nav>
+  <main class="container">
+    <div class="card">
+      <h1>找回密码</h1>
+      <p class="subtitle">
+        输入注册邮箱，我们会发送一封带重置链接的邮件。
+      </p>
+      <form id="forgot-form">
+        <label for="email">注册邮箱</label>
+        <input id="email" type="email" autocomplete="username" required />
+        <button type="submit">发送重置链接</button>
+        <div id="msg" class="message"></div>
+      </form>
+      <p class="hint">
+        本项目不会发送真实邮件，重置链接统一进入
+        <a href="/inbox.html">内置收件箱</a> 查看。
+      </p>
+    </div>
+  </main>
+  <script type="module">
+    import { api, showMessage } from '/common.js';
+    const form = document.getElementById('forgot-form');
+    const msg = document.getElementById('msg');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const res = await api('/api/password/forgot', {
+        method: 'POST',
+        body: { email: document.getElementById('email').value },
+      });
+      // 无论邮箱是否注册，都显示同一条统一回复
+      showMessage(msg, res.data.message || res.data.error, res.ok ? 'ok' : 'error');
+      form.reset();
+    });
+  </script>
+</body>
+</html>

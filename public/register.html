@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>注册</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <nav class="nav">
+    <a class="brand" href="/">账号系统</a>
+    <span class="spacer"></span>
+    <a href="/login.html">登录</a>
+  </nav>
+  <main class="container">
+    <div class="card">
+      <h1>注册新账号</h1>
+      <form id="register-form">
+        <label for="name">昵称</label>
+        <input id="name" type="text" autocomplete="nickname" />
+        <label for="email">邮箱</label>
+        <input id="email" type="email" autocomplete="username" required />
+        <label for="password">密码（至少 8 位）</label>
+        <input id="password" type="password" autocomplete="new-password" minlength="8" required />
+        <button type="submit">注册并登录</button>
+        <div id="msg" class="message"></div>
+      </form>
+      <p class="hint">已有账号？<a href="/login.html">去登录</a></p>
+    </div>
+  </main>
+  <script type="module">
+    import { api, showMessage } from '/common.js';
+    const form = document.getElementById('register-form');
+    const msg = document.getElementById('msg');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const { data } = await api('/api/register', {
+        method: 'POST',
+        body: {
+          name: document.getElementById('name').value,
+          email: document.getElementById('email').value,
+          password: document.getElementById('password').value,
+        },
+      });
+      if (data.user) {
+        window.location.href = '/profile.html';
+      } else {
+        showMessage(msg, data.error || '注册失败');
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>内置收件箱</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <nav class="nav">
+    <a class="brand" href="/">账号系统</a>
+    <span class="spacer"></span>
+    <a href="/forgot.html">忘记密码</a>
+    <a href="/login.html">登录</a>
+  </nav>
+  <main class="container" style="max-width: 680px;">
+    <h1>内置收件箱</h1>
+    <p class="subtitle">
+      演示项目不连接真实邮件服务，所有重置邮件都在这里。每封邮件直接展示可点击的演示重置链接。
+    </p>
+    <div id="mail-list"></div>
+  </main>
+  <script type="module">
+    import { api, esc, formatTime } from '/common.js';
+    const list = document.getElementById('mail-list');
+    const res = await api('/api/mails');
+    const mails = res.data.mails || [];
+
+    if (!mails.length) {
+      list.innerHTML = '<div class="empty">收件箱为空，先去“忘记密码”页提交一次邮箱吧。</div>';
+    } else {
+      list.innerHTML = mails.map((mail) => `
+        <article class="mail-item">
+          <div class="mail-meta">
+            收件人：${esc(mail.to)}　·　${esc(formatTime(mail.sentAt))}
+          </div>
+          <strong>${esc(mail.subject)}</strong>
+          <p>${esc(mail.body)}</p>
+          <a class="mail-link" href="${esc(mail.resetUrl)}">打开重置链接</a>
+          <div class="mail-url">${esc(mail.resetUrl)}</div>
+        </article>
+      `).join('');
+    }
+  </script>
+</body>
+</html>
