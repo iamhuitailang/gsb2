@@ -1,0 +1,8 @@
+虚构样例 —— 以下私钥块为人工编造的演示数据, 不是真实密钥,
+仅用于演示 secretscan 对 PEM 私钥标记 (pem.private_key) 的检测。
+
+-----BEGIN RSA PRIVATE KEY-----
+FAKE+FAKE+FAKE+FAKE+FAKE+FAKE+FAKE+FAKE+FAKE+FAKE+FAKE+FAKE
+MIIEpAIBAAKCAQEA0000example0000example0000example0000example00
+FAKE+FAKE+FAKE+FAKE+FAKE+FAKE+FAKE+FAKE+FAKE+FAKE+FAKE+FAKE
+-----END RSA PRIVATE KEY-----

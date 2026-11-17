@@ -12,6 +12,10 @@ secret*
 *.p12
 *.pfx
 
+# 例外: 本仓库的扫描工具包名以 secret 开头, 需要纳入版本管理
+!secretscan/
+!secretscan/**
+
 # ---- 运行期产物 / 本地数据 ----
 data.json
 *.log
