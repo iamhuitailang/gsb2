@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>项目面板 · 实时任务更新</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>项目面板</h1>
+    <div id="identity"></div>
+  </header>
+
+  <!-- 登录：选择身份，token 由服务端识别并决定权限 -->
+  <section id="login" class="card">
+    <h2>选择身份登录</h2>
+    <p class="hint">订阅范围由服务端按该身份的项目成员关系决定，页面无法自行扩大。</p>
+    <div class="row">
+      <button data-token="employee-token">以员工身份进入（小赵）</button>
+      <button data-token="admin-token" class="secondary">以管理员身份进入</button>
+    </div>
+  </section>
+
+  <!-- 员工视图 -->
+  <main id="employee-view" hidden>
+    <div class="row between">
+      <h2>我的项目（服务端下发的订阅范围）</h2>
+      <button id="btn-refresh" class="secondary small">重新拉取 / 模拟重开页面</button>
+    </div>
+    <div id="project-grid" class="grid"></div>
+
+    <h2>实时消息流（SSE）</h2>
+    <div id="live-log" class="log"></div>
+  </main>
+
+  <!-- 管理员视图 -->
+  <main id="admin-view" hidden>
+    <h2>权限管理</h2>
+    <div id="access-panel" class="card"></div>
+    <h2>任务管理（更新后实时推送给有权限的在线员工）</h2>
+    <div id="admin-tasks" class="grid"></div>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>
