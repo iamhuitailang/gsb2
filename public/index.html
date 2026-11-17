@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>仓库 API 凭据管理</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>仓库系统 · API 凭据管理</h1>
+    <p class="subtitle">服务账号 → 钥匙（仓库 + 动作范围）→ 轮换重叠 → 停用即失效</p>
+  </header>
+
+  <main class="grid">
+    <!-- 演示时钟 -->
+    <section class="card span-2">
+      <h2>演示时钟</h2>
+      <div class="clock-row">
+        <div>
+          <div class="clock-now" id="clockNow">—</div>
+          <div class="muted" id="clockOffset">偏移 0 分钟</div>
+        </div>
+        <div class="clock-actions">
+          <button data-advance="300000">快进 5 分钟</button>
+          <button data-advance="3600000">快进 1 小时</button>
+          <button data-advance="7200000">快进 2 小时</button>
+          <input type="datetime-local" id="clockSetAt" step="1" />
+          <button id="clockSetBtn">设定时间</button>
+          <button id="clockResetBtn" class="ghost">时钟回正</button>
+          <button id="demoResetBtn" class="danger ghost">重置全部演示数据</button>
+        </div>
+      </div>
+      <p class="hint">钥匙到期与排队盘点的执行时刻都以这个时钟为准。</p>
+    </section>
+
+    <!-- 服务账号 -->
+    <section class="card">
+      <h2>服务账号（两个本地集成程序）</h2>
+      <div id="accounts"></div>
+    </section>
+
+    <!-- 库存 -->
+    <section class="card">
+      <h2>库存</h2>
+      <table>
+        <thead><tr><th>SKU</th><th>仓库</th><th>名称</th><th>数量</th></tr></thead>
+        <tbody id="inventoryBody"></tbody>
+      </table>
+    </section>
+
+    <!-- 签发钥匙 -->
+    <section class="card">
+      <h2>签发新钥匙</h2>
+      <form id="issueForm" class="form">
+        <label>服务账号
+          <select name="serviceAccountId" id="issueAccount"></select>
+        </label>
+        <fieldset>
+          <legend>绑定仓库（不能超出账号权限）</legend>
+          <div id="issueWarehouses" class="checks"></div>
+        </fieldset>
+        <fieldset>
+          <legend>可执行动作</legend>
+          <div id="issueActions" class="checks"></div>
+        </fieldset>
+        <button type="submit">生成钥匙</button>
+        <p class="hint">钥匙明文只会在生成结果里展示这一次，请立即复制。</p>
+      </form>
+    </section>
+
+    <!-- 钥匙列表 -->
+    <section class="card">
+      <h2>钥匙列表</h2>
+      <table>
+        <thead>
+          <tr><th>前缀</th><th>服务账号</th><th>范围</th><th>状态</th><th>创建 / 截止</th><th>操作</th></tr>
+        </thead>
+        <tbody id="keysBody"></tbody>
+      </table>
+      <p class="hint">列表只显示前缀与状态，系统不保存明文，无法找回。</p>
+    </section>
+
+    <!-- 接口试用 -->
+    <section class="card">
+      <h2>用钥匙调接口（范围核对）</h2>
+      <form id="apiForm" class="form">
+        <label>钥匙明文
+          <input name="secret" id="apiSecret" placeholder="gsb2_live_…（仅本浏览器内留存）" />
+        </label>
+        <div class="inline">
+          <label>接口
+            <select id="apiAction">
+              <option value="inventory:read">GET 查库存（只读动作）</option>
+              <option value="stocktake:submit">POST 提交盘点（写入动作，排队）</option>
+            </select>
+          </label>
+          <label>仓库
+            <select id="apiWarehouse"></select>
+          </label>
+        </div>
+        <div class="inline" id="stocktakeFields" hidden>
+          <label>SKU <input id="apiSku" placeholder="SKU-1001" /></label>
+          <label>盘点数量 <input id="apiQty" type="number" min="0" placeholder="1200" /></label>
+        </div>
+        <button type="submit">发送请求</button>
+        <div id="apiResult" class="result" hidden></div>
+      </form>
+    </section>
+
+    <!-- 排队盘点 -->
+    <section class="card span-2">
+      <h2>排队中的盘点写入（执行前再次确认钥匙与账号）</h2>
+      <table>
+        <thead>
+          <tr><th>任务</th><th>仓库/SKU</th><th>数量</th><th>使用钥匙</th><th>状态</th><th>执行时刻</th><th>结果</th></tr>
+        </thead>
+        <tbody id="jobsBody"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <!-- 明文一次性展示弹窗 -->
+  <div class="modal-backdrop" id="secretModal" hidden>
+    <div class="modal">
+      <h3 id="secretTitle">新钥匙明文（仅展示一次）</h3>
+      <p class="hint">关闭后无法再次查看，请立即复制并交给集成程序。</p>
+      <pre id="secretText" class="secret"></pre>
+      <div class="modal-actions">
+        <button id="secretCopy">复制</button>
+        <button id="secretUse" class="ghost">填入接口试用</button>
+        <button id="secretClose" class="ghost">我已保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

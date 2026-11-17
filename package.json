@@ -1,0 +1,14 @@
+{
+  "name": "gsb2-credential-admin",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "仓库系统 API 凭据管理：服务账号、钥匙签发/轮换/停用与范围校验",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
