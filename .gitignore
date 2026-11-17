@@ -28,6 +28,7 @@ __pycache__/
 venv/
 dist/
 build/
+*.egg-info/
 target/
 bin/
 *.exe

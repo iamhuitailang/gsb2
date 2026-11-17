@@ -1,0 +1,20 @@
+[build-system]
+# 不引入任何第三方构建后端：标准库 venv + pip 可直接以可编辑方式安装
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sqlaudit"
+version = "0.1.0"
+description = "本地 Python 项目 SQL 注入静态审查工具（纯标准库，不执行被扫描代码）"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "sqlaudit" }]
+dependencies = []
+
+[project.scripts]
+sqlaudit = "sqlaudit.cli:main"
+
+[tool.setuptools]
+packages = ["sqlaudit"]
