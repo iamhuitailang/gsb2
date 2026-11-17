@@ -1,0 +1,10 @@
+{
+  "name": "csrf-verification-bench",
+  "version": "1.0.0",
+  "private": true,
+  "description": "本机 CSRF 防护验证台：来源精确匹配 + 会话绑定令牌",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/csrf.test.js"
+  }
+}
