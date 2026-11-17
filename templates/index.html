@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>工单系统 · 主管批量关闭</title>
+<style>
+  body { font-family: -apple-system, "PingFang SC", sans-serif; max-width: 860px; margin: 24px auto; padding: 0 16px; color: #222; }
+  h1 { font-size: 20px; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; font-size: 14px; }
+  th { background: #f5f5f5; }
+  .bar { display: flex; gap: 12px; align-items: center; margin: 12px 0; flex-wrap: wrap; }
+  button { padding: 6px 14px; cursor: pointer; }
+  .archived { color: #999; }
+  #preview-result { font-weight: 600; }
+  #batch-result { background: #fafafa; border: 1px solid #e0e0e0; padding: 10px 14px; margin-top: 12px; white-space: pre-wrap; font-family: inherit; display: none; }
+  .ok { color: #1a7f37; }
+  .no { color: #b42318; }
+</style>
+</head>
+<body>
+<h1>工单系统 · 主管批量关闭</h1>
+
+<div class="bar">
+  当前身份：
+  <select id="group-select">
+    {% for g in groups %}
+    <option value="{{ g.id }}" {% if g.id == current_group_id %}selected{% endif %}>{{ g.name }}主管</option>
+    {% endfor %}
+  </select>
+  <span id="login-msg"></span>
+</div>
+
+<table>
+  <thead>
+    <tr><th></th><th>编号</th><th>标题</th><th>所属组</th><th>状态</th></tr>
+  </thead>
+  <tbody id="ticket-body"></tbody>
+</table>
+
+<div class="bar">
+  <button id="prev-page">上一页</button>
+  <span id="page-info"></span>
+  <button id="next-page">下一页</button>
+</div>
+
+<div class="bar">
+  <button id="preview-btn">预览可关闭数量</button>
+  <span id="preview-result"></span>
+  <button id="submit-btn" disabled>提交批量关闭</button>
+</div>
+
+<div id="batch-result"></div>
+
+<script>
+let page = 1, pages = 1;
+let batchId = null;          // 预览时生成批次号，提交与重试共用，保证幂等
+const selected = new Set();  // 跨页保留选中编号
+
+const $ = id => document.getElementById(id);
+
+async function loadTickets() {
+  const res = await fetch(`/api/tickets?page=${page}`);
+  const data = await res.json();
+  page = data.page; pages = data.pages;
+  const body = $('ticket-body');
+  body.innerHTML = '';
+  for (const t of data.items) {
+    const tr = document.createElement('tr');
+    if (t.status === 'archived') tr.className = 'archived';
+    tr.innerHTML = `
+      <td><input type="checkbox" data-id="${t.id}" ${selected.has(t.id) ? 'checked' : ''}></td>
+      <td>${t.id}</td><td>${t.title}</td><td>${t.group_name}</td>
+      <td>${t.status === 'open' ? '开启' : '已归档'}</td>`;
+    body.appendChild(tr);
+  }
+  body.querySelectorAll('input[type=checkbox]').forEach(cb => {
+    cb.onchange = () => {
+      const id = Number(cb.dataset.id);
+      cb.checked ? selected.add(id) : selected.delete(id);
+      invalidatePreview();
+    };
+  });
+  $('page-info').textContent = `第 ${page} / ${pages} 页，共 ${data.total} 张`;
+}
+
+function invalidatePreview() {
+  batchId = null;
+  $('preview-result').textContent = '';
+  $('submit-btn').disabled = true;
+}
+
+$('prev-page').onclick = () => { if (page > 1) { page--; loadTickets(); } };
+$('next-page').onclick = () => { if (page < pages) { page++; loadTickets(); } };
+
+$('group-select').onchange = async e => {
+  await fetch('/api/login', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({group_id: Number(e.target.value)})
+  });
+  selected.clear();
+  invalidatePreview();
+  $('batch-result').style.display = 'none';
+  loadTickets();
+};
+
+$('preview-btn').onclick = async () => {
+  if (selected.size === 0) { alert('请先勾选工单'); return; }
+  const res = await fetch('/api/preview', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ids: [...selected]})
+  });
+  const data = await res.json();
+  batchId = crypto.randomUUID().replaceAll('-', '');
+  $('preview-result').textContent = `选中 ${data.total} 张，可关闭 ${data.closable} 张`;
+  $('submit-btn').disabled = data.closable === 0;
+};
+
+$('submit-btn').onclick = async () => {
+  const res = await fetch('/api/batch-close', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({batch_id: batchId, ids: [...selected]})
+  });
+  const data = await res.json();
+  const lines = [];
+  if (data.replayed) lines.push('（该批次已提交过，以下为原执行结果，未重复写入）');
+  lines.push(`批次号：${data.batch_id}`);
+  lines.push(`关闭成功 ${data.closed.length} 张：` +
+    (data.closed.map(x => `#${x.id} ${x.title}`).join('、') || '无'));
+  lines.push(`未处理 ${data.not_processed.length} 张：`);
+  for (const x of data.not_processed) {
+    lines.push(`  #${x.id}${x.title ? ' ' + x.title : ''} —— ${x.reason}`);
+  }
+  const box = $('batch-result');
+  box.textContent = lines.join('\n');
+  box.style.display = 'block';
+  invalidatePreview();
+  loadTickets();
+};
+
+loadTickets();
+</script>
+</body>
+</html>
