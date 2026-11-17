@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>现场检查 · 离线填报演示</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="app-bar">
+    <div class="brand">
+      <strong>现场检查单</strong>
+      <span>离线填报 · 按检查点授权 · 本地演示</span>
+    </div>
+    <span class="who">
+      <span class="avatar" aria-hidden="true">李</span>
+      李岩 · 现场检查员
+    </span>
+    <button class="net-toggle" id="netToggle" type="button" aria-pressed="false">
+      <span class="dot" aria-hidden="true"></span>
+      <span class="state" id="netState">网络正常</span>
+      <span class="hint" id="netHint">点击模拟断网</span>
+    </button>
+    <a class="btn btn-ghost" href="/supervisor" target="_blank" rel="noopener">打开主管页面 ↗</a>
+  </header>
+
+  <main class="layout">
+    <section aria-labelledby="tasksTitle">
+      <h1 class="section-title" id="tasksTitle">我的检查任务 <small>资料按检查点授权下发</small></h1>
+      <div class="note-strip" id="noteStrip">
+        <div>
+          <strong>演示步骤</strong>
+          <ol>
+            <li>断网后，在甲、乙两个检查点各填一份检查单，保存到本机队列。</li>
+            <li>在主管页面撤销「甲」的授权，再回到本页恢复网络。</li>
+            <li>点击「同步队列」：乙点入库一条；甲点留在队列中待处理，不会写入服务端。</li>
+            <li>再次点击同步：乙点不会重复入库，甲点仍等待你处理。</li>
+          </ol>
+        </div>
+      </div>
+      <div id="checkpoints"></div>
+    </section>
+
+    <aside class="queue" aria-labelledby="queueTitle">
+      <div class="card queue-head">
+        <div class="row">
+          <h2 id="queueTitle">本机队列</h2>
+          <span class="badge badge-muted" id="queueTotal">0</span>
+          <button class="btn btn-primary btn-sm" id="syncBtn" type="button" style="margin-left:auto">同步队列</button>
+        </div>
+        <p class="sub" id="queueSub">草稿只保存在这台设备上，点击同步才会上报。</p>
+        <div class="counts" id="counts"></div>
+      </div>
+      <div class="card" style="padding:0 0 4px">
+        <div class="queue-list" id="queueList"></div>
+        <div class="foot">
+          队列存储：本机 localStorage（<code>inspection.queue.v1</code>）。断网状态仅作用于当前标签页。
+          <div style="margin-top:8px">
+            <button class="btn btn-ghost btn-sm" id="clearBtn" type="button">清理已上报副本</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <div class="toast-stack" id="toasts" aria-live="polite"></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "name": "offline-inspection-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "现场检查离线填报与按检查点授权的本地演示",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/server.test.js test/queue-core.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

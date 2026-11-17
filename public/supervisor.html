@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>主管 · 授权与正式检查单</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="app-bar">
+    <div class="brand">
+      <strong>主管工作台</strong>
+      <span>按检查点授权 · 正式检查单 · 操作记录</span>
+    </div>
+    <span class="who">
+      <span class="avatar" aria-hidden="true">王</span>
+      王敏 · 检验主管
+    </span>
+    <a class="btn btn-ghost" href="/" target="_blank" rel="noopener">打开检查员页面 ↗</a>
+  </header>
+
+  <main class="sv-layout">
+    <section>
+      <h1 class="section-title">检查点授权 <small>李岩 · 现场检查员</small></h1>
+      <div class="card">
+        <div class="card-head">
+          <h2>任务与资料可见范围</h2>
+          <span class="spacer"></span>
+          <small id="authUpdated">—</small>
+        </div>
+        <div id="authList">
+          <div class="empty">正在读取…</div>
+        </div>
+        <div class="foot">
+          撤销授权后，检查员页面的任务与资料立即不再下发；已经离线保存的草稿留在其本机，无法写入正式检查单。
+        </div>
+      </div>
+
+      <h1 class="section-title" style="margin-top:22px">操作记录</h1>
+      <div class="card">
+        <div id="audit" class="audit"><div class="empty">暂无记录</div></div>
+      </div>
+    </section>
+
+    <section>
+      <h1 class="section-title">正式检查单 <small>服务端已入库的记录</small></h1>
+      <div class="card">
+        <div class="card-head">
+          <h2>已接收到 <span id="recordCount">0</span> 条</h2>
+          <span class="spacer"></span>
+          <button class="btn btn-sm" id="refreshBtn" type="button">刷新</button>
+        </div>
+        <div class="records" id="records">
+          <div class="empty">还没有检查单入库</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast-stack" id="toasts" aria-live="polite"></div>
+  <script type="module" src="/supervisor.js"></script>
+</body>
+</html>
