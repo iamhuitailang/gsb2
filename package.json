@@ -1,0 +1,11 @@
+{
+  "name": "duty-console",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "本地值班账号后台：密码 + 新设备邮箱确认 + 设备信任管理",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/e2e.mjs"
+  }
+}
