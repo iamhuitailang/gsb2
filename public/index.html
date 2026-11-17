@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>本地登录 · 双层失败限流演示</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <p class="eyebrow">本地演示</p>
+        <h1>账号 / 来源双层失败限流</h1>
+        <p class="lede">
+          账号窗口与来源窗口各自独立计数。换来源清不掉账号计数，换账号也清不掉来源计数。
+          成功登录只清除本账号的失败记录。
+        </p>
+        <div class="clock" id="clock">
+          <span>演示时钟</span>
+          <strong id="clock-value">--:--:--</strong>
+          <span class="muted" id="clock-offset">偏移 0 分钟</span>
+        </div>
+      </header>
+
+      <section class="grid">
+        <form class="card" id="login-form">
+          <h2>模拟登录</h2>
+          <p class="muted">来源由测试入口指定，普通登录接口不能自报来源。</p>
+
+          <label>
+            账号
+            <select name="username" required>
+              <option value="jia">甲 · jia</option>
+              <option value="yi">乙 · yi</option>
+              <option value="bing">丙 · bing</option>
+            </select>
+          </label>
+
+          <label>
+            来源
+            <select name="source" required>
+              <option value="demo-a">demo-a</option>
+              <option value="demo-b">demo-b</option>
+              <option value="demo-c">demo-c</option>
+            </select>
+          </label>
+
+          <label>
+            密码
+            <input name="password" type="password" autocomplete="off" required />
+          </label>
+
+          <p class="muted">演示口令：<code>jia-demo-2026</code> · <code>yi-demo-2026</code> · <code>bing-demo-2026</code></p>
+
+          <button type="submit">尝试登录</button>
+          <p class="result" id="login-result" role="status" aria-live="polite"></p>
+        </form>
+
+        <section class="card">
+          <h2>当前窗口</h2>
+          <div class="meters">
+            <div class="meter">
+              <h3>账号层</h3>
+              <p><strong id="account-used">0</strong> / <span id="account-limit">3</span> 次失败</p>
+              <div class="bar"><span id="account-bar"></span></div>
+              <p class="muted" id="account-retry">可正常尝试</p>
+            </div>
+            <div class="meter">
+              <h3>来源层</h3>
+              <p><strong id="source-used">0</strong> / <span id="source-limit">5</span> 次失败</p>
+              <div class="bar"><span id="source-bar"></span></div>
+              <p class="muted" id="source-retry">可正常尝试</p>
+            </div>
+          </div>
+          <table class="retry-table">
+            <thead>
+              <tr><th>限制层</th><th>最早可重试时间</th></tr>
+            </thead>
+            <tbody id="retry-rows"></tbody>
+          </table>
+          <button class="secondary" id="refresh-status" type="button">刷新状态</button>
+        </section>
+
+        <section class="card">
+          <h2>演示时钟</h2>
+          <p class="muted">只影响窗口判定，不会改动真实系统时间。</p>
+          <div class="clock-actions">
+            <button type="button" data-advance="1">+1 分钟</button>
+            <button type="button" data-advance="5">+5 分钟</button>
+            <button type="button" data-advance="15">+15 分钟</button>
+            <button type="button" class="secondary" id="reset-clock">重置时钟</button>
+            <button type="button" class="secondary" id="reset-state">清空限流状态</button>
+          </div>
+          <p class="result" id="clock-result" role="status" aria-live="polite"></p>
+        </section>
+
+        <section class="card wide">
+          <div class="card-head">
+            <h2>管理员日志</h2>
+            <button class="secondary" id="refresh-log" type="button">刷新日志</button>
+          </div>
+          <p class="muted">对外只返回统一的失败提示，具体是账号层还是来源层生效记录在这里。</p>
+          <ol class="log" id="log-list"></ol>
+        </section>
+      </section>
+
+      <details class="notes">
+        <summary>样例操作步骤</summary>
+        <ol>
+          <li>用 <code>demo-a</code> 让甲连续失败 2 次，再用 <code>demo-b</code> 失败 1 次：账号层达到 3 次。</li>
+          <li>此时甲换到全新的 <code>demo-c</code> 仍被限制，说明账号计数与来源无关。</li>
+          <li>乙在 <code>demo-c</code>（来源用量未满）用正确密码可登录。</li>
+          <li>把时钟推进超过账号窗口，再让甲用正确密码登录即可成功。</li>
+        </ol>
+      </details>
+    </main>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
