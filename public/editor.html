@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>编辑草稿 · 轻协作</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231f6f5c'/%3E%3Cpath d='M9 16.5l4.2 4.2L23 11' stroke='white' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <header class="app-header">
+      <a class="brand" href="/"><span class="brand__mark">轻</span>轻协作</a>
+      <nav class="nav">
+        <a href="/">我的草稿</a>
+        <a href="/security">账号安全</a>
+      </nav>
+      <div class="header__spacer"></div>
+      <div class="header__user">
+        <span class="avatar" id="user-avatar">演</span>
+        <span id="user-name">演示账号</span>
+        <button class="btn btn--ghost btn--sm" id="logout-btn" type="button">退出登录</button>
+      </div>
+    </header>
+
+    <main>
+      <div id="editor-loading" class="card empty">正在读取草稿…</div>
+
+      <div id="editor-body" hidden>
+        <div class="editor-bar">
+          <a class="btn btn--ghost btn--sm" href="/">← 返回</a>
+          <h1 id="draft-title">草稿</h1>
+          <span class="status" id="save-status" data-state="saved">
+            <span class="status__dot"></span><span id="save-status-text">已同步</span>
+          </span>
+          <span class="toolbar__spacer"></span>
+          <button class="btn btn--sm" id="revert-btn" type="button" disabled>放弃本地修改</button>
+          <button class="btn btn--primary btn--sm" id="save-btn" type="button" disabled>保存</button>
+        </div>
+
+        <div class="locked-banner" id="locked-banner" role="alert">
+          <div>
+            <strong id="locked-title">这台设备上的登录已结束</strong>
+            <p id="locked-text">
+              服务端已经使这台设备的会话失效，因此不能再保存到这账号的草稿。
+              你在本页尚未保存的内容仍保留在下方，可以全选复制出来。
+            </p>
+          </div>
+          <div class="locked-banner__actions">
+            <button class="btn btn--sm" id="copy-local-btn" type="button">复制本地内容</button>
+            <button class="btn btn--sm" id="download-local-btn" type="button">下载为 .txt</button>
+            <button class="btn btn--sm" id="discard-local-btn" type="button">放弃本地内容</button>
+            <a class="btn btn--sm btn--primary" href="/">重新登录</a>
+          </div>
+        </div>
+
+        <div class="conflict-box card" id="conflict-box">
+          <h3>服务器上的内容已被更新</h3>
+          <p class="page-sub page-sub--tight">
+            为避免覆盖别人的修改，这次保存没有写入。下面是服务器上最新的版本，你的内容仍保留在编辑框和本地副本中。
+          </p>
+          <pre id="conflict-content"></pre>
+          <div class="dialog__actions">
+            <button class="btn btn--sm" id="conflict-copy-btn" type="button">复制服务器版本</button>
+            <button class="btn btn--sm" id="conflict-reload-btn" type="button">
+              用服务器版本重新加载
+            </button>
+            <button class="btn btn--sm btn--danger" id="conflict-overwrite-btn" type="button">
+              用我的内容覆盖
+            </button>
+          </div>
+        </div>
+
+        <div class="editor-shell">
+          <textarea
+            id="editor"
+            class="editor-textarea"
+            spellcheck="false"
+            aria-label="草稿内容"
+            placeholder="开始写作…"
+          ></textarea>
+        </div>
+        <p class="local-backup-hint" id="local-hint"></p>
+      </div>
+    </main>
+
+    <script type="module" src="/editor.js"></script>
+  </body>
+</html>

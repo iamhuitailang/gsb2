@@ -1,0 +1,16 @@
+{
+  "name": "gsb2",
+  "version": "1.0.0",
+  "private": true,
+  "description": "本地多设备会话管理与账号安全演示",
+  "type": "module",
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node --watch server.mjs",
+    "test": "node --test test/*.test.mjs",
+    "reset": "node scripts/reset.mjs"
+  }
+}

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>账号安全 · 轻协作</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231f6f5c'/%3E%3Cpath d='M9 16.5l4.2 4.2L23 11' stroke='white' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <header class="app-header">
+      <a class="brand" href="/"><span class="brand__mark">轻</span>轻协作</a>
+      <nav class="nav">
+        <a href="/">我的草稿</a>
+        <a href="/security" aria-current="page">账号安全</a>
+      </nav>
+      <div class="header__spacer"></div>
+      <div class="header__user">
+        <span class="avatar" id="user-avatar">演</span>
+        <span id="user-name">演示账号</span>
+        <button class="btn btn--ghost btn--sm" id="logout-btn" type="button">退出登录</button>
+      </div>
+    </header>
+
+    <main>
+      <h1 class="page-title">账号安全</h1>
+      <p class="page-sub">
+        这里列出账号当前在线的设备。下线依据服务端保存的会话记录生效：
+        设备上的页面即使没有刷新，也会在下一次保存时被拒绝。
+      </p>
+
+      <div class="summary-row">
+        <div class="summary-tile">
+          <strong id="stat-online">—</strong>
+          <span>台设备在线</span>
+        </div>
+        <div class="summary-tile">
+          <strong id="stat-sessions">—</strong>
+          <span>个在线会话</span>
+        </div>
+        <div class="summary-tile">
+          <strong id="stat-ended">—</strong>
+          <span>条已结束的会话</span>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <span class="status" id="security-status"><span class="status__dot"></span><span>正在读取…</span></span>
+        <span class="toolbar__spacer"></span>
+        <button class="btn btn--sm" id="refresh-btn" type="button">刷新</button>
+        <button class="btn btn--sm btn--danger" id="revoke-others-btn" type="button">
+          退出其他所有设备
+        </button>
+      </div>
+
+      <div id="security-notice"></div>
+
+      <div class="section-head">
+        <h2>登录设备</h2>
+        <p>可以单独退出某一台设备。</p>
+        <span class="section-head__spacer"></span>
+      </div>
+      <div class="device-list" id="device-list">
+        <div class="card empty">正在读取设备列表…</div>
+      </div>
+    </main>
+
+    <dialog id="confirm-dialog">
+      <form class="dialog__body" method="dialog">
+        <h2 id="confirm-title">确认操作</h2>
+        <p id="confirm-text"></p>
+        <div class="dialog__actions">
+          <button class="btn" value="cancel" id="confirm-cancel" type="submit">取消</button>
+          <button class="btn btn--danger" value="confirm" id="confirm-ok" type="submit">确认</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script type="module" src="/security.js"></script>
+  </body>
+</html>

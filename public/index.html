@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>轻协作 · 登录</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231f6f5c'/%3E%3Cpath d='M9 16.5l4.2 4.2L23 11' stroke='white' stroke-width='2.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <div id="login-view" class="login-wrap" hidden>
+      <section class="card login-card">
+        <h1>登录轻协作</h1>
+        <p>同一个账号可以同时在多台设备上登录，登录记录会出现在账号安全页。</p>
+
+        <p id="login-error" class="form-error" role="alert"></p>
+
+        <form id="login-form" autocomplete="on">
+          <label class="field">
+            <span>账号</span>
+            <input id="username" name="username" value="demo" autocomplete="username" required />
+          </label>
+          <label class="field">
+            <span>密码</span>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              value="demo1234"
+              autocomplete="current-password"
+              required
+            />
+          </label>
+          <label class="field">
+            <span>设备名称（用于在安全页区分浏览器）</span>
+            <input id="device-name" name="deviceName" maxlength="40" placeholder="例如：甲 · 办公室电脑" />
+          </label>
+          <label class="field">
+            <span>设备类型</span>
+            <select id="device-kind" name="kind">
+              <option value="desktop">电脑</option>
+              <option value="mobile">手机</option>
+              <option value="tablet">平板</option>
+            </select>
+          </label>
+          <button class="btn btn--primary btn--block" type="submit" id="login-submit">登录</button>
+        </form>
+
+        <div class="hint">
+          演示账号 <code>demo</code>，密码 <code>demo1234</code>。<br />
+          请用两个浏览器（或普通窗口 + 无痕窗口）分别登录，并在「设备名称」里写清楚是哪一台，
+          例如甲写「甲 · 办公室电脑」，乙写「乙 · 笔记本」。
+        </div>
+      </section>
+    </div>
+
+    <div id="app-view" hidden>
+      <header class="app-header">
+        <a class="brand" href="/"><span class="brand__mark">轻</span>轻协作</a>
+        <nav class="nav">
+          <a href="/" aria-current="page">我的草稿</a>
+          <a href="/security">账号安全</a>
+        </nav>
+        <div class="header__spacer"></div>
+        <div class="header__user">
+          <span class="avatar" id="user-avatar">演</span>
+          <span id="user-name">演示账号</span>
+          <button class="btn btn--ghost btn--sm" id="logout-btn" type="button">退出登录</button>
+        </div>
+      </header>
+
+      <main>
+        <h1 class="page-title">我的草稿</h1>
+        <p class="page-sub">这一页读取的就是服务端保存的内容，已结束的会话无法再写入。</p>
+
+        <div class="toolbar">
+          <span class="status" id="draft-count"><span class="status__dot"></span><span>加载中…</span></span>
+          <span class="toolbar__spacer"></span>
+          <button class="btn btn--sm" id="refresh-btn" type="button">刷新</button>
+        </div>
+
+        <div class="draft-grid" id="draft-grid"></div>
+      </main>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
