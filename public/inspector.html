@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>检查员 · 离线检查单</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>🔎 现场检查员工作台</h1>
+    <nav>
+      <a href="/inspector.html">检查员</a>
+      <a href="/supervisor.html">主管页面</a>
+    </nav>
+    <div class="net-switch">
+      <span id="netLabel" class="small">在线</span>
+      <span id="netDot" class="net-dot online"></span>
+      <label class="switch" title="模拟本页面断网 / 恢复网络">
+        <input type="checkbox" id="netToggle" checked />
+        <span class="slider"></span>
+      </label>
+      <span class="small">模拟断网</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>当前授权 <span class="muted">（每次同步前按服务端当前权限重新核对）</span></h2>
+      <div id="permBar" class="small muted">加载中…</div>
+    </section>
+
+    <section class="card">
+      <h2>检查任务与资料</h2>
+      <div id="checkpoints"><div class="empty">加载中…</div></div>
+    </section>
+
+    <section class="card">
+      <h2>
+        本地同步队列
+        <button id="syncBtn" style="margin-left:auto">立即同步</button>
+        <button id="clearSyncedBtn" class="ghost">清除已入库记录</button>
+      </h2>
+      <div class="queue-summary">
+        <div class="stat pending"><div class="num" id="cntQueued">0</div><div class="lbl">待发送（还没发）</div></div>
+        <div class="stat synced"><div class="num" id="cntSynced">0</div><div class="lbl">已成功入库</div></div>
+        <div class="stat blocked"><div class="num" id="cntBlocked">0</div><div class="lbl">需用户处理</div></div>
+      </div>
+      <div class="records-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>检查点</th><th>内容摘要</th><th>状态</th>
+              <th>最近尝试</th><th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="outboxBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="/inspector.js"></script>
+</body>
+</html>

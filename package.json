@@ -1,0 +1,14 @@
+{
+  "name": "offline-inspection-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "离线检查单本地演示：按检查点授权、离线草稿队列、逐条权限核对、服务端幂等入库",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/api.test.mjs && node test/e2e-demo.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

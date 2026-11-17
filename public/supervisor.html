@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>主管 · 授权与正式检查单</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>🛡 主管管理台</h1>
+    <nav>
+      <a href="/inspector.html">检查员页面</a>
+      <a href="/supervisor.html">主管</a>
+    </nav>
+    <div class="net-switch">
+      <span class="net-dot online"></span>
+      <span class="small">管理台始终在线（检查员的断网模拟不影响本页）</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>检查点授权管理 <span class="muted">（按“员工 × 检查点”授权，立即生效；检查员下次同步按此核对）</span></h2>
+      <div class="records-wrap">
+        <table class="perm-table">
+          <thead>
+            <tr><th>员工</th><th>检查点</th><th>当前授权</th><th>操作</th></tr>
+          </thead>
+          <tbody id="permBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>
+        服务端正式检查单
+        <span class="muted">（权限不足的本机草稿不会出现在这里）</span>
+        <button id="resetBtn" class="ghost" style="margin-left:auto">重置演示数据</button>
+      </h2>
+      <div class="records-wrap">
+        <table>
+          <thead>
+            <tr><th>#</th><th>检查点</th><th>检查员</th><th>结论</th><th>内容</th><th>入库时间</th><th>草稿编号</th></tr>
+          </thead>
+          <tbody id="recordsBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="/supervisor.js"></script>
+</body>
+</html>
