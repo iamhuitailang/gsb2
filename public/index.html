@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>调价审核 · 委托值班</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">价</span>
+      <div>
+        <h1>调价审核 · 委托值班</h1>
+        <p class="brand-sub">休假期间把指定门店的审核权限临时委托给值班员</p>
+      </div>
+    </div>
+    <div class="whoami">
+      <span class="whoami-label">当前身份</span>
+      <div class="user-switch" id="user-switch" role="tablist" aria-label="切换当前员工"></div>
+    </div>
+  </header>
+
+  <div class="clockbar" id="clockbar">
+    <span class="clock-dot" id="clock-dot"></span>
+    <span class="clock-text">演示时钟 <strong id="clock-now">--</strong></span>
+    <span class="clock-badge" id="clock-badge" hidden>已调整</span>
+    <button class="link-btn" id="clock-reset" type="button" hidden>回到真实时间</button>
+  </div>
+
+  <nav class="tabs" id="tabs">
+    <a href="/" data-tab="todos" data-link>待办</a>
+    <a href="/delegations" data-tab="delegations" data-link>委托管理</a>
+    <a href="/demo" data-tab="demo" data-link>演示控制</a>
+  </nav>
+
+  <main id="main" class="main">
+    <div class="loading">加载中…</div>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

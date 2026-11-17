@@ -1,0 +1,14 @@
+{
+  "name": "price-approval-delegation-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "调价审核委托小后台：主管休假期间把指定门店的审核权限临时委托给值班员",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
