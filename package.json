@@ -1,0 +1,11 @@
+{
+  "name": "aftersale-delegation-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "本地演示后台：客服经客户一次性授权后代办售后申请",
+  "scripts": {
+    "start": "node src/server.js",
+    "smoke": "node scripts/smoke.mjs"
+  }
+}
