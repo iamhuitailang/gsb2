@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- XXE 样例：试图读取本机文件。检查台必须拒绝加载并说明原因，
+     解析结果中绝不应出现文件内容。 -->
+<!DOCTYPE data [
+  <!ENTITY xxe SYSTEM "file:///etc/passwd">
+]>
+<data>
+  <title>外部实体（本地文件）测试</title>
+  <leak>&xxe;</leak>
+  <note>上面的引用应被跳过，这里的内容仍应正常展示。</note>
+</data>

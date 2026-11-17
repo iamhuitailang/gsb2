@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 格式错误样例：标签未闭合，应报告具体行列位置 -->
+<order>
+  <item id="1">苹果</item>
+  <item id="2">香蕉
+</order>

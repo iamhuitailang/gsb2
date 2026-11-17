@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 正常文档：命名空间、注释、字符实体、CDATA、属性都应正常展示 -->
+<catalog xmlns="http://example.com/ns/catalog" xmlns:m="http://example.com/ns/meta" xml:lang="zh-CN">
+  <m:meta m:version="1.2" m:author="demo">
+    <m:created>2026-11-18</m:created>
+  </m:meta>
+  <book id="b-001" available="true">
+    <title>XML 安全指南 &amp; 实践</title>
+    <price currency="CNY">88.50</price>
+    <description><![CDATA[包含 <tags> 与 &entities; 的原文，不应被解析]]></description>
+    <!-- 一条普通注释 -->
+    <summary>字符实体测试：&lt;标签&gt; &amp; &#65;&#x42; 引号 &quot; 省略号 &#8230;</summary>
+  </book>
+  <book id="b-002" available="false">
+    <title>第二本书</title>
+    <?render mode="fast"?>
+    <segments>
+      <seg>第一段文本</seg>
+      <seg>第二段文本，含换行
+           与缩进</seg>
+    </segments>
+  </book>
+</catalog>
