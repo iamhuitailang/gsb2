@@ -45,3 +45,10 @@ coverage/
 
 # 生成的示例素材(可用 npm run generate:samples 恢复)
 public/samples/
+
+# ---- 本项目运行期产物 ----
+samples/
+.audit_data/
+*.audit_data/
+report.json
+

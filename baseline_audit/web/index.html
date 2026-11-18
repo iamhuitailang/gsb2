@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>本地安全基线核查台</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="topbar">
+  <h1>本地安全基线核查台</h1>
+  <div class="meta">
+    <span id="rule-version" class="pill">规则版本 -</span>
+    <span class="pill subtle">只读 · 离线 · 不跟随符号链接</span>
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <div class="scan-row">
+      <input id="root-path" type="text" placeholder="输入待核查的本地目录绝对路径，例如 /Users/you/demo-target" spellcheck="false">
+      <button id="btn-scan" class="primary">开始核查</button>
+      <button id="btn-baseline" disabled>保存为基线</button>
+      <button id="btn-export" disabled>导出报告</button>
+    </div>
+    <div id="banner" class="banner hidden"></div>
+    <div id="stats" class="stats hidden">
+      <div class="stat high"><b id="cnt-high">0</b><span>高危</span></div>
+      <div class="stat medium"><b id="cnt-medium">0</b><span>中危</span></div>
+      <div class="stat low"><b id="cnt-low">0</b><span>低危</span></div>
+      <div class="stat"><b id="cnt-new">0</b><span>新增</span></div>
+      <div class="stat"><b id="cnt-changed">0</b><span>变化</span></div>
+      <div class="stat"><b id="cnt-gone">0</b><span>消失</span></div>
+      <div class="stat"><b id="cnt-notice">0</b><span>处理提示</span></div>
+    </div>
+  </section>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="findings">发现项</button>
+    <button class="tab" data-tab="notices">读取/解析/工具提示</button>
+    <button class="tab" data-tab="exceptions">例外</button>
+    <button class="tab" data-tab="history">核查历史</button>
+    <button class="tab" data-tab="log">审计日志</button>
+  </nav>
+
+  <section id="tab-findings" class="tab-panel">
+    <div class="filters card">
+      <label>风险等级
+        <select id="f-severity">
+          <option value="">全部</option><option value="high">高</option>
+          <option value="medium">中</option><option value="low">低</option>
+        </select>
+      </label>
+      <label>发现状态
+        <select id="f-status">
+          <option value="">全部</option><option value="new">新增</option>
+          <option value="present">仍存在</option>
+          <option value="changed">发生变化</option>
+          <option value="disappeared">已消失</option>
+        </select>
+      </label>
+      <label>路径包含
+        <input id="f-path" type="text" placeholder="相对路径关键字">
+      </label>
+      <label class="check"><input id="f-hide-exc" type="checkbox"> 隐藏已加例外</label>
+      <button id="btn-clear-filter" class="ghost">清除筛选</button>
+    </div>
+    <div id="finding-list" class="list"></div>
+  </section>
+
+  <section id="tab-notices" class="tab-panel hidden">
+    <div id="notice-list" class="list"></div>
+  </section>
+
+  <section id="tab-exceptions" class="tab-panel hidden">
+    <div id="exception-list" class="list"></div>
+  </section>
+
+  <section id="tab-history" class="tab-panel hidden">
+    <div id="history-list" class="list"></div>
+  </section>
+
+  <section id="tab-log" class="tab-panel hidden">
+    <div id="log-list" class="list mono"></div>
+  </section>
+</main>
+
+<!-- 发现项详情抽屉 -->
+<div id="drawer-mask" class="drawer-mask hidden"></div>
+<aside id="drawer" class="drawer hidden">
+  <div class="drawer-head">
+    <h2 id="d-title">发现详情</h2>
+    <button id="d-close" class="ghost">关闭</button>
+  </div>
+  <div id="d-body" class="drawer-body"></div>
+</aside>
+
+<script src="app.js"></script>
+</body>
+</html>
