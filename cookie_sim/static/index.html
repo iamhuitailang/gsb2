@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cookie 安全策略模拟器(本机)</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<header>
+  <h1>浏览器 Cookie 安全策略模拟器</h1>
+  <p class="subtitle">纯本机运行 · 不连接真实浏览器或外部网站 · 数据保存在本地 data/jar.json</p>
+</header>
+
+<section class="samples">
+  <h2>① 本地样例(点击载入, 可改上下文后立即重算)</h2>
+  <div id="sample-list" class="sample-list"></div>
+</section>
+
+<main class="grid">
+  <!-- 左栏: cookie 维护 -->
+  <section class="panel">
+    <h2>② 维护 Cookie(接收 Set-Cookie)</h2>
+    <label class="field-label">产生 Set-Cookie 的响应来源 URL
+      <input id="source-url" type="text" value="https://shop.example.com/" spellcheck="false">
+    </label>
+    <label class="field-label">Set-Cookie 内容(每行一条, 不含 "Set-Cookie:" 前缀)
+      <textarea id="set-cookie-input" rows="5" spellcheck="false"
+placeholder="sid=abc123; Path=/; HttpOnly; SameSite=Lax"></textarea>
+    </label>
+    <div class="btn-row">
+      <button id="btn-add" class="primary">解析并保存</button>
+      <button id="btn-purge">清理已过期</button>
+      <button id="btn-clear" class="danger">清空全部数据</button>
+    </div>
+
+    <h3>当前 Cookie 库 <span id="cookie-count" class="badge"></span></h3>
+    <div class="table-wrap">
+      <table id="cookie-table">
+        <thead>
+          <tr>
+            <th>名称</th><th>值</th><th>作用域</th><th>路径</th>
+            <th>Secure</th><th>HttpOnly</th><th>SameSite</th><th>有效期</th><th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <h3>拒收记录(保留原因, 不静默丢弃) <span id="reject-count" class="badge warn"></span></h3>
+    <div id="rejection-list" class="rejection-list"></div>
+  </section>
+
+  <!-- 右栏: 请求模拟 -->
+  <section class="panel">
+    <h2>③ 构造一次请求</h2>
+    <label class="field-label">请求目标 URL
+      <input id="request-url" type="text" spellcheck="false">
+    </label>
+    <label class="field-label">顶层页面 URL(地址栏所在页面)
+      <input id="top-url" type="text" spellcheck="false">
+    </label>
+    <div class="form-row">
+      <label class="field-label small">请求方法
+        <select id="method">
+          <option>GET</option><option>HEAD</option><option>OPTIONS</option>
+          <option>POST</option><option>PUT</option><option>DELETE</option><option>PATCH</option>
+        </select>
+      </label>
+      <label class="field-label small check">
+        <input id="is-navigation" type="checkbox"> 由页面跳转触发(顶层导航)
+      </label>
+    </div>
+    <div class="btn-row">
+      <button id="btn-evaluate" class="primary">执行请求判断</button>
+      <span id="cross-site-tag" class="tag hidden"></span>
+    </div>
+
+    <h3>最终 Cookie 请求头</h3>
+    <pre id="cookie-header" class="header-box">（尚未计算）</pre>
+    <p class="hint" id="header-hint"></p>
+
+    <h3>逐项解释(域 / 路径 / 安全连接 / 有效期 / SameSite)</h3>
+    <div id="decision-list" class="decision-list"></div>
+
+    <h3>④ 页面脚本可读视图(document.cookie 模拟)</h3>
+    <label class="field-label">当前文档 URL
+      <input id="document-url" type="text" spellcheck="false">
+    </label>
+    <button id="btn-script-view">查看脚本可读 Cookie</button>
+    <div class="notice">
+      该视图模拟 <code>document.cookie</code>, <b>不是</b>实际请求头;
+      HttpOnly cookie 在这里不可见, 但仍可随符合条件的请求发送。
+    </div>
+    <pre id="script-header" class="header-box subtle">（尚未计算）</pre>
+    <div id="script-detail" class="decision-list"></div>
+  </section>
+</main>
+
+<footer>
+  所有页面、数据与请求均留在本机; 公共后缀表为内置静态快照, 不联网更新。
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>
