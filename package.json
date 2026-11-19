@@ -1,0 +1,11 @@
+{
+  "name": "gsb2-report-library",
+  "version": "1.0.0",
+  "private": true,
+  "description": "采购系统本地报告库:隔离展示供应商 HTML 报告",
+  "scripts": {
+    "generate:samples": "node src/generate-samples.js",
+    "start": "node src/start.js",
+    "test": "node test/verify.js"
+  }
+}
