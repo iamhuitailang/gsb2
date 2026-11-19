@@ -1,0 +1,6 @@
+{
+  "note": "B 探头第五批：同版本内容不一致的冲突演示，汇总保持不变",
+  "records": [
+    {"device_id": "probe-B", "reading_id": "B-r2", "version": 2, "measured_at": "2024-01-01T10:05:10Z", "temperature": 77.7}
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "note": "第三批：A 探头把原 22 度读数 A-r2 更正为 10:05:10 的 28 度（跨窗口），两组平均值应分别变成 17 和 27",
+  "records": [
+    {"device_id": "probe-A", "reading_id": "A-r2", "version": 2, "measured_at": "2024-01-01T10:05:10Z", "temperature": 28}
+  ]
+}

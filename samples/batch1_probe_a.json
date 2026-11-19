@@ -1,0 +1,8 @@
+{
+  "note": "第一批：A 探头 10:00 组的 18/22 度，10:05 整的 26 度（整点边界归入后一组）",
+  "records": [
+    {"device_id": "probe-A", "reading_id": "A-r1", "version": 1, "measured_at": "2024-01-01T10:00:00Z", "temperature": 18},
+    {"device_id": "probe-A", "reading_id": "A-r2", "version": 1, "measured_at": "2024-01-01T10:04:00Z", "temperature": 22},
+    {"device_id": "probe-A", "reading_id": "A-r3", "version": 1, "measured_at": "2024-01-01T10:05:00Z", "temperature": 26}
+  ]
+}

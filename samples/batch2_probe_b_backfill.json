@@ -1,0 +1,6 @@
+{
+  "note": "B 探头第二批：补传 10:00 组的 16 度",
+  "records": [
+    {"device_id": "probe-B", "reading_id": "B-r4", "version": 1, "measured_at": "2024-01-01T10:01:00Z", "temperature": 16}
+  ]
+}

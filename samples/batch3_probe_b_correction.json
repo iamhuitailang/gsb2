@@ -1,0 +1,6 @@
+{
+  "note": "B 探头第三批：B-r2 更正为 10:05:10 的 28 度（跨窗口）",
+  "records": [
+    {"device_id": "probe-B", "reading_id": "B-r2", "version": 2, "measured_at": "2024-01-01T10:05:10Z", "temperature": 28}
+  ]
+}

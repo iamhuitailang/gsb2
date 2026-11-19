@@ -1,0 +1,6 @@
+{
+  "note": "第五批（冲突演示）：同版本号 v2 但温度内容不一致，应在批次结果中指出 A-r2 冲突，保留已接收的 28 度，冲突内容不入库，汇总保持不变",
+  "records": [
+    {"device_id": "probe-A", "reading_id": "A-r2", "version": 2, "measured_at": "2024-01-01T10:05:10Z", "temperature": 99.9}
+  ]
+}

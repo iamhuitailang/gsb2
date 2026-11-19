@@ -1,0 +1,7 @@
+{
+  "note": "第四批：A 探头旧版 v1 与新版 v2 同时重传（内容均与已收版本一致），结果保持不变，均记为重复",
+  "records": [
+    {"device_id": "probe-A", "reading_id": "A-r2", "version": 1, "measured_at": "2024-01-01T10:04:00Z", "temperature": 22},
+    {"device_id": "probe-A", "reading_id": "A-r2", "version": 2, "measured_at": "2024-01-01T10:05:10Z", "temperature": 28}
+  ]
+}

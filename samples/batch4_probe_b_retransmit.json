@@ -1,0 +1,7 @@
+{
+  "note": "B 探头第四批：旧版与新版同时重传，结果保持不变",
+  "records": [
+    {"device_id": "probe-B", "reading_id": "B-r2", "version": 1, "measured_at": "2024-01-01T10:04:00Z", "temperature": 22},
+    {"device_id": "probe-B", "reading_id": "B-r2", "version": 2, "measured_at": "2024-01-01T10:05:10Z", "temperature": 28}
+  ]
+}

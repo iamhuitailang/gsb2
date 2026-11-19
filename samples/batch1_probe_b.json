@@ -1,0 +1,8 @@
+{
+  "note": "B 探头第一批：与 A 相同的时间段和数据形状，用于对照补传/更正/重算是否影响其他设备",
+  "records": [
+    {"device_id": "probe-B", "reading_id": "B-r1", "version": 1, "measured_at": "2024-01-01T10:00:00Z", "temperature": 18},
+    {"device_id": "probe-B", "reading_id": "B-r2", "version": 1, "measured_at": "2024-01-01T10:04:00Z", "temperature": 22},
+    {"device_id": "probe-B", "reading_id": "B-r3", "version": 1, "measured_at": "2024-01-01T10:05:00Z", "temperature": 26}
+  ]
+}

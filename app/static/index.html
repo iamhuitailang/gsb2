@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>温度探头批次服务</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1>温度探头批次服务</h1>
+  <nav>
+    <button class="tab active" data-tab="query">设备汇总查询</button>
+    <button class="tab" data-tab="batches">批次</button>
+    <button class="tab" data-tab="recompute">补算</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ===================== Tab 1: device windows ===================== -->
+  <section id="tab-query" class="tab-panel active">
+    <div class="toolbar">
+      <label>设备
+        <select id="device-select"></select>
+      </label>
+      <label>开始（含，UTC）
+        <input id="range-start" type="datetime-local" step="300">
+      </label>
+      <label>结束（不含，UTC）
+        <input id="range-end" type="datetime-local" step="300">
+      </label>
+      <button id="btn-query">查询</button>
+      <button id="btn-clear-range" class="secondary">显示全部</button>
+    </div>
+    <p class="hint">五分钟窗口按测量时间（UTC）划分，正好落在分界点的读数归入后一组；空窗口显示“无数据”。点开一组查看参与计算的读数，再点读数查看历史版本。</p>
+    <div id="window-meta"></div>
+    <table id="window-table">
+      <thead>
+        <tr><th>五分钟窗口（UTC）</th><th>读数条数</th><th>最低</th><th>最高</th><th>平均</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- ===================== Tab 2: batches ===================== -->
+  <section id="tab-batches" class="tab-panel">
+    <div class="toolbar">
+      <label>发送样例批次
+        <select id="sample-select"></select>
+      </label>
+      <button id="btn-send-sample">发送选中批次</button>
+      <button id="btn-send-all">依次发送全部样例</button>
+      <button id="btn-refresh-batches" class="secondary">刷新</button>
+      <button id="btn-reset" class="danger">清空数据库</button>
+    </div>
+    <p class="hint">计数口径：新增 / 更正 / 重复 / 旧版本 / 冲突 / 无效。冲突会列出是哪台设备哪条读数的哪个版本，并保留已接收的版本。</p>
+    <div id="batch-result" class="result-box hidden"></div>
+    <table id="batch-table">
+      <thead>
+        <tr>
+          <th>批次</th><th>收到时间（UTC）</th><th>备注</th>
+          <th>新增</th><th>更正</th><th>重复</th><th>旧版本</th><th>冲突</th><th>无效</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div id="batch-detail" class="result-box hidden"></div>
+  </section>
+
+  <!-- ===================== Tab 3: recompute ===================== -->
+  <section id="tab-recompute" class="tab-panel">
+    <div class="toolbar">
+      <label>设备
+        <select id="rc-device-select"></select>
+      </label>
+      <label>起始窗口（含，UTC）
+        <input id="rc-start" type="datetime-local" step="300">
+      </label>
+      <label>结束时间（不含，UTC）
+        <input id="rc-end" type="datetime-local" step="300">
+      </label>
+      <button id="btn-recompute">按保留的原始版本重算</button>
+    </div>
+    <p class="hint">只重算所选设备在范围内的窗口，范围外的汇总和其他设备不受影响。补算期间该设备到达的批次会排队，补算结束后并入，因此最终结果包含补算期间收到的新版本。</p>
+    <div id="rc-result" class="result-box hidden"></div>
+    <table id="rc-table">
+      <thead>
+        <tr><th>任务</th><th>设备</th><th>范围（UTC）</th><th>状态</th><th>开始</th><th>结束</th><th>改动</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div id="rc-detail" class="result-box hidden"></div>
+  </section>
+</main>
+
+<!-- drill-down modals -->
+<div id="modal-backdrop" class="hidden">
+  <div id="modal" class="modal">
+    <div class="modal-head">
+      <h3 id="modal-title"></h3>
+      <button id="modal-close" class="secondary">关闭</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
