@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>本地多轨音频编排器</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="toolbar">
+        <div class="toolbar-group" id="transport"></div>
+        <div class="toolbar-group" id="time-display">00:00.0</div>
+        <div class="toolbar-group" id="view-controls"></div>
+        <div class="toolbar-group" id="mode-controls"></div>
+        <div class="toolbar-group" id="export-controls"></div>
+        <div class="toolbar-group toolbar-right" id="project-controls"></div>
+      </header>
+      <main class="workspace">
+        <section class="track-area" id="track-area">
+          <div class="track-headers-scroll" id="headers-scroll">
+            <div class="ruler-spacer"></div>
+            <div id="track-headers"></div>
+          </div>
+          <div class="timeline-scroll" id="timeline-scroll">
+            <canvas id="ruler-canvas"></canvas>
+            <canvas id="timeline-canvas"></canvas>
+          </div>
+        </section>
+        <section class="media-bin" id="media-bin"></section>
+      </main>
+      <div id="toast-container"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

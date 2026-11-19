@@ -1,0 +1,23 @@
+{
+  "name": "local-multitrack-arranger",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "本地多轨音频编排器：片段编排、音量自动化、混音导出",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "generate-samples": "node scripts/generate-samples.mjs",
+    "typecheck": "tsc --noEmit",
+    "test:smoke": "node tests/smoke.mjs",
+    "test:audio": "node tests/audio-content.mjs",
+    "test:scroll": "node tests/scroll-align.mjs",
+    "test:screenshot": "node tests/screenshot.mjs",
+    "test": "node tests/smoke.mjs && node tests/audio-content.mjs && node tests/scroll-align.mjs"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "vite": "^5.4.2"
+  }
+}

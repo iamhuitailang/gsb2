@@ -43,5 +43,9 @@ coverage/
 .vscode/
 *.swp
 
-# 生成的示例素材(可用 npm run generate:samples 恢复)
+# 生成的示例素材(可用 npm run generate-samples 恢复)
 public/samples/
+
+# 测试产物（由 tests/ 脚本生成，可随时重新生成）
+tests/exported-smoke.wav
+tests/timeline-screenshot.png
