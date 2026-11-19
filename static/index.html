@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>本地全景拼接工具</title>
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">🧭 本地全景拼接</div>
+  <div class="toolbar">
+    <button id="btn-upload" class="primary">添加图片</button>
+    <input id="file-input" type="file" accept="image/*" multiple hidden>
+    <button id="btn-samples">载入演示素材</button>
+    <button id="btn-align" class="primary" disabled>自动对齐</button>
+    <button id="btn-export-png" disabled>导出 PNG</button>
+    <button id="btn-export-jpg" disabled>导出 JPEG</button>
+    <button id="btn-save-project" disabled>保存项目</button>
+    <button id="btn-open-project">打开项目</button>
+    <input id="project-input" type="file" accept=".json,application/json" hidden>
+    <button id="btn-reset" class="danger">清空</button>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- 左侧: 图片序列缩略图 -->
+  <aside class="filmstrip" id="filmstrip">
+    <div class="panel-title">
+      图片序列
+      <span class="hint">拖拽调整顺序</span>
+    </div>
+    <div id="thumbs" class="thumbs"></div>
+  </aside>
+
+  <!-- 中间: 拼接画布 -->
+  <section class="canvas-wrap" id="canvas-wrap">
+    <div class="canvas-toolbar">
+      <label class="check"><input type="checkbox" id="chk-coverage" checked> 显示覆盖范围</label>
+      <label class="check"><input type="checkbox" id="chk-labels" checked> 图片名称</label>
+      <span class="spacer"></span>
+      <button id="btn-zoom-in" title="放大">＋</button>
+      <button id="btn-zoom-out" title="缩小">－</button>
+      <button id="btn-fit" title="适应窗口">适应</button>
+      <button id="btn-zoom-100">100%</button>
+      <span id="zoom-label" class="zoom-label">—</span>
+    </div>
+    <canvas id="canvas"></canvas>
+    <div id="empty-hint" class="empty-hint">
+      <p>还没有图片</p>
+      <p class="sub">点击「添加图片」选择多张有重叠区域的照片,<br>或「载入演示素材」体验完整流程(含曝光差与匹配失败示例)</p>
+    </div>
+  </section>
+
+  <!-- 右侧: 融合参数 + 手动调整 + 对齐信息 -->
+  <aside class="sidepanel">
+    <div class="side-section">
+      <div class="panel-title">融合与曝光</div>
+      <label class="slider-label">
+        羽化宽度 <span id="feather-value">60 px</span>
+        <input type="range" id="feather" min="0" max="300" step="1" value="60" disabled>
+      </label>
+      <div class="row">
+        <label class="check"><input type="checkbox" id="auto-exposure" checked disabled> 自动曝光补偿</label>
+      </div>
+      <div id="gain-list" class="gain-list"></div>
+    </div>
+
+    <div class="side-section" id="manual-section">
+      <div class="panel-title">手动调整 <span id="manual-target" class="hint"></span></div>
+      <p class="sub" id="manual-empty">在画布上点击某张图的覆盖框,或在下方对齐信息中选择</p>
+      <div id="manual-controls" class="hidden">
+        <div class="nudge-grid">
+          <span></span>
+          <button data-nudge="up">↑</button>
+          <span></span>
+          <button data-nudge="left">←</button>
+          <button data-nudge="reset">重置</button>
+          <button data-nudge="right">→</button>
+          <span></span>
+          <button data-nudge="down">↓</button>
+          <span></span>
+        </div>
+        <label class="slider-label">水平偏移 <span id="off-x-value">0 px</span>
+          <input type="range" id="off-x" min="-5000" max="5000" step="1" value="0">
+        </label>
+        <label class="slider-label">垂直偏移 <span id="off-y-value">0 px</span>
+          <input type="range" id="off-y" min="-5000" max="5000" step="1" value="0">
+        </label>
+        <p class="sub">步长 1px, 按住 Shift 点方向键为 10px。拖动覆盖框也可平移。</p>
+      </div>
+    </div>
+
+    <div class="side-section grow">
+      <div class="panel-title">对齐信息</div>
+      <div id="pair-list" class="pair-list">
+        <p class="sub">点击「自动对齐」估计相邻图片的变换关系</p>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<footer class="statusbar">
+  <span id="status">就绪</span>
+  <span class="spacer"></span>
+  <span id="detector-label"></span>
+</footer>
+
+<div id="toast" class="toast hidden"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

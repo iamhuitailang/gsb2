@@ -19,6 +19,7 @@ data.json
 *.sqlite
 *.sqlite3
 tmp/
+.workspace/
 
 # ---- 依赖与构建产物 ----
 node_modules/
@@ -43,5 +44,6 @@ coverage/
 .vscode/
 *.swp
 
-# 生成的示例素材(可用 npm run generate:samples 恢复)
+# 生成的示例素材(可用 python3 -m scripts.generate_samples 恢复)
 public/samples/
+# 注意: samples/demo/ 是本仓库演示素材, 需要随仓库提供, 不要忽略
