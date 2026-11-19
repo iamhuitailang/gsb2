@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>本地日志安全审查台</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark">🛡</span>
+      <div>
+        <h1>本地结构化日志安全审查台</h1>
+        <p class="subtitle">全部数据仅在本机浏览器内处理 · 不连接任何外部服务 · 刷新页面即清空</p>
+      </div>
+    </div>
+    <ol class="step-indicator" id="stepIndicator">
+      <li data-step="1" class="active">1 导入</li>
+      <li data-step="2">2 规则与预览</li>
+      <li data-step="3">3 逐项审查</li>
+      <li data-step="4">4 导出</li>
+    </ol>
+  </header>
+
+  <main class="layout">
+    <!-- ================= 步骤 1：导入 ================= -->
+    <section class="panel active" id="panel-import">
+      <div class="panel-head">
+        <h2>① 导入日志（多行 JSON / JSONL）</h2>
+        <div class="actions">
+          <button type="button" class="btn" id="btnLoadDemo">载入本地演示日志</button>
+          <label class="btn">
+            选择文件
+            <input type="file" id="fileInput" accept=".jsonl,.json,.log,.txt" hidden />
+          </label>
+        </div>
+      </div>
+      <p class="hint">逐行解析：每行应是一条独立 JSON 记录。解析失败的行不会被丢弃，会单独列出并在导出时保留原因。数据不会离开本机。</p>
+      <textarea id="rawInput" spellcheck="false" placeholder='粘贴 JSONL，例如：&#10;{"ts":"2026-11-20T08:00:00Z","phone":"13812345678","order_id":"ORD-001"}'></textarea>
+      <div class="actions-row">
+        <button type="button" class="btn btn-primary" id="btnParse">解析并扫描</button>
+        <button type="button" class="btn btn-ghost" id="btnClearInput">清空</button>
+        <span class="status" id="importStatus"></span>
+      </div>
+      <div class="summary-cards" id="importSummary" hidden></div>
+      <div class="split">
+        <div class="subpanel">
+          <h3>可处理记录 <span class="count" id="okCount">0</span></h3>
+          <div class="record-list" id="recordList"></div>
+        </div>
+        <div class="subpanel">
+          <h3>解析失败的行 <span class="count count-warn" id="failCount">0</span></h3>
+          <div class="record-list" id="failureList"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 步骤 2：规则与预览 ================= -->
+    <section class="panel" id="panel-rules">
+      <div class="panel-head">
+        <h2>② 规则开关与命中预览</h2>
+        <div class="actions">
+          <button type="button" class="btn" id="btnBackToImport">返回导入</button>
+          <button type="button" class="btn btn-primary" id="btnToReview">进入逐项审查</button>
+        </div>
+      </div>
+      <p class="hint">字段名规则按 JSON 的 key 判定；内容规则按字段值和嵌套文本判定。停用规则后点击「重新预览」，命中列表会立即重算。普通业务编号、日期、日志级别没有对应规则，不会被抹掉。</p>
+      <div class="rule-block">
+        <h3>字段名规则</h3>
+        <div class="rule-grid" id="fieldRules"></div>
+      </div>
+      <div class="rule-block">
+        <h3>内容模式规则（字段值 / 嵌套文本）</h3>
+        <div class="rule-grid" id="patternRules"></div>
+      </div>
+      <div class="actions-row">
+        <button type="button" class="btn btn-primary" id="btnRescan">重新预览</button>
+        <button type="button" class="btn btn-ghost" id="btnRulesAll">全部启用</button>
+        <button type="button" class="btn btn-ghost" id="btnRulesDefault">恢复默认</button>
+        <span class="status" id="scanStatus"></span>
+      </div>
+      <div class="summary-cards" id="scanSummary" hidden></div>
+    </section>
+
+    <!-- ================= 步骤 3：逐项审查 ================= -->
+    <section class="panel" id="panel-review">
+      <div class="panel-head">
+        <h2>③ 逐项审查命中</h2>
+        <div class="actions">
+          <button type="button" class="btn" id="btnBackToRules">返回规则</button>
+          <button type="button" class="btn btn-primary" id="btnApply">应用处理并生成脱敏副本</button>
+        </div>
+      </div>
+      <p class="hint">
+        预览只显示脱敏后的片段（如 <code>138****5678</code>），不显示完整原值。默认全部处理；切换为「保留」的项会原样留在副本中，审计记录会如实标注。
+        同一敏感值在整批数据中复用同一个替代标记，可在右侧标记表核对。
+      </p>
+      <div class="actions-row">
+        <div class="filter-group">
+          <label>类型筛选
+            <select id="typeFilter"><option value="">全部类型</option></select>
+          </label>
+          <label>动作筛选
+            <select id="actionFilter">
+              <option value="">全部</option>
+              <option value="redact">将处理</option>
+              <option value="keep">将保留</option>
+            </select>
+          </label>
+          <input type="search" id="findingSearch" placeholder="按路径/规则搜索" />
+        </div>
+        <div class="actions">
+          <button type="button" class="btn btn-ghost" id="btnAllRedact">全部设为处理</button>
+          <button type="button" class="btn btn-ghost" id="btnAllKeep">全部设为保留</button>
+        </div>
+      </div>
+      <div class="split review-split">
+        <div class="subpanel">
+          <h3>命中清单 <span class="count" id="findingCount">0</span></h3>
+          <div class="finding-list" id="findingList"></div>
+        </div>
+        <div class="subpanel">
+          <h3>替代标记一致性表</h3>
+          <p class="hint small">处理后生成：相同原值 → 相同标记；不同原值 → 不同序号。</p>
+          <div class="marker-table-wrap" id="markerTable"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 步骤 4：导出 ================= -->
+    <section class="panel" id="panel-export">
+      <div class="panel-head">
+        <h2>④ 脱敏结果与导出</h2>
+        <div class="actions">
+          <button type="button" class="btn" id="btnBackToReview">返回审查</button>
+        </div>
+      </div>
+      <div class="safety-banner" id="safetyBanner"></div>
+      <div class="summary-cards" id="exportSummary"></div>
+      <div class="tabs">
+        <button type="button" class="tab active" data-tab="masked">脱敏后 JSONL</button>
+        <button type="button" class="tab" data-tab="report">处理记录（不含原文）</button>
+      </div>
+      <div class="tab-pane active" id="tab-masked">
+        <textarea id="maskedOutput" spellcheck="false" readonly></textarea>
+      </div>
+      <div class="tab-pane" id="tab-report">
+        <textarea id="reportOutput" spellcheck="false" readonly></textarea>
+      </div>
+      <div class="actions-row">
+        <button type="button" class="btn btn-primary" id="btnDownloadJsonl">导出脱敏 JSONL</button>
+        <button type="button" class="btn btn-primary" id="btnDownloadReport">导出处理记录 JSON</button>
+        <button type="button" class="btn" id="btnReimportMasked">把脱敏 JSONL 重新导入验证</button>
+        <button type="button" class="btn btn-ghost" id="btnRestart">开始新的一批</button>
+      </div>
+      <h3 class="changes-title">变更摘要（可定位，不含原始敏感值）</h3>
+      <div class="changes-list" id="changesList"></div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    纯本地运行：无网络请求、无跟踪、无第三方依赖。关闭或刷新页面后，本次数据不会持久化。
+  </footer>
+
+  <script src="../core/rules.js"></script>
+  <script src="../core/importer.js"></script>
+  <script src="../core/scanner.js"></script>
+  <script src="../core/redactor.js"></script>
+  <script src="../core/audit.js"></script>
+  <script src="../core/pipeline.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "log-redaction-console",
+  "version": "1.0.0",
+  "private": true,
+  "description": "本地结构化日志安全审查台：在本机识别并脱敏日志中的凭据与个人信息",
+  "scripts": {
+    "test": "node --test",
+    "gen:demo": "node scripts/gen-demo.js",
+    "smoke:browser": "node scripts/browser-smoke.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,13 @@
+{"ts":"2026-11-20T08:12:03Z","level":"INFO","service":"order-api","event":"request","order_id":"ORD20261120001","trace_id":"trc-7f3a91c2","user_id":10086,"latency_ms":42}
+{"ts":"2026-11-20T08:13:11Z","level":"INFO","service":"user-api","event":"login","user":{"user_id":10086,"real_name":"张伟","phone":"13812345678","email":"zhangwei@example.cn"},"password":"P@ssw0rd-2026"}
+{"ts":"2026-11-20T08:14:02Z","event":"token_refresh","tokens":{"access_token":"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMDA4NiJ9.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c","refresh_token":"rft-9f2e7d4a1b6c4801a2d3e5f70819abcd"}}
+{"ts":"2026-11-20T08:15:40Z","event":"payment","order_id":"ORD20261120001","amount":199.0,"currency":"CNY","card":{"card_no":"6222020200111117","holder_name":"李娜"},"billing_address":"北京市海淀区中关村大街1号"}
+{"ts":"2026-11-20T08:16:00Z","event":"callback","message":"客户 13812345678 来电，备用邮箱 zhangwei@example.cn；下游调用使用 api_key=sk_live_AbCdEf1234567890XyZ","status":"ok"}
+{"ts":"2026-11-20T08:17:21Z","event":"aws_deploy","env":{"AWS_ACCESS_KEY_ID":"AKIAIOSFODNN7EXAMPLE","region":"cn-north-1","retry":3}}
+{"ts":"2026-11-20T08:18:09Z","event":"http_out","url":"https://internal.example.local/v1/charge","headers":{"Authorization":"Bearer abcdef1234567890ABCDEF","Content-Type":"application/json"},"timeout_ms":3000}
+{"ts":"2026-11-20T08:19:55Z","event":"config_dump","config":"-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEA0123456789abcdefFAKEKEYMATERIAL\n-----END RSA PRIVATE KEY-----"}
+{"ts":"2026-11-20T08:20:12Z","event":"id_verify","id_card":"11010519491231002X","note":"身份证号仅用于实名核验流程"}
+{"ts":"2026-11-20T08:21:33Z","event":"similar_values","phone_a":"13812345678","phone_b":"13812345679","app_version":"12.0.3","serial":1234567890123456}
+{"ts":"2026-11-20T08:22:48Z","event":"upstream_error","error":"gateway rejected JWT eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyIjoxMDA4Nn0.signaturePart1234567890ab; retry with Bearer zzxxyy11223344556677"}
+{"ts":"2026-11-20T08:23:00Z","event":"broken","order_id":"ORD-002","note":"这一行缺少右花括号且引号未闭合
+{"ts":"2026-11-20T08:24:10Z","event":"reimport_demo","remark":"[REDACTED:PHONE:0001] 是上次处理留下的标记，不应被再次判定","client_ip":"10.20.30.40","server_ip":"192.168.1.10","hotline":"4008001234","version":"12.0.3","device_imei":"490154203237518"}
