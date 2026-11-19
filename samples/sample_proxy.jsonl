@@ -1,0 +1,7 @@
+{"source": "proxy", "event_id": "PX-2001", "event_time": "2026-11-18T09:10:00Z", "subject": "anonymous", "src_ip": "198.51.100.77", "action": "path_scan", "target": "/.git/config", "result": "404"}
+{"source": "proxy", "event_id": "PX-2002", "event_time": "2026-11-18T09:10:15Z", "subject": "anonymous", "src_ip": "198.51.100.77", "action": "GET", "target": "/wp-admin/admin.php", "result": "404"}
+{"source": "proxy", "event_id": "PX-2003", "event_time": "2026-11-18T09:11:00Z", "subject": "anonymous", "src_ip": "198.51.100.77", "action": "GET", "target": "/admin/users", "result": "200"}
+{"source": "proxy", "event_id": "PX-2004", "event_time": "2026-11-18T09:12:20Z", "subject": "anonymous", "src_ip": "198.51.100.77", "action": "GET", "target": "/api/internal/tokens", "result": "500"}
+{"source": "proxy", "event_id": "PX-2010", "event_time": "2026-11-18T09:40:00Z", "subject": "alice", "src_ip": "198.51.100.22", "action": "GET", "target": "/dashboard", "result": "200"}
+{"source": "proxy", "event_id": "PX-2011", "event_time": "2026-11-18T09:41:00Z", "subject": "alice", "src_ip": "198.51.100.22", "action": "GET", "target": "/missing-page", "result": "404"}
+{"source": "proxy", "event_id": "PX-2012", "event_time": "2026-11-18T11:00:00Z", "subject": "anonymous", "src_ip": "203.0.113.9", "action": "path_scan", "target": "/actuator/env", "result": "404"}

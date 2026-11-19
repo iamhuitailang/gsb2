@@ -1,0 +1,1 @@
+{"source": "endpoint", "event_id": "EP-3003", "event_time": "2026-11-18T10:38:00Z", "subject": "alice", "src_ip": "192.0.2.42", "action": "data_export", "target": "hr_salary_table", "result": "success"}

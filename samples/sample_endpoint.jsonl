@@ -1,0 +1,4 @@
+{"source": "endpoint", "event_id": "EP-3001", "event_time": "2026-11-18T10:35:00Z", "subject": "alice", "src_ip": "192.0.2.40", "action": "bulk_export", "target": "crm_customer_pii", "result": "success"}
+{"source": "endpoint", "event_id": "EP-3002", "event_time": "2026-11-18T10:42:00Z", "subject": "alice", "src_ip": "192.0.2.41", "action": "file_download", "target": "finance_q3.xlsx", "result": "success"}
+{"source": "endpoint", "event_id": "EP-3010", "event_time": "2026-11-18T12:05:00Z", "subject": "erin", "src_ip": "192.0.2.66", "action": "file_download", "target": "team_roster.pdf", "result": "success"}
+{"source": "endpoint", "event_id": "EP-3011", "event_time": "2026-11-18T12:20:00Z", "subject": "dave", "src_ip": "10.20.30.8", "action": "process_start", "target": "inventory-agent", "result": "success"}

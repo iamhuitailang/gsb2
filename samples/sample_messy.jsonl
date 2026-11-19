@@ -1,0 +1,7 @@
+{"source": "auth", "event_id": "AUTH-1003", "event_time": "2026-11-18T09:00:41Z", "subject": "carol", "src_ip": "203.0.113.45", "action": "login", "target": "sso.example.internal", "result": "failure"}
+{"source": "auth", "event_id": "AUTH-9001", "event_time": "not-a-time", "subject": "mallory", "src_ip": "203.0.113.99", "action": "login", "target": "sso.example.internal", "result": "failure"}
+{"source": "ids", "event_id": "IDS-1", "event_time": "2026-11-18T09:00:00Z", "subject": "x", "src_ip": "203.0.113.99", "action": "lookup", "target": "host-1", "result": "ok"}
+{"source": "auth", "event_id": "AUTH-9002", "event_time": "2026-11-18T09:00:00Z", "subject": "mallory", "action": "login", "target": "sso.example.internal", "result": "failure"}
+this is not json at all
+{"source": "auth", "event_id": "AUTH-1005", "event_time": "2026-11-18T09:01:30Z", "subject": "alice", "src_ip": "203.0.113.45", "action": "login", "target": "sso.example.internal", "result": "success", "extra": "conflicting-content"}
+{"source": "auth", "event_id": "AUTH-1002", "event_time": "2026-11-18T09:00:20+00:00", "subject": "bob", "src_ip": "203.0.113.45", "action": "login", "target": "sso.example.internal", "result": "failure"}

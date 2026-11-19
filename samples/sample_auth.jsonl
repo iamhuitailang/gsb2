@@ -1,0 +1,8 @@
+{"source": "auth", "event_id": "AUTH-1001", "event_time": "2026-11-18T09:00:05Z", "subject": "alice", "src_ip": "203.0.113.45", "action": "login", "target": "sso.example.internal", "result": "failure"}
+{"source": "auth", "event_id": "AUTH-1002", "event_time": "2026-11-18T09:00:20Z", "subject": "bob", "src_ip": "203.0.113.45", "action": "login", "target": "sso.example.internal", "result": "failure"}
+{"source": "auth", "event_id": "AUTH-1003", "event_time": "2026-11-18T09:00:41Z", "subject": "carol", "src_ip": "203.0.113.45", "action": "login", "target": "sso.example.internal", "result": "failure"}
+{"source": "auth", "event_id": "AUTH-1004", "event_time": "2026-11-18T09:01:02Z", "subject": "alice", "src_ip": "203.0.113.45", "action": "login", "target": "sso.example.internal", "result": "failure"}
+{"source": "auth", "event_id": "AUTH-1005", "event_time": "2026-11-18T09:01:30Z", "subject": "alice", "src_ip": "203.0.113.45", "action": "login", "target": "sso.example.internal", "result": "success"}
+{"source": "auth", "event_id": "AUTH-1010", "event_time": "2026-11-18T09:05:00Z", "subject": "dave", "src_ip": "10.20.30.7", "action": "login", "target": "sso.example.internal", "result": "failure"}
+{"source": "auth", "event_id": "AUTH-1020", "event_time": "2026-11-18T10:30:00Z", "subject": "alice", "src_ip": "198.51.100.22", "action": "login", "target": "sso.example.internal", "result": "success"}
+{"source": "auth", "event_id": "AUTH-1021", "event_time": "2026-11-18T12:00:00Z", "subject": "erin", "src_ip": "192.0.2.66", "action": "login", "target": "sso.example.internal", "result": "success"}

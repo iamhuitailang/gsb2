@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>secbench · 本地安全事件关联工作台</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header>
+  <h1>secbench <span class="sub">本地安全事件关联工作台（数据仅存本机）</span></h1>
+  <div class="meta" id="health">连接中…</div>
+</header>
+
+<nav class="tabs">
+  <button data-tab="import" class="active">① 导入</button>
+  <button data-tab="events">② 事件</button>
+  <button data-tab="alerts">③ 告警</button>
+  <button data-tab="settings">④ 阈值与限额</button>
+</nav>
+
+<main>
+  <!-- ================= 导入 ================= -->
+  <section id="tab-import" class="tab active">
+    <div class="card">
+      <h2>导入 JSONL 事件</h2>
+      <p class="hint">支持身份认证 auth / 反向代理 proxy / 终端 endpoint 三类来源。单文件与单次事件数受配置限额约束，超限整批拒绝；已有数据不会被清空。</p>
+      <form id="upload-form">
+        <input type="file" id="file-input" accept=".jsonl,application/x-ndjson,text/plain" required>
+        <button type="submit">上传导入</button>
+      </form>
+      <div id="import-result" class="result-box hidden"></div>
+    </div>
+
+    <div class="card">
+      <h2>导入批次</h2>
+      <table id="imports-table">
+        <thead><tr><th>#</th><th>时间(UTC)</th><th>文件</th><th>已接收</th><th>重复</th><th>隔离</th><th>错误</th><th>整批拒绝原因</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>行级错误</h2>
+      <table id="errors-table">
+        <thead><tr><th>批次</th><th>行号</th><th>原因</th><th>原始行</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>冲突隔离区</h2>
+      <p class="hint">相同来源+事件编号但内容不同的记录被隔离在此，不覆盖原始事件。</p>
+      <table id="quarantine-table">
+        <thead><tr><th>批次</th><th>来源</th><th>事件编号</th><th>隔离原因</th><th>原始行</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card danger">
+      <h2>清空演示数据</h2>
+      <p class="hint">删除本机数据库中的全部事件、告警、批次与处置记录（数据库文件保留）。</p>
+      <button id="reset-btn" class="danger-btn">清空全部数据</button>
+    </div>
+  </section>
+
+  <!-- ================= 事件 ================= -->
+  <section id="tab-events" class="tab hidden">
+    <div class="card">
+      <h2>已规范化事件</h2>
+      <form id="event-filter" class="filters">
+        <label>来源 <select name="source"><option value="">全部</option><option>auth</option><option>proxy</option><option>endpoint</option></select></label>
+        <label>主体 <input name="subject" placeholder="如 alice"></label>
+        <label>来源地址 <input name="src_ip" placeholder="如 203.0.113.45"></label>
+        <button type="submit">筛选</button>
+        <button type="button" id="event-reset">重置</button>
+      </form>
+      <table id="events-table">
+        <thead><tr><th>PK</th><th>来源</th><th>事件时间(UTC)</th><th>编号</th><th>主体</th><th>来源地址</th><th>动作</th><th>目标</th><th>结果</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= 告警 ================= -->
+  <section id="tab-alerts" class="tab hidden">
+    <div class="card">
+      <h2>告警列表</h2>
+      <form id="alert-filter" class="filters">
+        <label>严重度 <select name="severity"><option value="">全部</option><option value="high">高</option><option value="medium">中</option><option value="low">低</option></select></label>
+        <label>来源 <select name="source"><option value="">全部</option><option>auth</option><option>proxy</option><option>endpoint</option></select></label>
+        <label>主体 <input name="subject" placeholder="账号"></label>
+        <label>处置状态 <select name="status"><option value="">全部</option><option value="open">待处理</option><option value="confirmed">已确认</option><option value="false_positive">误报</option></select></label>
+        <label>起始时间 <input name="time_from" placeholder="2026-11-18T00:00:00Z"></label>
+        <label>截止时间 <input name="time_to" placeholder="2026-11-19T00:00:00Z"></label>
+        <label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" name="include_superseded" value="1"> 显示已失效告警</label>
+        <button type="submit">筛选</button>
+        <button type="button" id="alert-reset">重置</button>
+      </form>
+      <div class="export-bar">
+        <button id="export-json">导出当前筛选 (JSON)</button>
+        <button id="export-jsonl">导出当前筛选 (JSONL)</button>
+        <span class="hint">导出含规则版本、告警判断、证据事件编号与原始事件内容</span>
+      </div>
+      <div id="alerts-container"></div>
+    </div>
+  </section>
+
+  <!-- ================= 设置 ================= -->
+  <section id="tab-settings" class="tab hidden">
+    <div class="card">
+      <h2>规则阈值与导入限额</h2>
+      <p class="hint">修改保存后会用新阈值重新评估全部告警；既有告警的处置状态与说明保留。所有值必须为正整数（秒 / 字节 / 次）。</p>
+      <form id="settings-form" class="settings-grid"></form>
+      <button id="settings-save">保存并重新评估</button>
+    </div>
+    <div class="card">
+      <h2>规则说明</h2>
+      <div id="rules-doc"></div>
+    </div>
+  </section>
+</main>
+
+<dialog id="raw-dialog">
+  <h3>原始事件</h3>
+  <pre id="raw-dialog-content"></pre>
+  <form method="dialog"><button>关闭</button></form>
+</dialog>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
