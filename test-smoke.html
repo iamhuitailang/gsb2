@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>图层图像合成器</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header id="menubar">
+  <span class="app-title">🎨 图层合成器</span>
+  <div class="menu-group">
+    <button id="btn-new" title="新建项目">新建</button>
+    <button id="btn-open" title="打开项目文件 (.json)">打开…</button>
+    <button id="btn-save" title="保存项目到浏览器本地存储">保存</button>
+    <button id="btn-export-project" title="导出项目文件 (.json)">导出项目</button>
+    <button id="btn-export-png" title="导出合成结果 PNG">导出PNG</button>
+    <button id="btn-sample" title="载入内置示例项目">载入示例</button>
+  </div>
+  <div class="menu-group">
+    <button id="btn-undo" title="撤销 (Ctrl/Cmd+Z)">↩ 撤销</button>
+    <button id="btn-redo" title="重做 (Ctrl/Cmd+Shift+Z)">↪ 重做</button>
+  </div>
+  <div class="menu-group">
+    <label class="add-layer-label">添加图层
+      <select id="add-layer-select">
+        <option value="">— 选择类型 —</option>
+      </select>
+    </label>
+  </div>
+  <div class="menu-group tools">
+    <button class="tool-btn" data-tool="pan" title="抓手工具 (H)：拖动画布平移">✋ 抓手</button>
+    <button class="tool-btn" data-tool="brush" title="画笔工具 (B)：在遮罩上涂白色（显示区域）">🖌 画笔</button>
+    <button class="tool-btn" data-tool="eraser" title="橡皮工具 (E)：在遮罩上涂黑色（隐藏区域）">◻ 橡皮</button>
+  </div>
+  <div class="menu-group brush-controls">
+    <label>笔刷 <input type="range" id="brush-size" min="4" max="300" value="80"><span id="brush-size-val">80</span></label>
+    <label>硬度 <input type="range" id="brush-hardness" min="0" max="100" value="60"><span id="brush-hardness-val">60</span></label>
+  </div>
+  <div class="menu-group zoom-controls">
+    <button id="btn-zoom-out" title="缩小">−</button>
+    <span id="zoom-label">100%</span>
+    <button id="btn-zoom-in" title="放大">＋</button>
+    <button id="btn-zoom-fit" title="适应窗口">适应</button>
+  </div>
+</header>
+
+<main id="workspace">
+  <div id="canvas-container">
+    <canvas id="display-canvas"></canvas>
+    <div id="canvas-hint"></div>
+  </div>
+  <aside id="side-panel">
+    <section id="layers-section">
+      <h3>图层</h3>
+      <div id="layers-panel"></div>
+    </section>
+    <section id="props-section">
+      <h3>属性</h3>
+      <div id="props-panel"><p class="empty-tip">未选中图层</p></div>
+    </section>
+  </aside>
+</main>
+
+<input type="file" id="file-input" accept=".json,application/json" style="display:none">
+
+<script src="js/util.js"></script>
+<script src="js/generators.js"></script>
+<script src="js/model.js"></script>
+<script src="js/history.js"></script>
+<script src="js/render.js"></script>
+<script src="js/persistence.js"></script>
+<script src="js/sample.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+<script src="test-smoke.js"></script>
+</body>
+</html>
