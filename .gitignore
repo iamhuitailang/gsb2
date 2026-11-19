@@ -45,3 +45,6 @@ coverage/
 
 # 生成的示例素材(可用 npm run generate:samples 恢复)
 public/samples/
+
+# 本项目生成的虚构样例与演示案件目录（python3 -I samples/generate_samples.py 可重建）
+samples/generated/
