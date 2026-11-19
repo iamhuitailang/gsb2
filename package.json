@@ -1,0 +1,15 @@
+{
+  "name": "pixanim",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "本地像素动画工作台：逐帧绘制、图层/洋葱皮/差异检查、GIF 与精灵表导出",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node scripts/run-tests.mjs",
+    "generate:samples": "node scripts/generate-sample.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

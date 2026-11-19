@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pixanim · 像素动画工作台</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <div>
+          <h1>Pixanim</h1>
+          <p class="brand-sub">像素动画工作台</p>
+        </div>
+      </div>
+
+      <div class="project-meta">
+        <input
+          id="project-name"
+          class="project-name"
+          type="text"
+          maxlength="60"
+          aria-label="工程名称"
+          value="未命名工程"
+        />
+        <span id="project-info" class="project-info">48 × 48 · 1 帧</span>
+      </div>
+
+      <div class="topbar-actions">
+        <button type="button" class="btn ghost" data-action="new-project" title="新建空白工程">新建</button>
+        <button type="button" class="btn ghost" data-action="load-sample" title="载入内置角色样例">载入样例</button>
+        <button type="button" class="btn ghost" data-action="open-project" title="打开 .pixanim.json（Ctrl/Cmd+O）">打开</button>
+        <button type="button" class="btn ghost" data-action="save-project" title="保存工程（Ctrl/Cmd+S）">保存工程</button>
+        <button type="button" class="btn primary" data-action="open-export" title="导出 GIF / 精灵表">导出…</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="panel panel-tools" aria-label="工具">
+        <section class="block">
+          <h2 class="block-title">工具</h2>
+          <div class="tool-grid" id="tool-grid">
+            <button type="button" class="tool" data-tool="brush" title="画笔 (B)">
+              <span class="tool-icon">✎</span><span class="tool-name">画笔</span><kbd>B</kbd>
+            </button>
+            <button type="button" class="tool" data-tool="eraser" title="橡皮 (E)">
+              <span class="tool-icon">⌫</span><span class="tool-name">橡皮</span><kbd>E</kbd>
+            </button>
+            <button type="button" class="tool" data-tool="fill" title="填充 (G)">
+              <span class="tool-icon">▩</span><span class="tool-name">填充</span><kbd>G</kbd>
+            </button>
+            <button type="button" class="tool" data-tool="eyedropper" title="取色 (I)">
+              <span class="tool-icon">⊘</span><span class="tool-name">取色</span><kbd>I</kbd>
+            </button>
+          </div>
+        </section>
+
+        <section class="block">
+          <h2 class="block-title">
+            笔尖
+            <output id="brush-size-value" class="block-value">1 px</output>
+          </h2>
+          <input id="brush-size" type="range" min="1" max="16" step="1" value="1" aria-label="笔尖大小" />
+          <div class="brush-preview-row">
+            <canvas id="brush-preview" width="48" height="48" aria-hidden="true"></canvas>
+            <p class="hint">按 <kbd>[</kbd> / <kbd>]</kbd> 调整</p>
+          </div>
+        </section>
+
+        <section class="block grow">
+          <h2 class="block-title">
+            调色板
+            <output id="palette-count" class="block-value">16 色</output>
+          </h2>
+          <div id="palette" class="palette" role="listbox" aria-label="调色板"></div>
+          <div class="palette-actions">
+            <button type="button" class="btn small" data-action="palette-add" title="把当前颜色加入调色板">＋ 添加</button>
+            <button type="button" class="btn small ghost" data-action="palette-edit" title="编辑当前颜色（也可双击色块）">改色…</button>
+            <button type="button" class="btn small ghost" data-action="palette-remove" title="从调色板移除当前颜色（不影响画布）">移除</button>
+          </div>
+        </section>
+
+        <section class="block">
+          <h2 class="block-title">当前颜色</h2>
+          <div class="current-color">
+            <span id="current-swatch" class="swatch-large" aria-hidden="true"></span>
+            <div class="current-color-fields">
+              <input id="color-input" type="color" value="#1a1c2c" aria-label="选择颜色" />
+              <input id="hex-input" type="text" value="#1a1c2c" maxlength="7" spellcheck="false" aria-label="颜色十六进制值" />
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <section class="stage">
+        <div class="stage-toolbar">
+          <div class="segmented" role="group" aria-label="缩放">
+            <button type="button" class="btn icon" data-action="zoom-out" title="缩小 (−)">−</button>
+            <output id="zoom-value" class="zoom-value">800%</output>
+            <button type="button" class="btn icon" data-action="zoom-in" title="放大 (+)">＋</button>
+            <button type="button" class="btn small ghost" data-action="zoom-fit" title="适应窗口">适应</button>
+          </div>
+          <label class="toggle">
+            <input id="toggle-grid" type="checkbox" />
+            <span>像素网格</span>
+          </label>
+          <label class="toggle">
+            <input id="toggle-onion" type="checkbox" />
+            <span>洋葱皮</span>
+          </label>
+          <div class="onion-range" id="onion-range">
+            <label>
+              前 <input id="onion-prev" type="number" min="0" max="3" step="1" value="1" />
+            </label>
+            <label>
+              后 <input id="onion-next" type="number" min="0" max="3" step="1" value="1" />
+            </label>
+          </div>
+          <label class="toggle">
+            <input id="toggle-diff" type="checkbox" />
+            <span>帧间差异</span>
+          </label>
+          <div class="spacer"></div>
+          <button type="button" class="btn ghost" data-action="undo" id="undo-btn" title="撤销 (Ctrl/Cmd+Z)">↶ 撤销</button>
+          <button type="button" class="btn ghost" data-action="redo" id="redo-btn" title="重做 (Ctrl/Cmd+Shift+Z)">↷ 重做</button>
+        </div>
+
+        <div class="canvas-scroll" id="canvas-scroll">
+          <div class="canvas-wrap" id="canvas-wrap">
+            <canvas id="stage-canvas" tabindex="0" aria-label="绘图画布"></canvas>
+          </div>
+        </div>
+
+        <div class="stage-footer">
+          <span id="stage-hint" class="hint">左键绘制 · 空格播放 · Ctrl/Cmd+Z 撤销</span>
+          <span id="pixel-info" class="pixel-info">—</span>
+        </div>
+      </section>
+
+      <aside class="panel panel-right">
+        <section class="block">
+          <h2 class="block-title">预览</h2>
+          <div class="preview-box">
+            <canvas id="preview-canvas" aria-label="循环预览"></canvas>
+            <div class="preview-overlay">
+              <span id="preview-frame" class="preview-frame">1 / 1</span>
+            </div>
+          </div>
+          <div class="preview-controls">
+            <button type="button" class="btn small" data-action="preview-toggle" id="preview-toggle" title="播放/暂停 (空格)">▶ 播放</button>
+            <label class="toggle compact">
+              <input id="preview-loop" type="checkbox" checked />
+              <span>循环</span>
+            </label>
+            <span id="loop-duration" class="loop-duration">—</span>
+          </div>
+          <div class="loop-bar" aria-hidden="true">
+            <div class="loop-bar-fill" id="loop-bar-fill"></div>
+          </div>
+          <p class="hint" id="loop-hint"></p>
+        </section>
+
+        <section class="block grow">
+          <h2 class="block-title">
+            图层
+            <span class="block-actions">
+              <button type="button" class="btn tiny" data-action="layer-add" title="新增图层">＋</button>
+              <button type="button" class="btn tiny ghost" data-action="layer-up" title="上移图层">↑</button>
+              <button type="button" class="btn tiny ghost" data-action="layer-down" title="下移图层">↓</button>
+              <button type="button" class="btn tiny ghost" data-action="layer-delete" title="删除图层">🗑</button>
+            </span>
+          </h2>
+          <ul id="layer-list" class="layer-list" aria-label="图层列表"></ul>
+          <p class="hint">隐藏的图层不参与预览和导出；锁定后不可绘制。</p>
+        </section>
+
+        <section class="block">
+          <h2 class="block-title">本帧信息</h2>
+          <dl class="facts">
+            <div><dt>帧序号</dt><dd id="fact-frame">1 / 1</dd></div>
+            <div><dt>停留时间</dt><dd id="fact-duration">120 ms</dd></div>
+            <div><dt>循环总长</dt><dd id="fact-total">120 ms</dd></div>
+            <div><dt>差异像素</dt><dd id="fact-diff">—</dd></div>
+          </dl>
+        </section>
+      </aside>
+    </main>
+
+    <footer class="timeline" aria-label="时间轴">
+      <div class="timeline-head">
+        <div class="timeline-title">
+          <h2>时间轴</h2>
+          <span id="timeline-meta" class="timeline-meta">1 帧 · 120 ms</span>
+        </div>
+        <div class="timeline-actions">
+          <button type="button" class="btn small" data-action="frame-add" title="在当前帧后插入空白帧 (N)">＋ 插入</button>
+          <button type="button" class="btn small ghost" data-action="frame-duplicate" title="复制当前帧 (Shift+D)">复制</button>
+          <button type="button" class="btn small ghost" data-action="frame-left" title="当前帧左移 (Alt+←)">← 前移</button>
+          <button type="button" class="btn small ghost" data-action="frame-right" title="当前帧右移 (Alt+→)">后移 →</button>
+          <button type="button" class="btn small danger" data-action="frame-delete" title="删除当前帧 (Delete)">删除</button>
+          <span class="divider"></span>
+          <label class="duration-field">
+            停留
+            <input id="frame-duration" type="number" min="10" max="60000" step="10" value="120" />
+            ms
+          </label>
+          <button type="button" class="btn small ghost" data-action="duration-apply-all" title="把当前停留时间应用到所有帧">应用到全部</button>
+        </div>
+      </div>
+      <div class="timeline-strip" id="timeline-strip" role="listbox" aria-label="帧列表"></div>
+      <div class="timeline-progress" aria-hidden="true">
+        <div class="timeline-progress-fill" id="timeline-progress-fill"></div>
+      </div>
+    </footer>
+
+    <div class="statusbar" role="status">
+      <span id="status-text">就绪</span>
+      <span id="status-right" class="status-right"></span>
+    </div>
+
+    <dialog id="export-dialog" class="dialog">
+      <form method="dialog" class="dialog-body" data-prevent-submit>
+        <header class="dialog-head">
+          <h2>导出</h2>
+          <button type="button" class="btn tiny ghost" data-close-dialog title="关闭">✕</button>
+        </header>
+        <div class="dialog-tabs" role="tablist">
+          <button type="button" class="tab active" data-export-tab="gif" role="tab">GIF 动画</button>
+          <button type="button" class="tab" data-export-tab="sheet" role="tab">精灵表 PNG</button>
+        </div>
+
+        <section class="export-pane" data-export-pane="gif">
+          <div class="field-row">
+            <label class="field">
+              <span>放大倍数</span>
+              <select id="gif-scale">
+                <option value="1" selected>1×（原始像素）</option>
+                <option value="2">2×</option>
+                <option value="3">3×</option>
+                <option value="4">4×</option>
+                <option value="6">6×</option>
+                <option value="8">8×</option>
+              </select>
+            </label>
+            <label class="field checkbox">
+              <input id="gif-loop" type="checkbox" checked />
+              <span>无限循环</span>
+            </label>
+          </div>
+          <div class="export-note" id="gif-report"></div>
+          <p class="hint">透明背景使用 GIF 单 Bit 透明；半透明像素会按 50% 阈值处理。帧时长按 10ms 取整。</p>
+          <div class="dialog-actions">
+            <button type="button" class="btn ghost" data-close-dialog>取消</button>
+            <button type="button" class="btn primary" data-action="export-gif">导出 GIF</button>
+          </div>
+        </section>
+
+        <section class="export-pane hidden" data-export-pane="sheet">
+          <div class="field-row">
+            <label class="field">
+              <span>排版</span>
+              <select id="sheet-layout">
+                <option value="horizontal" selected>横向条带（1 行）</option>
+                <option value="grid">网格</option>
+              </select>
+            </label>
+            <label class="field hidden" id="sheet-columns-field">
+              <span>列数</span>
+              <input id="sheet-columns" type="number" min="1" max="64" step="1" value="4" />
+            </label>
+            <label class="field">
+              <span>间距</span>
+              <input id="sheet-gap" type="number" min="0" max="16" step="1" value="0" />
+            </label>
+            <label class="field">
+              <span>放大</span>
+              <select id="sheet-scale">
+                <option value="1" selected>1×</option>
+                <option value="2">2×</option>
+                <option value="4">4×</option>
+                <option value="8">8×</option>
+              </select>
+            </label>
+          </div>
+          <div class="export-note" id="sheet-report"></div>
+          <p class="hint">PNG 保留完整 alpha 通道。附带一份 JSON 元数据，记录每帧坐标与时长。</p>
+          <div class="dialog-actions">
+            <button type="button" class="btn ghost" data-close-dialog>取消</button>
+            <button type="button" class="btn primary" data-action="export-sheet">导出精灵表</button>
+          </div>
+        </section>
+      </form>
+    </dialog>
+
+    <dialog id="new-dialog" class="dialog narrow">
+      <form method="dialog" class="dialog-body" data-prevent-submit>
+        <header class="dialog-head">
+          <h2>新建工程</h2>
+          <button type="button" class="btn tiny ghost" data-close-dialog title="关闭">✕</button>
+        </header>
+        <div class="field-row">
+          <label class="field">
+            <span>宽度</span>
+            <input id="new-width" type="number" min="8" max="256" step="1" value="48" />
+          </label>
+          <label class="field">
+            <span>高度</span>
+            <input id="new-height" type="number" min="8" max="256" step="1" value="48" />
+          </label>
+        </div>
+        <label class="field">
+          <span>名称</span>
+          <input id="new-name" type="text" maxlength="60" value="未命名工程" />
+        </label>
+        <p class="hint">尺寸范围 8–256 像素。新建会清空当前工程（请先保存）。</p>
+        <div class="dialog-actions">
+          <button type="button" class="btn ghost" data-close-dialog>取消</button>
+          <button type="button" class="btn primary" data-action="create-project">创建</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="color-dialog" class="dialog narrow">
+      <form method="dialog" class="dialog-body" data-prevent-submit>
+        <header class="dialog-head">
+          <h2>编辑调色板颜色</h2>
+          <button type="button" class="btn tiny ghost" data-close-dialog title="关闭">✕</button>
+        </header>
+        <div class="color-edit-preview">
+          <span id="color-edit-old" class="swatch-large" aria-label="原颜色"></span>
+          <span class="color-arrow">→</span>
+          <span id="color-edit-new" class="swatch-large" aria-label="新颜色"></span>
+        </div>
+        <div class="field-row">
+          <label class="field">
+            <span>新颜色</span>
+            <input id="color-edit-input" type="color" value="#ffffff" />
+          </label>
+          <label class="field">
+            <span>十六进制</span>
+            <input id="color-edit-hex" type="text" maxlength="7" spellcheck="false" />
+          </label>
+        </div>
+        <label class="toggle replace-toggle">
+          <input id="color-edit-replace" type="checkbox" />
+          <span>同步替换画布中已有的同色像素</span>
+        </label>
+        <p class="hint" id="color-edit-count">—</p>
+        <div class="dialog-actions">
+          <button type="button" class="btn ghost" data-close-dialog>取消</button>
+          <button type="button" class="btn primary" data-action="apply-color-edit">应用</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <input id="file-input" type="file" accept=".json,application/json" hidden />
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
