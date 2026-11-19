@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>供应单提取校对工具</title>
+<style>
+  body { font-family: -apple-system, "PingFang SC", sans-serif; margin: 24px; color: #222; }
+  h1 { font-size: 20px; }
+  table { border-collapse: collapse; margin-top: 12px; }
+  th, td { border: 1px solid #ccc; padding: 6px 10px; font-size: 14px; }
+  th { background: #f3f3f3; }
+  .ok { color: #1a7f37; } .bad { color: #c00; }
+  .box { border: 1px solid #ddd; padding: 12px; margin: 12px 0; border-radius: 6px; }
+  form.inline { display: inline; }
+  button { padding: 4px 12px; }
+</style>
+</head>
+<body>
+<h1>供应单提取校对工具</h1>
+
+<div class="box">
+  <b>解析样例:</b>
+  <form class="inline" method="post" action="{{ url_for('parse') }}">
+    <button name="sample" value="1">样例一(跨页明细, 合计 40.00)</button>
+    <button name="sample" value="2">样例二(品名断行, 演示校对)</button>
+  </form>
+  &nbsp;&nbsp;
+  <b>或上传供应单 PDF:</b>
+  <form class="inline" method="post" action="{{ url_for('parse') }}" enctype="multipart/form-data">
+    <input type="file" name="file" accept=".pdf">
+    <button type="submit">解析</button>
+  </form>
+</div>
+
+{% if docs %}
+<table>
+  <tr><th>文件</th><th>单号</th><th>版式</th><th>状态</th><th>核对</th><th>最近解析</th><th>操作</th></tr>
+  {% for d in docs %}
+  <tr>
+    <td>{{ d.doc.filename }}</td>
+    <td>{{ d.doc.parse.order_no }}</td>
+    <td>{{ d.doc.parse.layout_title }}</td>
+    <td>
+      {% if d.doc.status == 'confirmed' %}已入库({{ d.doc.snapshot.confirmed_at }})
+      {% elif d.doc.status == 'reviewing' %}校对中
+      {% else %}待校对{% endif %}
+    </td>
+    <td>{% if d.total_ok %}<span class="ok">相符 {{ d.sum_total }}</span>{% else %}<span class="bad">不符</span>{% endif %}</td>
+    <td>{{ d.doc.last_parsed }}</td>
+    <td><a href="{{ url_for('doc_page', h=d.hash) }}">打开校对</a>
+        <a href="{{ url_for('export_csv', h=d.hash) }}">导出CSV</a></td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p>还没有解析过任何供应单。</p>
+{% endif %}
+</body>
+</html>
