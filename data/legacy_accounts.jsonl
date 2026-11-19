@@ -1,0 +1,10 @@
+{"username": "alice", "digest": "v1:e6fa47a4274817e73fe3d088b13052d0"}
+{"username": "bob", "digest": "v2:1ed17a4b075aa75c:b04e9009f86958a48185cf9b852ace75301d29627287cff0938cdea4611ca971"}
+{"username": "carol", "digest": "v3:60000:ea0b6cf9eaa084bb2ce25bed25a71f73:4f3da33cdf374946d066c7ec044238958f56d58ff606f35b156074bd927ec601"}
+{"username": "dave", "digest": "v1:ed8e9e5621d1fa39ddf8227e5f6eea8c"}
+{"username": "erin", "digest": "v2:61151f002b5faa16:b21761a02fc498f9c76e57ae891d248cf4d40163270b6adfa1aa93200230e252"}
+{"username": "frank", "digest": "v9:deadbeef"}
+{"username": "grace", "digest": "v1:not-hex-at-all"}
+{"username": "heidi"}
+{"username": "ivan", "version": 2, "digest": "v1:4872d6da615d7def941baabc5590f5ed"}
+{"digest": "v1:9fc489e38beacd16bbc0b1910372bb99"}
