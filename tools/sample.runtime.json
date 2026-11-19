@@ -1,0 +1,1026 @@
+{
+  "format": "bone-runtime-anim",
+  "formatVersion": 1,
+  "exportedAt": "2026-11-19T22:14:16.375Z",
+  "name": "示例角色（几何小人）",
+  "bones": [
+    {
+      "id": "bone_mwo3xyk7_2",
+      "name": "pelvis",
+      "parentId": null,
+      "rest": {
+        "x": 0,
+        "y": -140,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      }
+    },
+    {
+      "id": "bone_mwo3xyk7_3",
+      "name": "spine",
+      "parentId": "bone_mwo3xyk7_2",
+      "rest": {
+        "x": 0,
+        "y": -52,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      }
+    },
+    {
+      "id": "bone_mwo3xyk7_4",
+      "name": "chest",
+      "parentId": "bone_mwo3xyk7_3",
+      "rest": {
+        "x": 0,
+        "y": -46,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      }
+    },
+    {
+      "id": "bone_mwo3xyk7_5",
+      "name": "neck",
+      "parentId": "bone_mwo3xyk7_4",
+      "rest": {
+        "x": 0,
+        "y": -20,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      }
+    },
+    {
+      "id": "bone_mwo3xyk7_6",
+      "name": "head",
+      "parentId": "bone_mwo3xyk7_5",
+      "rest": {
+        "x": 0,
+        "y": -32,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      }
+    },
+    {
+      "id": "bone_mwo3xyk7_7",
+      "name": "shoulderL",
+      "parentId": "bone_mwo3xyk7_4",
+      "rest": {
+        "x": -28,
+        "y": 10,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      }
+    },
+    {
+      "id": "bone_mwo3xyk7_8",
+      "name": "elbowL",
+      "parentId": "bone_mwo3xyk7_7",
+      "rest": {
+        "x": -44,
+        "y": 53,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      }
+    },
+    {
+      "id": "bone_mwo3xyk7_9",
+      "name": "wristL",
+      "parentId": "bone_mwo3xyk7_8",
+      "rest": {
+        "x": -32,
+        "y": 43,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      }
+    },
+    {
+      "id": "bone_mwo3xyk7_10",
+      "name": "shoulderR",
+      "parentId": "bone_mwo3xyk7_4",
+      "rest": {
+        "x": 28,
+        "y": 10,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      }
+    },
+    {
+      "id": "bone_mwo3xyk7_11",
+      "name": "elbowR",
+      "parentId": "bone_mwo3xyk7_10",
+      "rest": {
+        "x": 44,
+        "y": 53,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      }
+    },
+    {
+      "id": "bone_mwo3xyk7_12",
+      "name": "wristR",
+      "parentId": "bone_mwo3xyk7_11",
+      "rest": {
+        "x": 32,
+        "y": 43,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      }
+    },
+    {
+      "id": "bone_mwo3xyk7_13",
+      "name": "hipL",
+      "parentId": "bone_mwo3xyk7_2",
+      "rest": {
+        "x": -22,
+        "y": 12,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      }
+    },
+    {
+      "id": "bone_mwo3xyk7_14",
+      "name": "kneeL",
+      "parentId": "bone_mwo3xyk7_13",
+      "rest": {
+        "x": -14,
+        "y": 60,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      }
+    },
+    {
+      "id": "bone_mwo3xyk7_15",
+      "name": "ankleL",
+      "parentId": "bone_mwo3xyk7_14",
+      "rest": {
+        "x": 14,
+        "y": 68,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      }
+    },
+    {
+      "id": "bone_mwo3xyk7_16",
+      "name": "footL",
+      "parentId": "bone_mwo3xyk7_15",
+      "rest": {
+        "x": 0,
+        "y": 16,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      }
+    },
+    {
+      "id": "bone_mwo3xyk7_17",
+      "name": "hipR",
+      "parentId": "bone_mwo3xyk7_2",
+      "rest": {
+        "x": 22,
+        "y": 12,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      }
+    },
+    {
+      "id": "bone_mwo3xyk7_18",
+      "name": "kneeR",
+      "parentId": "bone_mwo3xyk7_17",
+      "rest": {
+        "x": 14,
+        "y": 60,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      }
+    },
+    {
+      "id": "bone_mwo3xyk7_19",
+      "name": "ankleR",
+      "parentId": "bone_mwo3xyk7_18",
+      "rest": {
+        "x": -14,
+        "y": 68,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      }
+    },
+    {
+      "id": "bone_mwo3xyk7_20",
+      "name": "footR",
+      "parentId": "bone_mwo3xyk7_19",
+      "rest": {
+        "x": 0,
+        "y": 16,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      }
+    }
+  ],
+  "parts": [
+    {
+      "id": "part_mwo3xyk7_21",
+      "name": "骨盆",
+      "boneId": "bone_mwo3xyk7_2",
+      "shape": {
+        "type": "rect",
+        "width": 72,
+        "height": 38,
+        "radius": 30,
+        "points": [],
+        "imageId": null
+      },
+      "offset": {
+        "x": 0,
+        "y": 4,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "fill": "#6c7bd8",
+      "stroke": "#10233d",
+      "opacity": 1
+    },
+    {
+      "id": "part_mwo3xyk7_22",
+      "name": "躯干",
+      "boneId": "bone_mwo3xyk7_4",
+      "shape": {
+        "type": "rect",
+        "width": 78,
+        "height": 118,
+        "radius": 30,
+        "points": [],
+        "imageId": null
+      },
+      "offset": {
+        "x": 0,
+        "y": 24,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "fill": "#4aa3ff",
+      "stroke": "#10233d",
+      "opacity": 1
+    },
+    {
+      "id": "part_mwo3xyk7_23",
+      "name": "领口",
+      "boneId": "bone_mwo3xyk7_5",
+      "shape": {
+        "type": "rect",
+        "width": 20,
+        "height": 16,
+        "radius": 30,
+        "points": [],
+        "imageId": null
+      },
+      "offset": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "fill": "#2f7fd6",
+      "stroke": "#10233d",
+      "opacity": 1
+    },
+    {
+      "id": "part_mwo3xyk7_24",
+      "name": "头",
+      "boneId": "bone_mwo3xyk7_6",
+      "shape": {
+        "type": "circle",
+        "width": 60,
+        "height": 60,
+        "radius": 27,
+        "points": [],
+        "imageId": null
+      },
+      "offset": {
+        "x": 0,
+        "y": -8,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "fill": "#ffd9b3",
+      "stroke": "#10233d",
+      "opacity": 1
+    },
+    {
+      "id": "part_mwo3xyk7_25",
+      "name": "左眼",
+      "boneId": "bone_mwo3xyk7_6",
+      "shape": {
+        "type": "circle",
+        "width": 60,
+        "height": 60,
+        "radius": 3.6,
+        "points": [],
+        "imageId": null
+      },
+      "offset": {
+        "x": -10,
+        "y": -12,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "fill": "#233049",
+      "stroke": "#10233d",
+      "opacity": 1
+    },
+    {
+      "id": "part_mwo3xyk7_26",
+      "name": "右眼",
+      "boneId": "bone_mwo3xyk7_6",
+      "shape": {
+        "type": "circle",
+        "width": 60,
+        "height": 60,
+        "radius": 3.6,
+        "points": [],
+        "imageId": null
+      },
+      "offset": {
+        "x": 10,
+        "y": -12,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "fill": "#233049",
+      "stroke": "#10233d",
+      "opacity": 1
+    },
+    {
+      "id": "part_mwo3xyk7_27",
+      "name": "左上臂",
+      "boneId": "bone_mwo3xyk7_7",
+      "shape": {
+        "type": "rect",
+        "width": 24,
+        "height": 78.8839603971781,
+        "radius": 30,
+        "points": [],
+        "imageId": null
+      },
+      "offset": {
+        "x": -22,
+        "y": 26.5,
+        "rotation": 2.263675869072698,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "fill": "#4aa3ff",
+      "stroke": "#10233d",
+      "opacity": 1
+    },
+    {
+      "id": "part_mwo3xyk7_28",
+      "name": "左前臂",
+      "boneId": "bone_mwo3xyk7_8",
+      "shape": {
+        "type": "rect",
+        "width": 21,
+        "height": 63.600373133029585,
+        "radius": 30,
+        "points": [],
+        "imageId": null
+      },
+      "offset": {
+        "x": -16,
+        "y": 21.5,
+        "rotation": 2.210566109621522,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "fill": "#ffd9b3",
+      "stroke": "#10233d",
+      "opacity": 1
+    },
+    {
+      "id": "part_mwo3xyk7_29",
+      "name": "右上臂",
+      "boneId": "bone_mwo3xyk7_10",
+      "shape": {
+        "type": "rect",
+        "width": 24,
+        "height": 78.8839603971781,
+        "radius": 30,
+        "points": [],
+        "imageId": null
+      },
+      "offset": {
+        "x": 22,
+        "y": 26.5,
+        "rotation": 0.8779167845170952,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "fill": "#4aa3ff",
+      "stroke": "#10233d",
+      "opacity": 1
+    },
+    {
+      "id": "part_mwo3xyk7_30",
+      "name": "右前臂",
+      "boneId": "bone_mwo3xyk7_11",
+      "shape": {
+        "type": "rect",
+        "width": 21,
+        "height": 63.600373133029585,
+        "radius": 30,
+        "points": [],
+        "imageId": null
+      },
+      "offset": {
+        "x": 16,
+        "y": 21.5,
+        "rotation": 0.931026543968271,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "fill": "#ffd9b3",
+      "stroke": "#10233d",
+      "opacity": 1
+    },
+    {
+      "id": "part_mwo3xyk7_31",
+      "name": "左手",
+      "boneId": "bone_mwo3xyk7_9",
+      "shape": {
+        "type": "circle",
+        "width": 60,
+        "height": 60,
+        "radius": 11,
+        "points": [],
+        "imageId": null
+      },
+      "offset": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "fill": "#f0b98a",
+      "stroke": "#10233d",
+      "opacity": 1
+    },
+    {
+      "id": "part_mwo3xyk7_32",
+      "name": "右手",
+      "boneId": "bone_mwo3xyk7_12",
+      "shape": {
+        "type": "circle",
+        "width": 60,
+        "height": 60,
+        "radius": 11,
+        "points": [],
+        "imageId": null
+      },
+      "offset": {
+        "x": 0,
+        "y": 0,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "fill": "#f0b98a",
+      "stroke": "#10233d",
+      "opacity": 1
+    },
+    {
+      "id": "part_mwo3xyk7_33",
+      "name": "左大腿",
+      "boneId": "bone_mwo3xyk7_13",
+      "shape": {
+        "type": "rect",
+        "width": 27,
+        "height": 71.61168720299746,
+        "radius": 30,
+        "points": [],
+        "imageId": null
+      },
+      "offset": {
+        "x": -7,
+        "y": 30,
+        "rotation": 1.800028260071892,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "fill": "#6c7bd8",
+      "stroke": "#10233d",
+      "opacity": 1
+    },
+    {
+      "id": "part_mwo3xyk7_34",
+      "name": "左小腿",
+      "boneId": "bone_mwo3xyk7_14",
+      "shape": {
+        "type": "rect",
+        "width": 24,
+        "height": 79.42621983083913,
+        "radius": 30,
+        "points": [],
+        "imageId": null
+      },
+      "offset": {
+        "x": 7,
+        "y": 34,
+        "rotation": 1.3677511095414314,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "fill": "#4f5cb8",
+      "stroke": "#10233d",
+      "opacity": 1
+    },
+    {
+      "id": "part_mwo3xyk7_35",
+      "name": "右大腿",
+      "boneId": "bone_mwo3xyk7_17",
+      "shape": {
+        "type": "rect",
+        "width": 27,
+        "height": 71.61168720299746,
+        "radius": 30,
+        "points": [],
+        "imageId": null
+      },
+      "offset": {
+        "x": 7,
+        "y": 30,
+        "rotation": 1.3415643935179014,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "fill": "#6c7bd8",
+      "stroke": "#10233d",
+      "opacity": 1
+    },
+    {
+      "id": "part_mwo3xyk7_36",
+      "name": "右小腿",
+      "boneId": "bone_mwo3xyk7_18",
+      "shape": {
+        "type": "rect",
+        "width": 24,
+        "height": 79.42621983083913,
+        "radius": 30,
+        "points": [],
+        "imageId": null
+      },
+      "offset": {
+        "x": -7,
+        "y": 34,
+        "rotation": 1.773841544048362,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "fill": "#4f5cb8",
+      "stroke": "#10233d",
+      "opacity": 1
+    },
+    {
+      "id": "part_mwo3xyk7_37",
+      "name": "左脚",
+      "boneId": "bone_mwo3xyk7_16",
+      "shape": {
+        "type": "rect",
+        "width": 46,
+        "height": 17,
+        "radius": 30,
+        "points": [],
+        "imageId": null
+      },
+      "offset": {
+        "x": 9,
+        "y": 2,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "fill": "#34405c",
+      "stroke": "#10233d",
+      "opacity": 1
+    },
+    {
+      "id": "part_mwo3xyk7_38",
+      "name": "右脚",
+      "boneId": "bone_mwo3xyk7_20",
+      "shape": {
+        "type": "rect",
+        "width": 46,
+        "height": 17,
+        "radius": 30,
+        "points": [],
+        "imageId": null
+      },
+      "offset": {
+        "x": 9,
+        "y": 2,
+        "rotation": 0,
+        "scaleX": 1,
+        "scaleY": 1
+      },
+      "fill": "#34405c",
+      "stroke": "#10233d",
+      "opacity": 1
+    }
+  ],
+  "images": [],
+  "ik": [
+    {
+      "id": "ik_mwo3xyk7_39",
+      "name": "左腿 IK",
+      "rootBoneId": "bone_mwo3xyk7_13",
+      "midBoneId": "bone_mwo3xyk7_14",
+      "effBoneId": "bone_mwo3xyk7_15",
+      "enabled": true,
+      "bend": 1,
+      "target": {
+        "x": -22,
+        "y": -10.239999999999995
+      }
+    },
+    {
+      "id": "ik_mwo3xyk7_40",
+      "name": "右腿 IK",
+      "rootBoneId": "bone_mwo3xyk7_17",
+      "midBoneId": "bone_mwo3xyk7_18",
+      "effBoneId": "bone_mwo3xyk7_19",
+      "enabled": true,
+      "bend": 1,
+      "target": {
+        "x": 22,
+        "y": -10.239999999999995
+      }
+    },
+    {
+      "id": "ik_mwo3xyk7_41",
+      "name": "左臂 IK",
+      "rootBoneId": "bone_mwo3xyk7_7",
+      "midBoneId": "bone_mwo3xyk7_8",
+      "effBoneId": "bone_mwo3xyk7_9",
+      "enabled": false,
+      "bend": -1,
+      "target": {
+        "x": -97.92,
+        "y": -139.68
+      }
+    },
+    {
+      "id": "ik_mwo3xyk7_42",
+      "name": "右臂 IK",
+      "rootBoneId": "bone_mwo3xyk7_10",
+      "midBoneId": "bone_mwo3xyk7_11",
+      "effBoneId": "bone_mwo3xyk7_12",
+      "enabled": false,
+      "bend": -1,
+      "target": {
+        "x": 97.92,
+        "y": -139.68
+      }
+    }
+  ],
+  "animations": [
+    {
+      "id": "anim_mwo3xyk7_43",
+      "name": "待机 idle",
+      "frameRate": 12,
+      "frameCount": 24,
+      "loop": true,
+      "keys": {
+        "bone_mwo3xyk7_2": [
+          {
+            "frame": 0,
+            "easing": "linear",
+            "y": -140
+          },
+          {
+            "frame": 6,
+            "easing": "linear",
+            "y": -142
+          },
+          {
+            "frame": 12,
+            "easing": "linear",
+            "y": -140
+          },
+          {
+            "frame": 18,
+            "easing": "linear",
+            "y": -142
+          },
+          {
+            "frame": 24,
+            "easing": "linear",
+            "y": -140
+          }
+        ],
+        "bone_mwo3xyk7_4": [
+          {
+            "frame": 0,
+            "easing": "linear",
+            "rotation": 0
+          },
+          {
+            "frame": 6,
+            "easing": "linear",
+            "rotation": 0.035
+          },
+          {
+            "frame": 12,
+            "easing": "linear",
+            "rotation": 0
+          },
+          {
+            "frame": 18,
+            "easing": "linear",
+            "rotation": -0.035
+          },
+          {
+            "frame": 24,
+            "easing": "linear",
+            "rotation": 0
+          }
+        ],
+        "bone_mwo3xyk7_6": [
+          {
+            "frame": 0,
+            "easing": "linear",
+            "rotation": 0
+          },
+          {
+            "frame": 6,
+            "easing": "linear",
+            "rotation": -0.028000000000000004
+          },
+          {
+            "frame": 12,
+            "easing": "linear",
+            "rotation": 0
+          },
+          {
+            "frame": 18,
+            "easing": "linear",
+            "rotation": 0.028000000000000004
+          },
+          {
+            "frame": 24,
+            "easing": "linear",
+            "rotation": 0
+          }
+        ],
+        "bone_mwo3xyk7_7": [
+          {
+            "frame": 0,
+            "easing": "linear",
+            "rotation": 0.06
+          },
+          {
+            "frame": 12,
+            "easing": "linear",
+            "rotation": -0.06
+          },
+          {
+            "frame": 24,
+            "easing": "linear",
+            "rotation": 0.06
+          }
+        ],
+        "bone_mwo3xyk7_10": [
+          {
+            "frame": 0,
+            "easing": "linear",
+            "rotation": -0.06
+          },
+          {
+            "frame": 12,
+            "easing": "linear",
+            "rotation": 0.06
+          },
+          {
+            "frame": 24,
+            "easing": "linear",
+            "rotation": -0.06
+          }
+        ]
+      },
+      "ikKeys": {
+        "ik_mwo3xyk7_39": [
+          {
+            "frame": 0,
+            "x": -22,
+            "y": -10.239999999999995,
+            "easing": "linear"
+          }
+        ],
+        "ik_mwo3xyk7_40": [
+          {
+            "frame": 0,
+            "x": 22,
+            "y": -10.239999999999995,
+            "easing": "linear"
+          }
+        ]
+      }
+    },
+    {
+      "id": "anim_mwo3xyk7_44",
+      "name": "行走 walk",
+      "frameRate": 24,
+      "frameCount": 24,
+      "loop": true,
+      "keys": {
+        "bone_mwo3xyk7_2": [
+          {
+            "frame": 0,
+            "easing": "linear",
+            "y": -140,
+            "rotation": 0
+          },
+          {
+            "frame": 6,
+            "easing": "linear",
+            "y": -137,
+            "rotation": 0.04
+          },
+          {
+            "frame": 12,
+            "easing": "linear",
+            "y": -140,
+            "rotation": 0
+          },
+          {
+            "frame": 18,
+            "easing": "linear",
+            "y": -137,
+            "rotation": -0.04
+          },
+          {
+            "frame": 24,
+            "easing": "linear",
+            "y": -140,
+            "rotation": 0
+          }
+        ],
+        "bone_mwo3xyk7_4": [
+          {
+            "frame": 0,
+            "easing": "linear",
+            "rotation": 0.08
+          }
+        ],
+        "bone_mwo3xyk7_6": [
+          {
+            "frame": 0,
+            "easing": "linear",
+            "rotation": -0.05
+          },
+          {
+            "frame": 12,
+            "easing": "linear",
+            "rotation": 0.03
+          },
+          {
+            "frame": 24,
+            "easing": "linear",
+            "rotation": -0.05
+          }
+        ],
+        "bone_mwo3xyk7_7": [
+          {
+            "frame": 0,
+            "easing": "linear",
+            "rotation": 0.45
+          },
+          {
+            "frame": 12,
+            "easing": "linear",
+            "rotation": -0.45
+          },
+          {
+            "frame": 24,
+            "easing": "linear",
+            "rotation": 0.45
+          }
+        ],
+        "bone_mwo3xyk7_10": [
+          {
+            "frame": 0,
+            "easing": "linear",
+            "rotation": -0.45
+          },
+          {
+            "frame": 12,
+            "easing": "linear",
+            "rotation": 0.45
+          },
+          {
+            "frame": 24,
+            "easing": "linear",
+            "rotation": -0.45
+          }
+        ],
+        "bone_mwo3xyk7_8": [
+          {
+            "frame": 0,
+            "easing": "linear",
+            "rotation": 0.35
+          },
+          {
+            "frame": 12,
+            "easing": "linear",
+            "rotation": 0.15
+          },
+          {
+            "frame": 24,
+            "easing": "linear",
+            "rotation": 0.35
+          }
+        ],
+        "bone_mwo3xyk7_11": [
+          {
+            "frame": 0,
+            "easing": "linear",
+            "rotation": 0.15
+          },
+          {
+            "frame": 12,
+            "easing": "linear",
+            "rotation": 0.35
+          },
+          {
+            "frame": 24,
+            "easing": "linear",
+            "rotation": 0.15
+          }
+        ]
+      },
+      "ikKeys": {
+        "ik_mwo3xyk7_39": [
+          {
+            "frame": 0,
+            "x": -22,
+            "y": -10.239999999999995,
+            "easing": "linear"
+          },
+          {
+            "frame": 12,
+            "x": -22,
+            "y": -40,
+            "easing": "linear"
+          },
+          {
+            "frame": 24,
+            "x": -22,
+            "y": -10.239999999999995,
+            "easing": "linear"
+          }
+        ],
+        "ik_mwo3xyk7_40": [
+          {
+            "frame": 0,
+            "x": 22,
+            "y": -40,
+            "easing": "linear"
+          },
+          {
+            "frame": 12,
+            "x": 22,
+            "y": -10.239999999999995,
+            "easing": "linear"
+          },
+          {
+            "frame": 24,
+            "x": 22,
+            "y": -40,
+            "easing": "linear"
+          }
+        ]
+      }
+    }
+  ]
+}

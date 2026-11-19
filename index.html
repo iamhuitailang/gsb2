@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>2D 骨骼动画编辑器</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 顶栏 -->
+    <header class="topbar">
+      <div class="group">
+        <button class="btn" id="btnNew">新建</button>
+        <button class="btn" id="btnOpen">打开项目</button>
+        <button class="btn" id="btnSave">保存项目</button>
+        <button class="btn primary" id="btnExport">导出运行时</button>
+      </div>
+      <div class="group">
+        <button class="btn" id="btnUndo" disabled>↶ 撤销</button>
+        <button class="btn" id="btnRedo" disabled>↷ 重做</button>
+        <span class="hint" id="histScope"></span>
+      </div>
+      <div class="group">
+        <div class="seg">
+          <button class="btn mode-btn active" data-mode="setup">1 · Setup 摆骨骼</button>
+          <button class="btn mode-btn" data-mode="animate">2 · 动作关键帧</button>
+          <button class="btn mode-btn" data-mode="ik">3 · IK 约束</button>
+        </div>
+      </div>
+      <div class="group" id="toolGroup">
+        <div class="seg">
+          <button class="btn tool-btn active" data-tool="move">移动 V</button>
+          <button class="btn tool-btn" data-tool="rotate">旋转 R</button>
+          <button class="btn tool-btn" data-tool="scale">缩放</button>
+        </div>
+        <label class="check"><input type="checkbox" id="toggleBones" checked> 骨骼</label>
+        <label class="check"><input type="checkbox" id="toggleLabels" checked> 标签</label>
+        <button class="btn" id="btnResetView">复位视图</button>
+      </div>
+    </header>
+
+    <div class="main">
+      <!-- 左侧：层级 / 部件 / IK / 动作 -->
+      <aside class="sidebar left">
+        <section class="panel">
+          <div class="panel-head">
+            <h3>骨骼层级</h3>
+            <div class="mini-btns">
+              <button class="btn tiny" id="btnAddBone" title="添加子骨骼">＋骨骼</button>
+              <button class="btn tiny" id="btnUp" title="同级上移（显示顺序）">↑</button>
+              <button class="btn tiny" id="btnDown" title="同级下移（显示顺序）">↓</button>
+              <button class="btn tiny danger" id="btnDeleteSel">删除</button>
+            </div>
+          </div>
+          <div id="boneTree" class="tree"></div>
+          <p class="hint tiny-hint">拖拽树节点到另一节点可改变父级，世界姿势保持不变</p>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h3>图片部件</h3>
+            <div class="mini-btns">
+              <button class="btn tiny" id="btnAddPart">＋几何</button>
+              <button class="btn tiny" id="btnUploadImage">＋图片</button>
+            </div>
+          </div>
+          <div id="partList" class="list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h3>IK 约束</h3>
+            <button class="btn tiny" id="btnAddIK">＋两段 IK</button>
+          </div>
+          <div id="ikList" class="list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h3>动作</h3>
+            <div class="mini-btns">
+              <button class="btn tiny" id="btnAddAnim">＋</button>
+              <button class="btn tiny" id="btnDuplicateAnim">复制</button>
+              <button class="btn tiny danger" id="btnDelAnim">删除</button>
+            </div>
+          </div>
+          <div id="animList" class="list"></div>
+        </section>
+      </aside>
+
+      <!-- 中间画布 -->
+      <main class="stage-wrap">
+        <canvas id="stage"></canvas>
+        <div id="toast"></div>
+      </main>
+
+      <!-- 右侧属性 -->
+      <aside class="sidebar right">
+        <section class="panel">
+          <div class="panel-head"><h3>属性</h3></div>
+          <div id="props" class="props"></div>
+        </section>
+      </aside>
+    </div>
+
+    <!-- 底部时间线 -->
+    <footer class="timeline">
+      <div class="tl-controls">
+        <button class="btn" id="btnFirstFrame">⏮</button>
+        <button class="btn" id="btnPrevFrame">◀</button>
+        <button class="btn primary" id="btnPlay">▶ 播放</button>
+        <button class="btn" id="btnNextFrame">▶</button>
+        <button class="btn" id="btnLastFrame">⏭</button>
+        <label class="check">帧 <input type="number" id="frameInput" class="num small-num" min="1"></label>
+        <label class="check">帧率 <input type="number" id="fpsInput" class="num small-num" min="1" max="120"> fps</label>
+        <label class="check">总帧数 <input type="number" id="frameCountInput" class="num small-num" min="1" max="600"></label>
+        <label class="check"><input type="checkbox" id="loopCheck" checked> 循环</label>
+        <button class="btn" id="btnAddKey" title="快捷键 K">◆ 打关键帧</button>
+        <button class="btn danger" id="btnDelKey">删关键帧</button>
+        <label class="check">缓动
+          <select id="easingSelect">
+            <option value="linear">线性</option>
+            <option value="easeIn">缓入</option>
+            <option value="easeOut">缓出</option>
+            <option value="easeInOut">缓入缓出</option>
+            <option value="hold">阶跃</option>
+          </select>
+        </label>
+        <label class="check">前影
+          <select id="onionBefore">
+            <option value="0">关</option><option value="1" selected>1</option>
+            <option value="2">2</option><option value="3">3</option>
+          </select>
+        </label>
+        <label class="check">后影
+          <select id="onionAfter">
+            <option value="0">关</option><option value="1" selected>1</option>
+            <option value="2">2</option><option value="3">3</option>
+          </select>
+        </label>
+      </div>
+      <div class="tl-body">
+        <div id="trackHead" class="track-head"></div>
+        <div class="tl-scroll">
+          <canvas id="ruler" class="ruler"></canvas>
+          <div id="tracks" class="tracks"></div>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- 经典脚本（非 ES module）：可直接双击 index.html 通过 file:// 运行 -->
+  <script src="js/math.js"></script>
+  <script src="js/model.js"></script>
+  <script src="js/ik.js"></script>
+  <script src="js/pose.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/sample.js"></script>
+  <script src="js/renderer.js"></script>
+  <script src="js/timeline.js"></script>
+  <script src="js/panels.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
