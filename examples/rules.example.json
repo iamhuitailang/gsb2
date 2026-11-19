@@ -1,0 +1,15 @@
+{
+  "trustedHosts": ["registry.npmjs.org"],
+  "matchSubdomains": true,
+  "allowedSchemes": ["https:"],
+  "allowedAlgorithms": ["sha512", "sha384", "sha256"],
+  "weakAlgorithms": ["sha1"],
+  "forceIntegrity": true,
+  "maxFileSizeBytes": 10485760,
+  "reviewGitSources": "high",
+  "reviewFileSources": "medium",
+  "reviewLinkSources": "low",
+  "severityOverrides": {
+    "PACKAGE_UNREACHABLE": "info"
+  }
+}

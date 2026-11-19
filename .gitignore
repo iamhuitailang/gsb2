@@ -29,7 +29,8 @@ venv/
 dist/
 build/
 target/
-bin/
+# 注意：项目 CLI 入口位于 bin/，需保留；这里只忽略可能产生的二进制产物
+# bin/
 *.exe
 *.test
 *.out

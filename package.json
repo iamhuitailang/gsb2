@@ -1,0 +1,19 @@
+{
+  "name": "lockfile-source-audit",
+  "version": "1.0.0",
+  "private": true,
+  "description": "离线审查 package-lock.json 下载来源与完整性声明的零依赖小工具",
+  "type": "module",
+  "bin": {
+    "lock-audit": "./bin/lock-audit.js"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "start": "node bin/lock-audit.js serve",
+    "rules": "node bin/lock-audit.js rules"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "UNLICENSED"
+}

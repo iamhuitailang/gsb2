@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>锁文件来源与完整性审计（离线）</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>package-lock 来源与完整性审计</h1>
+    <span class="offline-badge" title="所有解析均在本机完成">● 离线模式 · 不访问注册表 · 不安装依赖</span>
+  </header>
+
+  <section class="inputs card">
+    <div class="file-row">
+      <label class="file-pick">
+        <span class="label">锁文件 <em>*</em></span>
+        <input type="file" id="file-lockfile" accept=".json,application/json" />
+        <span class="filename" id="name-lockfile">未选择</span>
+      </label>
+      <label class="file-pick">
+        <span class="label">规则配置（可选）</span>
+        <input type="file" id="file-rules" accept=".json,application/json" />
+        <span class="filename" id="name-rules">默认规则</span>
+      </label>
+      <label class="file-pick">
+        <span class="label">基线清单（可选）</span>
+        <input type="file" id="file-baseline" accept=".json,application/json" />
+        <span class="filename" id="name-baseline">未选择</span>
+      </label>
+    </div>
+    <div class="action-row">
+      <label class="sample-load">
+        <span class="label">载入示例：</span>
+        <select id="sample-select"><option value="">— 选择示例 —</option></select>
+      </label>
+      <button id="btn-analyze" type="button">开始审计</button>
+      <button id="btn-export" type="button" disabled>导出 JSON 报告</button>
+      <span id="request-hint" class="hint"></span>
+    </div>
+  </section>
+
+  <section id="error-banner" class="error-banner hidden" role="alert"></section>
+
+  <section id="empty-state" class="card empty-state">
+    <p>尚未产生本次审计结果。选择锁文件后点击「开始审计」，或从上方载入内置示例。</p>
+    <p class="hint">任何解析失败都会清空结果区，不会沿用上一次的内容。</p>
+  </section>
+
+  <section id="results" class="hidden">
+    <div class="summary-cards" id="summary-cards"></div>
+
+    <div class="card filters">
+      <div class="filter-group">
+        <span class="label">风险级别：</span>
+        <label><input type="checkbox" class="f-sev" value="critical" checked /> 严重</label>
+        <label><input type="checkbox" class="f-sev" value="high" checked /> 高</label>
+        <label><input type="checkbox" class="f-sev" value="medium" checked /> 中</label>
+        <label><input type="checkbox" class="f-sev" value="low" checked /> 低</label>
+        <label><input type="checkbox" class="f-sev" value="info" checked /> 提示</label>
+      </div>
+      <div class="filter-group">
+        <span class="label">变化类型：</span>
+        <select id="f-diff"><option value="">全部</option></select>
+      </div>
+      <div class="filter-group">
+        <span class="label">来源主机：</span>
+        <select id="f-host"><option value="">全部</option></select>
+      </div>
+      <div class="filter-group">
+        <span class="label">包名搜索：</span>
+        <input type="search" id="f-name" placeholder="输入包名或位置关键字" />
+      </div>
+    </div>
+
+    <div class="card table-card">
+      <table id="findings-table">
+        <thead>
+          <tr>
+            <th data-sort="severity" class="sortable">级别</th>
+            <th data-sort="ruleId" class="sortable">规则</th>
+            <th data-sort="name" class="sortable">包名</th>
+            <th data-sort="host" class="sortable">来源主机</th>
+            <th data-sort="packageKey" class="sortable">安装位置</th>
+            <th>触发原因</th>
+            <th>来源</th>
+          </tr>
+        </thead>
+        <tbody id="findings-tbody"></tbody>
+      </table>
+      <div class="pager">
+        <button id="page-prev" type="button">上一页</button>
+        <span id="page-info"></span>
+        <button id="page-next" type="button">下一页</button>
+        <span class="hint" id="result-count"></span>
+      </div>
+    </div>
+
+    <div class="card inconclusive-card">
+      <h2>待核实项（无法依据锁文件判定，不计为通过）</h2>
+      <ul id="inconclusive-list"></ul>
+    </div>
+
+    <div class="card meta-card">
+      <h2>清单标识与检查边界</h2>
+      <dl id="meta-list"></dl>
+    </div>
+  </section>
+
+  <script src="/app.js"></script>
+</body>
+</html>
