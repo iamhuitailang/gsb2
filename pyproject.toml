@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "taintscan"
+version = "0.1.0"
+description = "离线 Python 源码污点检查工具（不执行被检查代码，不访问网络）"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "taintscan contributors" }]
+keywords = ["security", "static-analysis", "taint", "python", "sast"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Topic :: Security",
+    "Topic :: Software Development :: Quality Assurance",
+]
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.scripts]
+taintscan = "taintscan.cli:main"
+
+[tool.setuptools]
+packages = ["taintscan"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
