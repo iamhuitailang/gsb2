@@ -1,0 +1,13 @@
+{
+  "name": "sprite-atlas-tool",
+  "version": "1.0.0",
+  "private": true,
+  "description": "离线精灵图集整理工具（纯静态页面，无运行时依赖）",
+  "scripts": {
+    "generate:samples": "python3 tools/generate_samples.py",
+    "test": "node test/packer.test.cjs",
+    "test:e2e": "node test/e2e.cjs",
+    "test:pixel": "node test/pixel_verify.cjs && python3 -I test/pixel_verify.py",
+    "serve": "python3 -m http.server 8080 -d public"
+  }
+}

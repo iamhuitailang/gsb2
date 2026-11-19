@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>精灵图集工具 · Sprite Atlas Tool（离线版）</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="logo">▦</span>
+      <div>
+        <h1>精灵图集工具</h1>
+        <span class="subtitle">纯离线 · 透明裁剪 / 留白 / 边缘扩展 / 旋转排版 / 工程往返</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button id="btnSamples" class="btn">载入内置示例</button>
+      <label class="btn">
+        导入 PNG
+        <input type="file" id="fileInput" accept="image/png,.png" multiple hidden>
+      </label>
+      <label class="btn">
+        导入工程
+        <input type="file" id="projectInput" accept=".json,application/json" hidden>
+      </label>
+      <button id="btnClear" class="btn danger">清空</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- 左栏：参数与导出 -->
+    <aside class="panel side-left">
+      <section class="card">
+        <h2>裁剪与留白</h2>
+        <label class="row">
+          <span>裁掉透明边缘</span>
+          <input type="checkbox" id="setTrim">
+        </label>
+        <label class="row column">
+          <span>透明判定阈值（Alpha &gt;）<em id="alphaVal"></em></span>
+          <input type="range" id="setAlphaThreshold" min="0" max="254" step="1">
+        </label>
+        <label class="row column">
+          <span>留白 padding（px）</span>
+          <input type="number" id="setPadding" min="0" max="64" step="1">
+        </label>
+        <label class="row column">
+          <span>边缘扩展 extrude（px）</span>
+          <input type="number" id="setExtrude" min="0" max="16" step="1">
+        </label>
+      </section>
+
+      <section class="card">
+        <h2>图集尺寸</h2>
+        <label class="row column">
+          <span>尺寸模式</span>
+          <select id="setMode">
+            <option value="limit">限制最大宽高（按内容收缩）</option>
+            <option value="fixed">固定宽高</option>
+          </select>
+        </label>
+        <div class="two-cols">
+          <label class="row column">
+            <span>宽度</span>
+            <input type="number" id="setWidth" min="1" max="8192" step="1">
+          </label>
+          <label class="row column">
+            <span>高度</span>
+            <input type="number" id="setHeight" min="1" max="8192" step="1">
+          </label>
+        </div>
+        <label class="row">
+          <span>2 的幂次方（仅限制模式）</span>
+          <input type="checkbox" id="setPowerOfTwo">
+        </label>
+        <label class="row">
+          <span>允许旋转 90°</span>
+          <input type="checkbox" id="setAllowRotate">
+        </label>
+        <p class="hint" id="modeHint"></p>
+        <button id="btnResetSettings" class="btn ghost full">恢复默认参数</button>
+      </section>
+
+      <section class="card">
+        <h2>导出</h2>
+        <button id="btnExportPng" class="btn full">导出图集 PNG</button>
+        <button id="btnExportManifest" class="btn full">导出位置清单 atlas.json</button>
+        <button id="btnExportProject" class="btn full">导出工程（可重新导入）</button>
+        <button id="btnExportSprites" class="btn ghost full">逐张导出精灵 PNG（重名自动加后缀）</button>
+        <p class="hint">位置清单字段说明见仓库 README.md。</p>
+      </section>
+    </aside>
+
+    <!-- 中栏：预览 -->
+    <section class="panel center">
+      <div class="toolbar">
+        <div class="seg">
+          <button id="viewAtlas" class="seg-btn active">实际图集占用</button>
+          <button id="viewOriginal" class="seg-btn">原尺寸对照</button>
+        </div>
+        <label class="mini-check"><input type="checkbox" id="toggleRegions" checked> 区域框</label>
+        <label class="mini-check"><input type="checkbox" id="toggleChanges" checked> 变化高亮</label>
+        <div class="seg zoom-seg">
+          <button id="zoomOut" class="seg-btn">−</button>
+          <button id="zoomFit" class="seg-btn fit">适应</button>
+          <button id="zoomIn" class="seg-btn">+</button>
+          <span id="zoomLabel" class="zoom-label">100%</span>
+        </div>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat"><span class="stat-k">已排入</span><span id="statCount" class="stat-v">0</span></div>
+        <div class="stat"><span class="stat-k">图集尺寸</span><span id="statSize" class="stat-v">—</span></div>
+        <div class="stat"><span class="stat-k">面积利用率</span><span id="statUtil" class="stat-v">—</span></div>
+      </div>
+      <div id="changeSummary" class="change-bar">本次无变化</div>
+      <div id="changeRange" class="change-range"></div>
+
+      <div id="rejectedBox" class="rejected-box hidden">
+        <h3>⚠ 以下精灵未能排入</h3>
+        <div id="rejectedList"></div>
+      </div>
+
+      <div id="previewWrap" class="preview-wrap">
+        <div id="previewStage" class="preview-stage"></div>
+      </div>
+    </section>
+
+    <!-- 右栏：精灵列表 -->
+    <aside class="panel side-right">
+      <div class="list-header">
+        <h2>精灵列表</h2>
+        <span class="hint">单击选中高亮，可单独关闭旋转</span>
+      </div>
+      <div id="spriteList" class="sprite-list"></div>
+    </aside>
+  </main>
+
+  <div id="dragMask" class="drag-mask">
+    <div class="drag-inner">松开以导入 PNG（支持多文件）</div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="js/util.js"></script>
+  <script src="js/packer.js"></script>
+  <script src="js/samples.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
