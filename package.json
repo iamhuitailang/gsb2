@@ -1,0 +1,17 @@
+{
+  "name": "gsb2",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "工单系统 + 两个本地演示应用的授权（OAuth2 授权码 + PKCE，按应用、按范围、可撤销）",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "demo": "node src/server.js",
+    "seed": "node scripts/seed.js",
+    "test": "node --test test/acceptance.test.js test/app-flow.test.js",
+    "verify": "node scripts/verify.js"
+  }
+}
