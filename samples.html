@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>样音演示 — 本地音频波形编辑器</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .demo-wrap { max-width: 860px; margin: 0 auto; padding: 28px 20px; }
+    .demo-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-bottom: 16px;
+    }
+    .demo-card h2 { margin: 0 0 6px; font-size: 15px; }
+    .demo-card p { color: var(--text-dim); font-size: 12.5px; margin: 4px 0; }
+    .demo-meta {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      color: var(--text-dim);
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin: 10px 0;
+    }
+    .demo-actions { display: flex; gap: 10px; margin-top: 12px; }
+    audio { height: 32px; }
+  </style>
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="logo">▚</span>
+      <h1>本地样音演示</h1>
+    </div>
+    <div class="header-actions">
+      <a class="btn" href="index.html">← 返回编辑器</a>
+    </div>
+  </header>
+
+  <div class="demo-wrap">
+    <p class="hint" style="margin-bottom:18px">
+      以下样音由 <code>samples/generate_samples.py</code>（仅使用 Python 标准库）在本地生成，覆盖静音、双声道与短促峰值场景。
+      点击「载入编辑器」即可在 <a href="index.html">编辑器</a> 中对比处理前后效果。
+    </p>
+
+    <div class="demo-card">
+      <h2>1. 综合样音：静音 + 双声道 + 短促峰值 <span class="badge badge-ok">推荐演示</span></h2>
+      <p>
+        立体声 44.1 kHz / 8 秒：开头与结尾各有一段纯静音（用于练习剪掉空白）；中段左右声道为不同频率的信号，
+        右声道相位反转便于分别查看 L/R；0.8 秒与 6.5 秒处各埋一个 10ms 的近满幅短脉冲（用于归一化与峰值观察）。
+      </p>
+      <div class="demo-meta">
+        <span>文件：samples/demo-stereo.wav</span><span>44100 Hz</span><span>2ch</span><span>16-bit</span><span>8.0 s</span>
+      </div>
+      <div class="demo-actions">
+        <audio controls preload="metadata" src="samples/demo-stereo.wav"></audio>
+        <a class="btn btn-primary" href="index.html?sample=samples/demo-stereo.wav">载入编辑器</a>
+        <a class="btn" href="samples/demo-stereo.wav" download>下载 WAV</a>
+      </div>
+    </div>
+
+    <div class="demo-card">
+      <h2>2. 全静音文件（边界场景）</h2>
+      <p>单声道 48 kHz / 3 秒，所有采样均为 0。用于验证静音文件导入提示、归一化「清楚结果」以及导出一致性。</p>
+      <div class="demo-meta">
+        <span>文件：samples/demo-silence.wav</span><span>48000 Hz</span><span>1ch</span><span>16-bit</span><span>3.0 s</span>
+      </div>
+      <div class="demo-actions">
+        <audio controls preload="metadata" src="samples/demo-silence.wav"></audio>
+        <a class="btn btn-primary" href="index.html?sample=samples/demo-silence.wav">载入编辑器</a>
+        <a class="btn" href="samples/demo-silence.wav" download>下载 WAV</a>
+      </div>
+    </div>
+
+    <div class="demo-card">
+      <h2>3. 单声道讲话感样音：长空白 + 峰值</h2>
+      <p>单声道 22.05 kHz / 6 秒：前 2 秒为静音，中间为带自然振幅起伏的音调，尾部含一个短峰值，适合演示剪切空白与淡入淡出组合。</p>
+      <div class="demo-meta">
+        <span>文件：samples/demo-mono.wav</span><span>22050 Hz</span><span>1ch</span><span>16-bit</span><span>6.0 s</span>
+      </div>
+      <div class="demo-actions">
+        <audio controls preload="metadata" src="samples/demo-mono.wav"></audio>
+        <a class="btn btn-primary" href="index.html?sample=samples/demo-mono.wav">载入编辑器</a>
+        <a class="btn" href="samples/demo-mono.wav" download>下载 WAV</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

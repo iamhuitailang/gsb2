@@ -1,0 +1,16 @@
+{
+  "name": "local-audio-waveform-editor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "纯本地、零依赖、零构建的浏览器音频波形编辑器：剪切空白、静音、增益、淡入淡出、归一化与 WAV 导出",
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "samples": "python3 -I samples/generate_samples.py",
+    "test": "node tests/smoke-test.mjs",
+    "test:e2e": "node tests/e2e-test.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

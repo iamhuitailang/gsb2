@@ -43,5 +43,5 @@ coverage/
 .vscode/
 *.swp
 
-# 生成的示例素材(可用 npm run generate:samples 恢复)
-public/samples/
+# 生成的示例素材(可用 npm run samples / python3 -I samples/generate_samples.py 恢复)
+# samples/*.wav

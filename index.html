@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>本地音频波形编辑器</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="logo">▚</span>
+      <h1>本地音频波形编辑器</h1>
+      <span id="projectName" class="project-name">未命名工程</span>
+    </div>
+    <div class="header-actions">
+      <button id="btnImport" class="btn">导入音频</button>
+      <button id="btnOpenProject" class="btn">打开工程</button>
+      <button id="btnSaveProject" class="btn">保存工程</button>
+      <button id="btnExport" class="btn btn-primary" disabled>导出 WAV</button>
+      <input type="file" id="fileInput" accept=".wav,.mp3,.m4a,.aac,.ogg,.flac,.webm,audio/*" hidden />
+      <input type="file" id="projectInput" accept=".json,application/json" hidden />
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="tb-group">
+      <button id="btnPlay" class="btn btn-sm" disabled>▶ 播放</button>
+      <button id="btnStop" class="btn btn-sm" disabled>■ 停止</button>
+      <label class="switch-label" title="在原始音频 / 处理结果之间切换试听（A/B 对比）">
+        <input type="checkbox" id="abToggle" /> 试听原始 (A/B)
+      </label>
+    </div>
+    <div class="tb-group">
+      <button id="btnUndo" class="btn btn-sm" disabled>↶ 撤销</button>
+      <button id="btnRedo" class="btn btn-sm" disabled>↷ 重做</button>
+    </div>
+    <div class="tb-group">
+      <button id="btnZoomOut" class="btn btn-sm" disabled>－</button>
+      <input type="range" id="zoomSlider" min="4" max="2000" value="100" class="zoom-slider" disabled />
+      <button id="btnZoomIn" class="btn btn-sm" disabled>＋</button>
+      <button id="btnZoomFit" class="btn btn-sm" disabled>适配宽度</button>
+      <button id="btnZoom100" class="btn btn-sm" disabled>100px/s</button>
+    </div>
+    <div class="tb-group">
+      <label class="switch-label">声道视图
+        <select id="viewMode" disabled>
+          <option value="all">双声道（L+R）</option>
+          <option value="left">仅左声道 L</option>
+          <option value="right">仅右声道 R</option>
+        </select>
+      </label>
+      <button id="btnMarkerMode" class="btn btn-sm" disabled>🏁 标记模式</button>
+      <button id="btnAddMarker" class="btn btn-sm" disabled>＋ 播放头标记</button>
+    </div>
+  </div>
+
+  <main class="app-main">
+    <section class="wave-section">
+      <div id="waveContainer" class="wave-container">
+        <div class="empty-hint" id="emptyHint">
+          <p>点击右上角「导入音频」开始编辑</p>
+          <p class="sub">支持 WAV / MP3 / M4A / OGG / FLAC 等浏览器可解码格式，全部处理在本机完成</p>
+          <p class="sub">也可以打开 <a href="samples.html">样音演示页</a> 载入含静音 / 双声道 / 短峰值的测试音频</p>
+        </div>
+      </div>
+      <div class="selection-bar">
+        <div class="sel-item"><span class="k">选区起</span><span id="selStart" class="v">—</span></div>
+        <div class="sel-item"><span class="k">选区止</span><span id="selEnd" class="v">—</span></div>
+        <div class="sel-item"><span class="k">时长</span><span id="selDur" class="v">—</span></div>
+        <div class="sel-item"><span class="k">采样范围</span><span id="selSamples" class="v">—</span></div>
+        <div class="sel-item"><span class="k">播放头</span><span id="playheadTime" class="v">00:00.000</span></div>
+        <div class="sel-item"><span class="k">总时长</span><span id="totalDur" class="v">—</span></div>
+      </div>
+    </section>
+
+    <aside class="sidebar">
+      <section class="panel">
+        <h2>处理链（非破坏性）</h2>
+        <p class="hint">操作按顺序组合，始终从原始 PCM 重算，可随时改参数 / 旁路 / 删除，无累积失真。</p>
+        <div class="op-buttons">
+          <button class="btn btn-sm op-btn" data-op="cut" disabled>剪切选区</button>
+          <button class="btn btn-sm op-btn" data-op="mute" disabled>静音选区</button>
+          <button class="btn btn-sm op-btn" data-op="gain" disabled>增益…</button>
+          <button class="btn btn-sm op-btn" data-op="fadeIn" disabled>淡入…</button>
+          <button class="btn btn-sm op-btn" data-op="fadeOut" disabled>淡出…</button>
+          <button class="btn btn-sm op-btn" data-op="normalize" disabled>归一化…</button>
+        </div>
+        <ol id="opsList" class="ops-list"></ol>
+      </section>
+
+      <section class="panel">
+        <h2>标记片段</h2>
+        <ol id="markerList" class="marker-list"></ol>
+      </section>
+
+      <section class="panel">
+        <h2>电平统计（A 原始 / B 处理后）</h2>
+        <div id="statsBox" class="stats-box">
+          <p class="hint">导入音频后显示峰值与 RMS</p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>操作日志</h2>
+        <ol id="logList" class="log-list"></ol>
+      </section>
+    </aside>
+  </main>
+
+  <!-- 通用模态框 -->
+  <div id="modalBackdrop" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-header">
+        <h3 id="modalTitle"></h3>
+        <button id="modalClose" class="btn btn-sm">✕</button>
+      </div>
+      <div id="modalBody" class="modal-body"></div>
+      <div id="modalFooter" class="modal-footer"></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
