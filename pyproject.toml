@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gha-audit"
+version = "0.1.0"
+description = "本地检查 GitHub Actions 工作流常见配置风险的命令行工具"
+requires-python = ">=3.9"
+dependencies = ["PyYAML>=6.0"]
+
+[project.scripts]
+gha-audit = "gha_audit.cli:run"
+
+[tool.setuptools]
+packages = ["gha_audit"]

@@ -1,0 +1,4 @@
+# 语法合法但不是 GitHub Actions 工作流
+services:
+  web:
+    image: nginx

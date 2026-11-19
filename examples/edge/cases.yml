@@ -1,0 +1,42 @@
+# 边界写法样例：权限继承、动态引用、本地动作、可复用工作流等
+name: edge
+
+on:
+  pull_request_target:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  pinned-ok:
+    runs-on: ubuntu-latest
+    permissions: {} # 任务级覆盖为空权限，不受工作流级写权限影响
+    steps:
+      - uses: ./local-action # 仓库内本地动作，无需固定
+      - uses: actions/checkout@8f4b7f84864484a7bf31766abe9204da3cbe65b3
+
+  dynamic:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        action: [actions/checkout]
+    steps:
+      # 动态引用：工具无法确认是否固定，应报告为“无法确认”而非静默放过
+      - uses: ${{ matrix.action }}@v4
+
+  reusable:
+    # 可复用工作流未固定到 SHA；secrets: inherit 会传递全部机密
+    uses: octo-org/example-repo/.github/workflows/reusable.yml@main
+    secrets: inherit
+
+  comments:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      # 安全写法：不可信数据经环境变量传递，不应触发 GHA020
+      - name: 引用评论内容
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: echo "$COMMENT_BODY"

@@ -1,0 +1,19 @@
+# 行内例外样例：有效豁免、已过期豁免、引用不存在规则的豁免
+name: exceptions
+
+on: push
+
+permissions:
+  contents: read
+
+jobs:
+  demo:
+    runs-on: ubuntu-latest
+    steps:
+      # gha-audit: disable=GHA010 expires=2099-01-01 reason="等待上游发布后再固定"
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4 # gha-audit: disable=GHA010 expires=2020-01-01 reason="已过期"
+      # gha-audit: disable=GHA999 reason="规则编号不存在"
+      - uses: actions/setup-python@v5
+      # checkout 的例外只覆盖它自己那一行，不影响这里
+      - uses: actions/cache@v4

@@ -1,0 +1,25 @@
+# 风险配置样例：集中演示各类常见配置风险（仅用于测试，不含真实凭据）
+name: legacy
+
+on: [pull_request_target, workflow_dispatch]
+
+permissions: write-all
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # GHA010：未固定到提交 SHA；GHA030：高风险触发器下检出 PR 代码
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      # GHA010：Docker 镜像使用可变标签
+      - uses: docker://node:20
+      # GHA020：PR 标题直接拼入命令
+      - name: 打印标题
+        run: echo "${{ github.event.pull_request.title }}"
+      # GHA021：手动触发输入直接拼入命令；GHA031：写权限 + 机密
+      - name: 部署
+        env:
+          DEPLOY_TOKEN: ${{ secrets.EXAMPLE_DEPLOY_TOKEN }}
+        run: ./deploy.sh "${{ github.event.inputs.version }}"
