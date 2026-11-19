@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>GSB2 2D 关卡编辑器</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header id="topbar">
+  <span class="brand">GSB2 关卡编辑器</span>
+  <button id="btn-new" title="新建地图">新建</button>
+  <button id="btn-open" title="打开地图文件 (Ctrl+O)">打开</button>
+  <button id="btn-save" title="保存并导出 JSON (Ctrl+S)">保存</button>
+  <button id="btn-sample" title="加载内置示例关卡">示例</button>
+  <span class="sep"></span>
+  <button id="btn-undo" title="撤销 (Ctrl+Z)">↶ 撤销</button>
+  <button id="btn-redo" title="重做 (Ctrl+Shift+Z / Ctrl+Y)">↷ 重做</button>
+  <span class="sep"></span>
+  <button id="btn-resize" title="扩展/裁切地图边缘 (R)">地图尺寸</button>
+  <span class="sep"></span>
+  <label>碰撞显示
+    <select id="sel-collision-view">
+      <option value="off">关闭</option>
+      <option value="active">当前图层</option>
+      <option value="all">所有图层</option>
+    </select>
+  </label>
+  <label><input type="checkbox" id="chk-grid" checked> 网格</label>
+  <label><input type="checkbox" id="chk-bounds" checked> 关卡范围</label>
+  <span class="spacer"></span>
+  <span id="zoom-label">100%</span>
+</header>
+
+<div id="main">
+  <aside id="toolbar">
+    <button class="tool" data-tool="brush"  title="笔刷 (B)">🖌</button>
+    <button class="tool" data-tool="eraser" title="橡皮 (E)">🧽</button>
+    <button class="tool" data-tool="fill"   title="填充桶 (G)">🪣</button>
+    <button class="tool" data-tool="select" title="选区/移动 (M)，拖动选区内部移动，Delete 清除">▣</button>
+  </aside>
+
+  <div id="canvas-wrap">
+    <canvas id="canvas"></canvas>
+    <div id="statusbar">
+      <span id="st-pos">—</span>
+      <span id="st-cell"></span>
+      <span id="st-level"></span>
+      <span id="st-hint"></span>
+    </div>
+  </div>
+
+  <aside id="sidepanel">
+    <section>
+      <h3>图层 <button id="btn-add-layer" title="新建图层">＋</button></h3>
+      <ul id="layer-list"></ul>
+    </section>
+    <section>
+      <h3>图块</h3>
+      <div id="palette"></div>
+    </section>
+    <section id="tile-config">
+      <h3>图块碰撞配置</h3>
+      <div id="tile-config-body"><p class="dim">选择一个图块</p></div>
+    </section>
+  </aside>
+</div>
+
+<!-- 新建地图对话框 -->
+<dialog id="dlg-new">
+  <h3>新建地图</h3>
+  <label>名称 <input id="new-name" value="未命名关卡"></label>
+  <label>宽（格） <input id="new-w" type="number" value="60" min="1" max="500"></label>
+  <label>高（格） <input id="new-h" type="number" value="34" min="1" max="500"></label>
+  <label>基准格子尺寸
+    <select id="new-tilesize"><option>8</option><option selected>16</option><option>32</option></select>
+  </label>
+  <menu>
+    <button id="new-cancel">取消</button>
+    <button id="new-ok" class="primary">创建</button>
+  </menu>
+</dialog>
+
+<!-- 地图尺寸调整对话框 -->
+<dialog id="dlg-resize">
+  <h3>扩展 / 裁切地图边缘</h3>
+  <p class="dim">单位为基准格。正数向外扩展，负数向内裁切。被裁掉的图块会在画布上以红色预览。</p>
+  <div class="resize-grid">
+    <label>左 <input id="rs-left" type="number" value="0"></label>
+    <label>右 <input id="rs-right" type="number" value="0"></label>
+    <label>上 <input id="rs-top" type="number" value="0"></label>
+    <label>下 <input id="rs-bottom" type="number" value="0"></label>
+  </div>
+  <p id="rs-summary" class="dim"></p>
+  <menu>
+    <button id="rs-cancel">取消</button>
+    <button id="rs-ok" class="primary">应用</button>
+  </menu>
+</dialog>
+
+<!-- 新建图层对话框 -->
+<dialog id="dlg-layer">
+  <h3>新建图层</h3>
+  <label>名称 <input id="layer-name" value="新图层"></label>
+  <label>格子尺寸
+    <select id="layer-cellsize"><option>8</option><option selected>16</option><option>32</option><option>64</option></select>
+  </label>
+  <menu>
+    <button id="layer-cancel">取消</button>
+    <button id="layer-ok" class="primary">创建</button>
+  </menu>
+</dialog>
+
+<input type="file" id="file-input" accept=".json,application/json" hidden>
+<div id="toast"></div>
+
+<script src="js/tileset.js"></script>
+<script src="js/model.js"></script>
+<script src="js/history.js"></script>
+<script src="js/io.js"></script>
+<script src="js/editor.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+<script src="sample/sample-level.js"></script>
+</body>
+</html>
