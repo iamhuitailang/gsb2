@@ -1,0 +1,21 @@
+{
+  "name": "particle-studio",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "粒子效果编辑与预览工具",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test src/core/simulation.test.ts && node scripts/smoke.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "generate:samples": "node scripts/generate-samples.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7"
+  }
+}
