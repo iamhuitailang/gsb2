@@ -1,0 +1,13 @@
+{
+  "name": "local-image-annotator",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "本地图片多边形/矩形标注工具（零依赖）",
+  "scripts": {
+    "dev": "node scripts/serve.mjs",
+    "start": "node scripts/serve.mjs",
+    "test": "node --test tests/",
+    "generate:samples": "node scripts/generate-samples.mjs"
+  }
+}

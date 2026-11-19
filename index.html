@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>本地图片标注工具</title>
+    <link rel="stylesheet" href="src/styles.css" />
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230d99ff'/><path d='M7 22l6-9 5 6 3-4 4 7z' fill='white'/><circle cx='22' cy='10' r='3' fill='white'/></svg>" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <div>
+          <h1>本地图片标注</h1>
+          <p>多边形 / 矩形区域标注 · 数据仅保存在本机</p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <button id="btn-import-images" class="btn" type="button">导入图片</button>
+        <button id="btn-load-sample" class="btn" type="button">载入示例</button>
+        <span class="divider" aria-hidden="true"></span>
+        <button id="btn-save-draft" class="btn" type="button">保存草稿</button>
+        <button id="btn-open-draft" class="btn" type="button">打开草稿</button>
+        <span class="divider" aria-hidden="true"></span>
+        <button id="btn-export-json" class="btn btn-primary" type="button">导出标注 JSON</button>
+        <button id="btn-export-masks" class="btn btn-primary" type="button">导出掩码 ZIP</button>
+        <input id="file-images" type="file" accept="image/*" multiple hidden />
+        <input id="file-draft" type="file" accept=".json,application/json" hidden />
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="panel panel-images" aria-label="图片列表">
+        <div class="panel-head">
+          <div>
+            <h2>图片</h2>
+            <p id="project-progress" class="muted">0 张</p>
+          </div>
+          <button id="btn-fit" class="icon-btn" type="button" title="适应窗口 (0)">⤢</button>
+        </div>
+        <div class="progress-track" title="已标注图片 / 全部图片">
+          <div id="project-progress-bar" class="progress-fill"></div>
+        </div>
+        <ul id="image-list" class="scroll-list image-list"></ul>
+        <div class="panel-foot">
+          <button id="btn-clear-all" class="btn btn-ghost btn-danger-text" type="button">清空项目</button>
+          <span class="muted small">自动保存到本机</span>
+        </div>
+      </aside>
+
+      <section class="workspace" aria-label="标注画布">
+        <div class="toolbar" role="toolbar" aria-label="标注工具">
+          <div class="tool-group" role="group" aria-label="工具">
+            <button id="tool-select" class="tool-btn is-active" type="button" data-tool="select" title="选择 / 移动 (V)">
+              <span class="tool-icon">⌖</span><span>选择</span>
+            </button>
+            <button id="tool-polygon" class="tool-btn" type="button" data-tool="polygon" title="多边形 (P)">
+              <span class="tool-icon">⬡</span><span>多边形</span>
+            </button>
+            <button id="tool-rect" class="tool-btn" type="button" data-tool="rect" title="矩形 (R)">
+              <span class="tool-icon">▭</span><span>矩形</span>
+            </button>
+          </div>
+          <div id="draft-actions" class="tool-group draft-actions" hidden>
+            <span id="draft-hint" class="draft-hint"></span>
+            <button id="btn-undo-point" class="btn btn-small" type="button" title="撤销最后一个点 (Backspace)">撤销点</button>
+            <button id="btn-close-polygon" class="btn btn-small btn-primary" type="button" title="闭合多边形 (Enter)">闭合</button>
+            <button id="btn-cancel-draft" class="btn btn-small" type="button" title="取消 (Esc)">取消</button>
+          </div>
+          <div class="tool-group zoom-group">
+            <button id="btn-zoom-out" class="icon-btn" type="button" title="缩小 (-)">−</button>
+            <button id="zoom-label" class="zoom-label" type="button" title="适应窗口 (0)">100%</button>
+            <button id="btn-zoom-in" class="icon-btn" type="button" title="放大 (+)">＋</button>
+            <button id="btn-zoom-fit" class="btn btn-small" type="button" title="适应窗口 (0)">适应</button>
+          </div>
+        </div>
+        <div id="canvas-wrap" class="canvas-wrap">
+          <canvas id="canvas" tabindex="0" aria-label="图片标注画布"></canvas>
+          <div id="empty-state" class="empty-state" hidden>
+            <h2>还没有图片</h2>
+            <p>导入本地图片，或载入内置示例开始标注。</p>
+            <div class="empty-actions">
+              <button id="btn-empty-import" class="btn btn-primary" type="button">导入图片</button>
+              <button id="btn-empty-sample" class="btn" type="button">载入示例</button>
+            </div>
+          </div>
+          <div id="hint-overlay" class="hint-overlay" hidden></div>
+        </div>
+        <footer class="statusbar">
+          <span id="status-image" class="status-item">—</span>
+          <span id="status-cursor" class="status-item mono">x —, y —</span>
+          <span id="status-selection" class="status-item">未选中</span>
+          <span class="status-spacer"></span>
+          <span id="status-message" class="status-item status-message" role="status" aria-live="polite"></span>
+        </footer>
+      </section>
+
+      <aside class="panel panel-side" aria-label="标签与标注">
+        <section class="side-section">
+          <div class="panel-head">
+            <div>
+              <h2>标签</h2>
+              <p class="muted small">顺序决定导出类别索引</p>
+            </div>
+          </div>
+          <form id="label-form" class="inline-form">
+            <input id="label-name-input" type="text" placeholder="新标签名称，如：车辆" maxlength="40" autocomplete="off" />
+            <button class="btn btn-small btn-primary" type="submit">新建</button>
+          </form>
+          <p id="label-error" class="form-error" role="alert" hidden></p>
+          <ul id="label-list" class="scroll-list label-list"></ul>
+          <p id="label-empty" class="muted small empty-note">尚未创建标签。先新建标签，再开始绘制。</p>
+        </section>
+
+        <section class="side-section side-annotations">
+          <div class="panel-head">
+            <div>
+              <h2>标注 <span id="annotation-count" class="count-badge">0</span></h2>
+              <p id="annotation-subtitle" class="muted small">选择一项可在画布中高亮</p>
+            </div>
+            <button id="btn-delete-selected" class="icon-btn" type="button" title="删除选中标注 (Delete)">🗑</button>
+          </div>
+          <ul id="annotation-list" class="scroll-list annotation-list"></ul>
+          <p id="annotation-empty" class="muted small empty-note">当前图片还没有标注。</p>
+        </section>
+      </aside>
+    </main>
+
+    <dialog id="label-delete-dialog" class="dialog">
+      <form method="dialog" class="dialog-body">
+        <h2>删除标签</h2>
+        <p id="delete-label-message"></p>
+        <div id="delete-label-options" class="dialog-options">
+          <label class="radio-line">
+            <input type="radio" name="delete-mode" value="delete" checked />
+            <span>同时删除使用该标签的标注</span>
+          </label>
+          <label class="radio-line">
+            <input type="radio" name="delete-mode" value="reassign" />
+            <span>把标注转移到：</span>
+            <select id="reassign-target"></select>
+          </label>
+        </div>
+        <div class="dialog-actions">
+          <button value="cancel" class="btn" type="submit">取消</button>
+          <button id="btn-confirm-delete-label" value="confirm" class="btn btn-danger" type="submit">确认删除</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="confirm-dialog" class="dialog">
+      <form method="dialog" class="dialog-body">
+        <h2 id="confirm-title">确认</h2>
+        <p id="confirm-message"></p>
+        <div class="dialog-actions">
+          <button value="cancel" class="btn" type="submit">取消</button>
+          <button value="confirm" class="btn btn-danger" type="submit">确认</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
