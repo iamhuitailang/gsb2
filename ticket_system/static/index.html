@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>工单系统</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div id="login-view" class="view">
+  <form id="login-form" class="card login-card">
+    <h1>工单系统</h1>
+    <p class="hint">演示账号：supervisor_a / demo1234（甲组主管）</p>
+    <label>用户名<input name="username" autocomplete="username" required></label>
+    <label>密码<input name="password" type="password" autocomplete="current-password" required></label>
+    <button type="submit">登录</button>
+    <p id="login-error" class="error" role="alert"></p>
+  </form>
+</div>
+
+<div id="main-view" class="view hidden">
+  <header class="topbar">
+    <strong id="whoami"></strong>
+    <div class="topbar-actions">
+      <div id="admin-bar" class="admin-bar hidden">
+        <label class="inline">查看小组
+          <select id="view-group"></select>
+        </label>
+        <label class="inline">工单编号
+          <input id="transfer-id" type="number" min="1" placeholder="如 2">
+        </label>
+        <label class="inline">转到
+          <select id="transfer-group"></select>
+        </label>
+        <button id="transfer-btn" type="button" class="secondary">转移工单</button>
+        <span id="transfer-msg" class="muted small"></span>
+      </div>
+      <button id="logout-btn" class="ghost" type="button">退出</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="card list-panel">
+      <div class="panel-head">
+        <h2>本组工单</h2>
+        <span id="page-info" class="muted"></span>
+      </div>
+
+      <table class="tickets">
+        <thead>
+          <tr><th class="col-check"></th><th>编号</th><th>标题</th><th>状态</th></tr>
+        </thead>
+        <tbody id="ticket-rows"></tbody>
+      </table>
+      <p id="empty-hint" class="muted hidden">本组暂无工单</p>
+
+      <div class="pager">
+        <button id="prev-page" type="button">上一页</button>
+        <button id="next-page" type="button">下一页</button>
+      </div>
+    </section>
+
+    <section class="card batch-panel">
+      <div class="panel-head">
+        <h2>批量关闭</h2>
+      </div>
+      <p class="muted small">跨页勾选的编号会保留，提交时后端会逐条重新校验。</p>
+      <form id="add-id-form" class="add-id">
+        <input id="add-id-input" type="number" min="1" placeholder="手动添加编号">
+        <button type="submit" class="ghost">添加</button>
+        <span class="muted small">也可加入不在本页的编号，后端会逐条判定</span>
+      </form>
+      <div id="selected-chips" class="chips"></div>
+      <p id="selected-count" class="muted"></p>
+
+      <div class="actions">
+        <button id="preview-btn" type="button" class="secondary" disabled>预览可关闭数量</button>
+        <button id="submit-btn" type="button" disabled>提交关闭</button>
+      </div>
+
+      <div id="preview-box" class="result-box hidden"></div>
+      <div id="result-box" class="result-box hidden"></div>
+    </section>
+  </main>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
