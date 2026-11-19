@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "regex-risk"
+version = "1.0.0"
+description = "静态检查 Python 正则表达式中潜在灾难性回溯风险的本地命令行工具（仅标准库）"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "regex_risk contributors" }]
+keywords = ["regex", "redos", "static-analysis", "backtracking", "security"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Topic :: Security",
+    "Topic :: Text Processing :: General",
+]
+dependencies = []
+
+[project.scripts]
+regex-risk = "regex_risk.__main__:main"
+
+[tool.setuptools]
+packages = ["regex_risk"]
