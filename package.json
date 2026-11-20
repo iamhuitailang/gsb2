@@ -1,0 +1,13 @@
+{
+  "name": "behavior-tree-debug-tool",
+  "version": "1.0.0",
+  "private": true,
+  "description": "行为树编辑与运行调试工具：可视化摆节点、逐步调试本地模拟角色",
+  "scripts": {
+    "start": "python3 -m http.server 8765",
+    "test": "node tests/engine.test.js",
+    "test:browser": "node tests/cdp-smoke.js"
+  },
+  "keywords": ["behavior-tree", "editor", "debugger", "game-ai", "blackboard"],
+  "license": "MIT"
+}

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>行为树编辑与运行调试工具</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='88'%3E%F0%9F%8C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">🌳 行为树调试台</div>
+  <div class="tree-tabs" id="treeTabs"></div>
+  <div class="top-actions">
+    <button id="btnNewTree" class="btn">＋ 新建行为树</button>
+    <button id="btnExport" class="btn">⬇ 导出项目</button>
+    <button id="btnImport" class="btn">⬆ 导入项目</button>
+    <input type="file" id="fileInput" accept=".json,application/json" hidden>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- 左栏：节点库 + 属性 -->
+  <aside class="side side-left">
+    <section class="panel">
+      <h3>节点库</h3>
+      <div id="palette" class="palette"></div>
+      <p class="panel-tip">点击按钮在画布中央添加节点，再从子节点顶部圆点拖线到父节点底部圆点。</p>
+    </section>
+    <section class="panel grow">
+      <h3>属性</h3>
+      <div id="propertyPanel" class="property-panel">
+        <p class="muted">未选中任何节点或连线</p>
+      </div>
+    </section>
+  </aside>
+
+  <!-- 中栏：编辑器 + 模拟场景 -->
+  <section class="center">
+    <div class="editor-wrap">
+      <div class="editor-toolbar">
+        <span class="hint">拖空白平移 · 滚轮缩放 · 选中后按 Delete 删除 · 非法连线会提示原因</span>
+        <span class="zoom-controls">
+          <button class="btn btn-mini" id="btnZoomOut">－</button>
+          <span id="zoomLabel">100%</span>
+          <button class="btn btn-mini" id="btnZoomIn">＋</button>
+          <button class="btn btn-mini" id="btnFit">适应视图</button>
+        </span>
+      </div>
+      <svg id="editorSvg" xmlns="http://www.w3.org/2000/svg">
+        <g id="viewRoot">
+          <g id="edgeLayer"></g>
+          <g id="nodeLayer"></g>
+          <path id="ghostEdge" class="ghost-edge" d="" visibility="hidden"></path>
+        </g>
+      </svg>
+    </div>
+
+    <div class="sim-wrap">
+      <div class="sim-toolbar">
+        <div class="run-controls">
+          <button id="btnRun" class="btn btn-primary">▶ 运行</button>
+          <button id="btnPause" class="btn" disabled>⏸ 暂停</button>
+          <button id="btnStep" class="btn">⏭ 单步</button>
+          <button id="btnReset" class="btn">⟲ 重置整树</button>
+          <label class="ctl">速度
+            <input type="range" id="speedRange" min="0.25" max="4" step="0.25" value="1">
+            <span id="speedLabel">1.0×</span>
+          </label>
+          <label class="ctl">Tick
+            <input type="number" id="tickInterval" min="100" max="2000" step="50" value="500" class="num-input"> ms
+          </label>
+        </div>
+        <div class="sim-state" id="simState"><span class="state-dot"></span>已停止</div>
+      </div>
+      <canvas id="simCanvas" width="900" height="260"></canvas>
+      <div class="sim-hint">本地模拟角色：可拖动角色 / 玩家 / 家 / 巡逻点标记；绿色扇形为角色视野，进入视野即写入黑板 <code>playerVisible</code>。</div>
+    </div>
+  </section>
+
+  <!-- 右栏：黑板 + 场景 + 日志 -->
+  <aside class="side side-right">
+    <section class="panel">
+      <h3>黑板 Blackboard</h3>
+      <div id="blackboardPanel" class="bb-panel"></div>
+    </section>
+    <section class="panel">
+      <h3>调试场景</h3>
+      <div id="scenePanel" class="scene-panel"></div>
+    </section>
+    <section class="panel grow">
+      <h3 class="log-head">运行日志
+        <button class="btn btn-mini" id="btnClearLog">清空</button>
+      </h3>
+      <div id="logPanel" class="log-panel"></div>
+    </section>
+  </aside>
+</main>
+
+<div id="toasts" class="toasts"></div>
+
+<script src="js/utils.js"></script>
+<script src="js/blackboard.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/simulation.js"></script>
+<script src="js/project.js"></script>
+<script src="js/examples.js"></script>
+<script src="js/editor.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
