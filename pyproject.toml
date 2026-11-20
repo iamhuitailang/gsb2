@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sqlguard"
+version = "0.1.0"
+description = "离线 Python SQL 注入静态审查工具（纯 AST 分析，不执行目标代码）"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+
+[project.scripts]
+sqlguard = "sqlguard.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["sqlguard*"]
