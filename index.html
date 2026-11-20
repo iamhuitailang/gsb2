@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ChromaDeck · 本地图片调色工作台</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app" class="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <h1>ChromaDeck</h1>
+            <p>本地调色工作台 · 源文件只读</p>
+          </div>
+        </div>
+
+        <div class="project-meta">
+          <label class="sr-only" for="projectName">项目名称</label>
+          <input id="projectName" class="project-name" value="未命名项目" maxlength="80" />
+          <span id="saveState" class="save-state" role="status" aria-live="polite">尚未保存</span>
+        </div>
+
+        <div class="top-actions">
+          <button id="btnSamples" class="btn ghost" type="button">载入样例</button>
+          <button id="btnImport" class="btn" type="button">导入图片</button>
+          <button id="btnRelink" class="btn ghost hidden" type="button">重新关联原图</button>
+          <button id="btnSaveProject" class="btn ghost" type="button">保存项目</button>
+          <button id="btnExportProject" class="btn ghost" type="button">导出项目文件</button>
+          <button id="btnImportProject" class="btn ghost" type="button">打开项目</button>
+          <button id="btnExportAll" class="btn primary" type="button">导出全部</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="sidebar" aria-label="图片列表">
+          <div class="sidebar-head">
+            <h2>图片 <span id="imageCount" class="pill">0</span></h2>
+            <button id="btnSelectAll" class="link-btn" type="button">全选</button>
+          </div>
+          <ul id="filmstrip" class="filmstrip" role="listbox" aria-label="项目图片"></ul>
+          <div class="sidebar-foot">
+            <p class="hint">已选 <span id="selectionCount">0</span> 张。勾选后可批量复制调整。</p>
+            <button id="btnCopyToSelected" class="btn wide" type="button">把当前调整复制到所选</button>
+            <button id="btnRestoreBatch" class="btn wide ghost" type="button">撤销当前图的批量调整</button>
+          </div>
+        </aside>
+
+        <section class="stage" aria-label="预览">
+          <div class="stage-toolbar">
+            <div class="segmented" role="group" aria-label="视图模式">
+              <button class="seg active" data-view="single" type="button">单张</button>
+              <button class="seg" data-view="compare" type="button">并排比较</button>
+            </div>
+            <div class="stage-tools">
+              <button id="btnOriginal" class="btn small" type="button" title="按住可临时查看原图">原图对比</button>
+              <span class="divider" aria-hidden="true"></span>
+              <button id="btnZoomOut" class="icon-btn" type="button" aria-label="缩小">−</button>
+              <span id="zoomLabel" class="zoom-label">100%</span>
+              <button id="btnZoomIn" class="icon-btn" type="button" aria-label="放大">+</button>
+              <button id="btnZoomFit" class="btn small ghost" type="button">适配</button>
+              <button id="btnZoomActual" class="btn small ghost" type="button">1:1</button>
+            </div>
+          </div>
+
+          <div id="stageBody" class="stage-body">
+            <div id="singlePane" class="pane-wrap single">
+              <div id="singleCanvasHost" class="canvas-host">
+                <canvas id="previewCanvas" class="preview-canvas"></canvas>
+              </div>
+              <div id="emptyState" class="empty-state">
+                <h3>还没有图片</h3>
+                <p>导入本地图片，或载入内置样例开始。原图不会被修改，导出总是写入新文件。</p>
+                <div class="empty-actions">
+                  <button id="btnImportEmpty" class="btn primary" type="button">选择本地图片</button>
+                  <button id="btnSamplesEmpty" class="btn ghost" type="button">载入样例</button>
+                </div>
+              </div>
+            </div>
+            <div id="comparePane" class="pane-wrap compare hidden">
+              <div id="compareGrid" class="compare-grid"></div>
+            </div>
+          </div>
+
+          <div class="stage-foot">
+            <div id="imageInfo" class="image-info">—</div>
+            <div id="exportStatus" class="export-status" role="status" aria-live="polite"></div>
+          </div>
+        </section>
+
+        <aside class="inspector" aria-label="调整面板">
+          <div class="inspector-head">
+            <h2>调整</h2>
+            <button id="btnResetAll" class="link-btn" type="button">全部重置</button>
+          </div>
+
+          <section class="group" data-group="exposure">
+            <header class="group-head">
+              <h3>曝光</h3>
+              <button class="link-btn restore" data-restore="exposure" type="button">恢复此项</button>
+            </header>
+            <div class="slider-row">
+              <input id="exposureSlider" type="range" min="-5" max="5" step="0.01" value="0" aria-label="曝光 EV" />
+              <div class="number-wrap">
+                <input id="exposureNumber" type="number" min="-5" max="5" step="0.05" value="0" aria-label="曝光数值" />
+                <span class="unit">EV</span>
+              </div>
+            </div>
+            <p class="group-hint">线性光计算，范围 −5 至 +5 EV</p>
+          </section>
+
+          <section class="group" data-group="whiteBalance">
+            <header class="group-head">
+              <h3>白平衡</h3>
+              <button class="link-btn restore" data-restore="whiteBalance" type="button">恢复此项</button>
+            </header>
+            <div class="slider-row">
+              <span class="row-label">色温</span>
+              <input id="tempSlider" type="range" min="-100" max="100" step="1" value="0" aria-label="色温" />
+              <div class="number-wrap">
+                <input id="tempNumber" type="number" min="-100" max="100" step="1" value="0" aria-label="色温数值" />
+              </div>
+            </div>
+            <div class="slider-row">
+              <span class="row-label">色调</span>
+              <input id="tintSlider" type="range" min="-100" max="100" step="1" value="0" aria-label="色调" />
+              <div class="number-wrap">
+                <input id="tintNumber" type="number" min="-100" max="100" step="1" value="0" aria-label="色调数值" />
+              </div>
+            </div>
+            <div class="wb-swatches" aria-hidden="true">
+              <span class="wb-cool"></span><span class="wb-neutral"></span><span class="wb-warm"></span>
+            </div>
+          </section>
+
+          <section class="group" data-group="toneCurve">
+            <header class="group-head">
+              <h3>色调曲线</h3>
+              <button class="link-btn restore" data-restore="toneCurve" type="button">恢复此项</button>
+            </header>
+            <div class="curve-tabs" role="tablist" aria-label="曲线通道">
+              <button class="curve-tab active" data-channel="master" type="button" role="tab">亮度</button>
+              <button class="curve-tab" data-channel="red" type="button" role="tab">红</button>
+              <button class="curve-tab" data-channel="green" type="button" role="tab">绿</button>
+              <button class="curve-tab" data-channel="blue" type="button" role="tab">蓝</button>
+            </div>
+            <div class="curve-editor">
+              <svg id="curveSvg" viewBox="0 0 100 100" preserveAspectRatio="none" role="application" aria-label="色调曲线编辑器"></svg>
+            </div>
+            <div class="curve-points">
+              <label>
+                选中点
+                <select id="pointSelect" aria-label="选择控制点"></select>
+              </label>
+              <label>
+                X
+                <input id="pointX" type="number" min="0" max="1" step="0.01" />
+              </label>
+              <label>
+                Y
+                <input id="pointY" type="number" min="0" max="1" step="0.01" />
+              </label>
+              <button id="btnRemovePoint" class="btn small ghost" type="button">删除</button>
+            </div>
+            <p class="group-hint">拖动控制点；空白处双击添加；选中点后按 Delete 删除。越界或重叠会提示并保留上一次有效值。</p>
+          </section>
+
+          <section class="group" data-group="saturation">
+            <header class="group-head">
+              <h3>饱和度</h3>
+              <button class="link-btn restore" data-restore="saturation" type="button">恢复此项</button>
+            </header>
+            <div class="slider-row">
+              <input id="satSlider" type="range" min="-100" max="100" step="1" value="0" aria-label="饱和度" />
+              <div class="number-wrap">
+                <input id="satNumber" type="number" min="-100" max="100" step="1" value="0" aria-label="饱和度数值" />
+              </div>
+            </div>
+            <p class="group-hint">−100 为黑白，+100 为最高浓度</p>
+          </section>
+
+          <section class="versions">
+            <header class="group-head">
+              <h3>版本</h3>
+              <button id="btnSaveVersion" class="btn small" type="button">保存当前为新版本</button>
+            </header>
+            <div id="versionList" class="version-list"></div>
+            <div class="version-actions">
+              <label class="check">
+                <input id="showCurrentInCompare" type="checkbox" checked />
+                比较时包含当前未保存调整
+              </label>
+              <button id="btnClearCompare" class="link-btn" type="button">清空比较</button>
+            </div>
+          </section>
+
+          <section class="export-box">
+            <header class="group-head">
+              <h3>导出</h3>
+            </header>
+            <div class="export-row">
+              <label>
+                格式
+                <select id="exportFormat">
+                  <option value="image/jpeg">JPEG</option>
+                  <option value="image/png">PNG</option>
+                  <option value="image/webp">WebP</option>
+                </select>
+              </label>
+              <label>
+                质量
+                <input id="exportQuality" type="number" min="40" max="100" step="1" value="92" />
+              </label>
+            </div>
+            <button id="btnExportCurrent" class="btn primary wide" type="button">导出当前图片</button>
+            <p class="group-hint">导出使用原图全分辨率，方向和色彩与预览一致；源文件保持不变。</p>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
+
+    <dialog id="relinkDialog" class="dialog">
+      <form method="dialog">
+        <h2>重新关联原图</h2>
+        <p>以下图片的原文件引用已失效。请选择本地原图，系统会按文件名与大小自动匹配。</p>
+        <ul id="relinkList" class="relink-list"></ul>
+        <div class="dialog-actions">
+          <button id="btnRelinkPick" class="btn primary" type="button">选择原图…</button>
+          <button class="btn ghost" value="cancel">关闭</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="exportDialog" class="dialog">
+      <form method="dialog">
+        <h2>导出结果</h2>
+        <div id="exportReport" class="export-report"></div>
+        <div class="dialog-actions">
+          <button class="btn primary" value="close">知道了</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>
