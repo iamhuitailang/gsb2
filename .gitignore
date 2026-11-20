@@ -42,6 +42,3 @@ coverage/
 .idea/
 .vscode/
 *.swp
-
-# 生成的示例素材(可用 npm run generate:samples 恢复)
-public/samples/

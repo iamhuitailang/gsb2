@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>网格简化对比工具 · LOD Compare</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3 28 10v12L16 29 4 22V10z' fill='none' stroke='%234fa3ff' stroke-width='2.5'/%3E%3Cpath d='M16 3v13m0 0L4 10m12 6 12-6M16 16v13' fill='none' stroke='%23ff8c42' stroke-width='1.8'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">◇</span>
+      <div>
+        <h1>网格简化对比工具</h1>
+        <p class="subtitle">QEM 边折叠 · 多候选 LOD · 同视图轮廓与细节损失检查</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="btn-sample-cube" class="btn">载入规则立方体</button>
+      <button id="btn-sample-sphere" class="btn">载入细节球</button>
+      <button id="btn-sample-two" class="btn">载入双分离块</button>
+      <label class="btn btn-primary file-btn">
+        导入 OBJ
+        <input type="file" id="file-import" accept=".obj" hidden />
+      </label>
+      <button id="btn-save-project" class="btn">保存项目</button>
+      <label class="btn file-btn">
+        打开项目
+        <input type="file" id="file-project" accept=".json" hidden />
+      </label>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- 左栏：网格列表 + 体检/清理 + 候选参数 -->
+    <aside class="sidebar">
+      <section class="panel">
+        <h2>网格列表 <span class="hint" id="mesh-count"></span></h2>
+        <ul id="mesh-list" class="mesh-list"></ul>
+      </section>
+
+      <section class="panel" id="panel-inspect">
+        <h2>体检与清理</h2>
+        <div id="inspect-report" class="report"></div>
+        <div class="clean-options">
+          <label><input type="checkbox" id="opt-weld" checked /> 焊接重复点</label>
+          <label><input type="checkbox" id="opt-degenerate" checked /> 删除退化面</label>
+          <label><input type="checkbox" id="opt-isolated" checked /> 删除孤立点</label>
+          <label class="tol">容差
+            <input type="number" id="opt-tolerance" value="0.000001" step="0.000001" min="0" />
+          </label>
+        </div>
+        <div class="row">
+          <button id="btn-clean" class="btn btn-primary btn-sm">生成清理版本</button>
+          <button id="btn-revert" class="btn btn-sm" hidden>恢复原始版本</button>
+        </div>
+        <div id="clean-result" class="clean-result"></div>
+      </section>
+
+      <section class="panel" id="panel-generate">
+        <h2>生成简化候选</h2>
+        <div class="form-row">
+          <label>模式</label>
+          <div class="seg" id="spec-mode">
+            <button data-mode="ratio" class="seg-btn active">简化比例</button>
+            <button data-mode="faces" class="seg-btn">目标面数</button>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>候选值</label>
+          <input type="text" id="spec-values" value="0.75, 0.5, 0.25, 0.1"
+            placeholder="比例如 0.5,0.25 或面数如 2000,500" />
+        </div>
+        <p class="hint" id="spec-hint">逗号分隔；比例范围 (0,1]，一次生成多个候选。</p>
+        <div class="form-row">
+          <label>边界权重 <span id="boundary-value">10</span></label>
+          <input type="range" id="boundary-weight" min="0" max="50" step="1" value="10" />
+        </div>
+        <button id="btn-generate" class="btn btn-primary btn-block">生成候选</button>
+        <button id="btn-regenerate" class="btn btn-block btn-sm" hidden>按已保存参数重新生成</button>
+      </section>
+    </aside>
+
+    <!-- 中央视图 -->
+    <section class="viewport-wrap">
+      <div class="view-toolbar">
+        <div class="seg" id="view-mode">
+          <button data-mode="overlay" class="seg-btn active">叠加对比</button>
+          <button data-mode="split" class="seg-btn">左右分屏</button>
+        </div>
+        <label><input type="checkbox" id="view-original" checked /> 显示原模型</label>
+        <label>不透明度 <input type="range" id="view-opacity" min="0.05" max="1" step="0.05" value="0.35" /></label>
+        <label><input type="checkbox" id="view-wireframe" checked /> 线框</label>
+        <label><input type="checkbox" id="view-heatmap" /> 偏差热力图</label>
+        <span class="view-labels">
+          <i class="dot dot-blue"></i>原始
+          <i class="dot dot-orange"></i>简化
+        </span>
+      </div>
+      <div id="viewer" class="viewer"></div>
+      <div class="split-labels">
+        <span class="split-label left">原始模型</span>
+        <span class="split-label right">简化候选</span>
+      </div>
+      <div class="view-footer">
+        <span id="view-stats"></span>
+        <span class="hint">左键旋转 · Shift/右键平移 · 滚轮缩放 · 点击候选模型选取区域</span>
+      </div>
+    </section>
+
+    <!-- 右栏：候选列表 + 指标 + 区域对比 -->
+    <aside class="sidebar sidebar-right">
+      <section class="panel">
+        <h2>候选版本与指标</h2>
+        <div id="candidate-list" class="candidate-list"></div>
+      </section>
+
+      <section class="panel" id="panel-region">
+        <h2>选中区域前后对比</h2>
+        <p class="hint" id="region-empty">在中央视图点击简化模型表面选择一块区域。</p>
+        <div id="region-detail" hidden>
+          <table class="kv">
+            <tr><td>区域顶点数</td><th id="region-vcount"></th></tr>
+            <tr><td>平均距离</td><th id="region-avg"></th></tr>
+            <tr><td>最大距离</td><th id="region-max"></th></tr>
+            <tr><td>法线夹角均值</td><th id="region-navg"></th></tr>
+            <tr><td>法线夹角最大</td><th id="region-nmax"></th></tr>
+          </table>
+          <button id="btn-clear-region" class="btn btn-sm">清除选区</button>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-export">
+        <h2>导出选定版本</h2>
+        <p class="hint">OBJ 文件头附带简化比例、面数、偏差等元数据。</p>
+        <button id="btn-export" class="btn btn-primary btn-block">导出当前候选 OBJ</button>
+        <button id="btn-export-original" class="btn btn-block btn-sm">导出当前基础网格 OBJ</button>
+      </section>
+    </aside>
+  </main>
+
+  <div id="toast" class="toast" hidden></div>
+  <script type="module" src="js/app/main.js"></script>
+</body>
+</html>

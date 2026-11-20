@@ -1,0 +1,17 @@
+{
+  "name": "mesh-lod-compare",
+  "version": "1.0.0",
+  "private": true,
+  "description": "浏览器端网格简化（QEM 边折叠）多候选 LOD 对比工具",
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "test": "node tools/test-core.mjs",
+    "test:e2e": "node tools/e2e-test.mjs http://127.0.0.1:8000/index.html",
+    "generate:samples": "node tools/generate-samples.mjs",
+    "screenshot": "node tools/screenshot.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
