@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>点云检查工具(离线版)</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <h1>点云检查工具 <span class="offline-badge">离线</span></h1>
+
+    <section class="panel">
+      <h2>1. 导入扫描</h2>
+      <div class="row">
+        <label class="file-btn">
+          选择点云文件…
+          <input type="file" id="fileInput" multiple accept=".xyz,.txt,.csv,.pts,.ply,.pcd,.json" hidden>
+        </label>
+      </div>
+      <div class="row hint">支持 XYZ/TXT/CSV/PTS/PLY(ascii)/PCD(ascii),可多选;数据仅在本机处理</div>
+      <div id="scanList" class="scan-list"></div>
+      <div id="parseReport" class="parse-report hidden"></div>
+    </section>
+
+    <section class="panel">
+      <h2>2. 变换(当前: <span id="activeScanName">—</span>)</h2>
+      <div class="grid3">
+        <label>平移 X <input type="number" step="any" id="tx"></label>
+        <label>平移 Y <input type="number" step="any" id="ty"></label>
+        <label>平移 Z <input type="number" step="any" id="tz"></label>
+        <label>旋转° X <input type="number" step="any" id="rx"></label>
+        <label>旋转° Y <input type="number" step="any" id="ry"></label>
+        <label>旋转° Z <input type="number" step="any" id="rz"></label>
+      </div>
+      <div class="row btn-row">
+        <button id="applyTransform" class="primary">应用变换</button>
+      </div>
+      <div class="row btn-row">
+        <button data-nudge="tx,-0.1">X−0.1</button>
+        <button data-nudge="tx,0.1">X+0.1</button>
+        <button data-nudge="ty,-0.1">Y−0.1</button>
+        <button data-nudge="ty,0.1">Y+0.1</button>
+        <button data-nudge="tz,-0.1">Z−0.1</button>
+        <button data-nudge="tz,0.1">Z+0.1</button>
+      </div>
+      <div class="row btn-row">
+        <button data-nudge="rx,-5">绕X−5°</button>
+        <button data-nudge="rx,5">绕X+5°</button>
+        <button data-nudge="ry,-5">绕Y−5°</button>
+        <button data-nudge="ry,5">绕Y+5°</button>
+        <button data-nudge="rz,-5">绕Z−5°</button>
+        <button data-nudge="rz,5">绕Z+5°</button>
+      </div>
+      <pre id="transformReadout" class="readout">未导入</pre>
+    </section>
+
+    <section class="panel">
+      <h2>3. 框选与裁剪</h2>
+      <div class="row hint">在视图上按住鼠标左键拖拽画框(需先点「开始框选」);右键拖拽旋转视图</div>
+      <div class="row btn-row">
+        <button id="startSelect">开始框选</button>
+        <button id="cancelSelect">取消框选</button>
+      </div>
+      <div class="row btn-row">
+        <button id="cropInside">保留框内</button>
+        <button id="cropOutside">剔除框内</button>
+      </div>
+      <div id="selectionInfo" class="hint">未选择</div>
+      <pre id="boxReadout" class="readout">—</pre>
+    </section>
+
+    <section class="panel">
+      <h2>4. 离群点与稀疏采样</h2>
+      <label class="param">近邻数 k
+        <input type="number" id="sorK" value="8" min="2" max="100" step="1">
+      </label>
+      <label class="param">标准差倍数
+        <input type="number" id="sorStd" value="1.0" min="0.1" max="5" step="0.1">
+      </label>
+      <div class="row btn-row">
+        <button id="previewSor">预览筛除</button>
+        <button id="applySor">应用筛除</button>
+      </div>
+      <div id="sorInfo" class="hint">—</div>
+      <label class="param">稀疏采样目标点数
+        <input type="number" id="sampleTarget" value="50000" min="100" step="1000">
+      </label>
+      <div class="row btn-row">
+        <button id="previewSample">预览采样</button>
+        <button id="applySample">应用采样</button>
+      </div>
+      <label class="param">或体素边长
+        <input type="number" id="voxelSize" value="0.5" min="0" step="0.1">
+      </label>
+      <div class="row btn-row">
+        <button id="applyVoxel">应用体素降采样</button>
+      </div>
+      <div id="sampleInfo" class="hint">—</div>
+    </section>
+
+    <section class="panel">
+      <h2>5. 双扫描对比</h2>
+      <div class="row btn-row">
+        <button id="layoutOverlay">叠加视图</button>
+        <button id="layoutSplit">并排视图</button>
+      </div>
+      <div class="row btn-row">
+        <button id="calcError">计算配准误差</button>
+      </div>
+      <pre id="errorReadout" class="readout">—</pre>
+    </section>
+
+    <section class="panel">
+      <h2>6. 保存与导出</h2>
+      <div class="row btn-row">
+        <button id="undoBtn">撤销上一步</button>
+        <button id="restoreBtn">恢复原始点集</button>
+      </div>
+      <label class="param">工程备注
+        <textarea id="projectNote" rows="2" placeholder="可选:记录处理目的、参数等"></textarea>
+      </label>
+      <div class="row btn-row">
+        <button id="saveProject">保存工程(.json)</button>
+        <button id="saveNote">导出说明(.md)</button>
+      </div>
+      <div class="row btn-row">
+        <button id="exportActive">导出当前点云(xyz)</button>
+        <button id="exportAll">导出全部点云</button>
+      </div>
+      <label class="param inline">
+        <input type="checkbox" id="exportColor" checked> 导出时包含颜色列
+      </label>
+    </section>
+
+    <section class="panel">
+      <h2>显示设置</h2>
+      <label class="param">渲染点大小
+        <input type="range" id="pointSize" min="0.5" max="8" step="0.5" value="2">
+      </label>
+      <label class="param">每片渲染点数上限(LOD)
+        <input type="number" id="renderCap" value="250000" min="1000" step="10000">
+      </label>
+      <div class="row btn-row">
+        <button id="frameAll">全部居中</button>
+        <button id="toggleBBox">包围盒</button>
+      </div>
+    </section>
+  </aside>
+
+  <main id="viewport">
+    <div id="emptyHint">
+      <p>点云检查工具 · 完全离线运行,文件不会离开本机</p>
+      <p class="sub">从左侧「选择点云文件」开始;可试用 samples/ 目录中的合成样例</p>
+    </div>
+    <div id="splitLabelL" class="split-label hidden"></div>
+    <div id="splitLabelR" class="split-label hidden"></div>
+    <div id="selectRect" class="select-rect hidden"></div>
+    <div id="statusBar">
+      <span id="statusText">就绪</span>
+      <span id="lodText"></span>
+    </div>
+  </main>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script src="vendor/OrbitControls.js"></script>
+<script src="js/pc/math3d.js"></script>
+<script src="js/pc/parser.js"></script>
+<script src="js/pc/kdtree.js"></script>
+<script src="js/pc/filters.js"></script>
+<script src="js/pc/registration.js"></script>
+<script src="js/pc/state.js"></script>
+<script src="js/pc/projectio.js"></script>
+<script src="js/app/viewer.js"></script>
+<script src="js/app/app.js"></script>
+</body>
+</html>

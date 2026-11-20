@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>集成测试(临时文件,可删除)</title>
+<style> body { margin: 0; background: #101418; } #log { color: #6f6; font: 12px monospace;
+  position: absolute; top: 0; left: 350px; white-space: pre-wrap; z-index: 9; }
+#fail { color: #f66; font-weight: bold; }</style>
+</head>
+<body>
+<div id="log">running…</div>
+<script src="../vendor/three.min.js"></script>
+<script src="../vendor/OrbitControls.js"></script>
+<script src="../js/pc/math3d.js"></script>
+<script src="../js/pc/parser.js"></script>
+<script src="../js/pc/kdtree.js"></script>
+<script src="../js/pc/filters.js"></script>
+<script src="../js/pc/registration.js"></script>
+<script src="../js/pc/state.js"></script>
+<script src="../js/pc/projectio.js"></script>
+<script src="../js/app/viewer.js"></script>
+<script>
+// 集成测试: 不依赖 app.js 的 DOM 流程,直接驱动 Viewer + 纯逻辑模块
+(async function () {
+  const log = [];
+  const fail = [];
+  function ok(cond, msg) { (cond ? log : fail).push((cond ? 'PASS ' : 'FAIL ') + msg); }
+
+  const resp = await fetch('../samples/scan_a.xyz');
+  const textA = await resp.text();
+  const respB = await fetch('../samples/scan_b.xyz');
+  const textB = await respB.text();
+  const parsedA = PCParser.parse(textA, 'scan_a.xyz');
+  const parsedB = PCParser.parse(textB, 'scan_b.xyz');
+  parsedA.fileName = 'scan_a.xyz';
+  parsedB.fileName = 'scan_b.xyz';
+  ok(parsedA.points.length === 4205, 'scan_a 解析 4205 点, 实际 ' + parsedA.points.length);
+  ok(parsedA.errors.length === 2, 'scan_a 2 坏行, 实际 ' + parsedA.errors.length);
+  ok(!!parsedA.colors, 'scan_a 含颜色');
+
+  const store = new PCState.ScanStore();
+  const sa = store.add(parsedA, 'scan_a');
+  const sb = store.add(parsedB, 'scan_b');
+
+  const container = document.createElement('div');
+  container.style.cssText = 'position:absolute;left:0;top:0;width:1200px;height:900px';
+  document.body.appendChild(container);
+  const viewer = new PCViewer(container);
+  viewer.addScan(sa);
+  viewer.addScan(sb);
+  ok(viewer.scanObjects.size === 2, '两个 Points 对象已加入场景');
+
+  // LOD 检查
+  const objA = viewer.scanObjects.get(sa.id);
+  ok(objA.renderedCount <= viewer.renderCap, 'LOD 渲染数 ' + objA.renderedCount + ' <= cap ' + viewer.renderCap);
+
+  // SOR
+  const sor = PCFilters.statisticalOutlierRemoval(sa.points, 8, 1.0);
+  ok(sor.removedCount === 5, 'SOR 剔除 5 离群点, 实际 ' + sor.removedCount);
+  sa.applyIndices(sor.keep, 'SOR');
+  viewer.updateScan(sa);
+  ok(sa.count() === 4200, 'SOR 后 4200 点');
+  sa.undo();
+  viewer.updateScan(sa);
+  ok(sa.count() === 4205, '撤销恢复 4205 点');
+
+  // 变换 + 配准误差
+  const before = PCRegistration.nearestNeighborError(sb.worldPoints(), sa.worldPoints(), 2000);
+  sb.setTransform([-0.6, -0.4, -0.05], [0, 0, -8], '校正');
+  viewer.updateScan(sb);
+  const after = PCRegistration.nearestNeighborError(sb.worldPoints(), sa.worldPoints(), 2000);
+  ok(after.rmse < before.rmse * 0.5, '配准 RMSE ' + before.rmse.toFixed(3) + ' -> ' + after.rmse.toFixed(3));
+
+  // 框选视锥: 取覆盖大半屏幕的矩形,应选中大量点
+  const bigRect = { x0: -0.8, y0: -0.8, x1: 0.8, y1: 0.8 };
+  const hit = viewer.pickInRect(sa, bigRect, 0);
+  ok(hit.size > 1000, '大屏矩形选中 ' + hit.size + ' 点');
+  // 视锥外的小矩形(屏幕角落外推)选点应明显更少
+  const corner = { x0: 0.95, y0: 0.95, x1: 1.0, y1: 1.0 };
+  const hitCorner = viewer.pickInRect(sa, corner, 0);
+  ok(hitCorner.size < hit.size, '角落小矩形选点更少: ' + hitCorner.size + ' < ' + hit.size);
+
+  // 裁剪 + 撤销
+  const box = viewer.selectionToBox(sa, hit);
+  ok(box !== null && box.isBox3, '选择框 AABB 构造成功');
+  viewer.showSelectionBox(box);
+  ok(viewer.selectionHelper !== null, '选择框 helper 已显示');
+  const crop = PCFilters.cropByBox(sa.points,
+    sa.activeIndices || Uint32Array.from(sa.points.map((_, i) => i)),
+    { min: [box.min.x, box.min.y, box.min.z], max: [box.max.x, box.max.y, box.max.z] },
+    'keep-inside');
+  sa.applyIndices(crop.keep, '框选裁剪');
+  viewer.updateScan(sa);
+  ok(sa.count() === hit.size, '裁剪后点数等于选中数: ' + sa.count() + ' == ' + hit.size);
+  sa.undo();
+  viewer.updateScan(sa);
+  ok(sa.count() === 4205, '裁剪撤销恢复 4205 点');
+
+  // 双视口
+  viewer.setLayout('split');
+  ok(viewer.views[0].rect.w === 0.5 && viewer.views[1].rect.x === 0.5, 'split 布局视口各占一半');
+  viewer.setSplitVisibility(0);
+  ok(viewer.scanObjects.get(sa.id).points.visible === true &&
+     viewer.scanObjects.get(sb.id).points.visible === false, '左视口仅 scan_a 可见');
+  viewer.setSplitVisibility(1);
+  ok(viewer.scanObjects.get(sa.id).points.visible === false &&
+     viewer.scanObjects.get(sb.id).points.visible === true, '右视口仅 scan_b 可见');
+  viewer.setSplitVisibility(null);
+  ok(viewer.scanObjects.get(sa.id).points.visible === true, 'overlay 全部恢复可见');
+  const hitSplit = viewer.pickInRect(sa, { x0: -0.8, y0: -0.8, x1: 0.8, y1: 0.8 }, 1);
+  ok(hitSplit.size > 100, '右视口框选可用, 选中 ' + hitSplit.size);
+  viewer.setLayout('overlay');
+
+  // 渲染一帧并读取像素,确认画布上真的画了东西(非纯背景色)
+  viewer.renderer.render(viewer.scene, viewer.views[0].camera);
+  const gl = viewer.renderer.getContext();
+  const px = new Uint8Array(1200 * 900 * 4);
+  gl.readPixels(0, 0, 1200, 900, gl.RGBA, gl.UNSIGNED_BYTE, px);
+  let nonBg = 0;
+  for (let i = 0; i < px.length; i += 4) {
+    if (!(px[i] === 16 && px[i + 1] === 20 && px[i + 2] === 24)) nonBg++;
+  }
+  ok(nonBg > 5000, '画布非背景像素 ' + nonBg + ' 个(点云已实际绘制)');
+
+  // 工程往返 + 导出
+  const project = PCProjectIO.saveProject(store, { registration: after });
+  const store2 = new PCState.ScanStore();
+  PCProjectIO.restoreProject(project, store2, PCState.Scan,
+    { 'scan_a.xyz': parsedA, 'scan_b.xyz': parsedB });
+  ok(store2.scans.length === 2 && store2.scans[1].count() === 3600, '工程还原 2 扫描');
+  const exported = PCProjectIO.exportXYZ(store2.scans[0], { withColor: true });
+  ok(exported.split('\n').filter(l => l && !l.startsWith('#')).length === 4205, 'XYZ 导出行数 4205');
+  const note = PCProjectIO.exportProjectNote(store2, project);
+  ok(note.includes('配准误差') && note.includes('scan_a.xyz'), '工程说明含配准与文件名');
+
+  window.__TEST_RESULT__ = { log: log, fail: fail };
+  document.getElementById('log').textContent =
+    log.concat(fail.length ? ['', '=== FAILURES ==='].concat(fail) : ['', 'ALL ' + log.length + ' CHECKS PASSED']).join('\n');
+  if (fail.length) {
+    const d = document.createElement('div');
+    d.id = 'fail';
+    d.textContent = fail.length + ' FAILURES';
+    document.body.appendChild(d);
+  }
+})().catch(function (err) {
+  document.getElementById('log').textContent = 'FATAL: ' + err.stack;
+  const d = document.createElement('div');
+  d.id = 'fail';
+  d.textContent = 'FATAL';
+  document.body.appendChild(d);
+});
+</script>
+</body>
+</html>
