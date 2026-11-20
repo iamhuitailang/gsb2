@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sqli-scanner"
+version = "1.0.0"
+description = "离线 Python SQL 注入静态检查工具（纯标准库，基于 AST，不执行被扫描代码）"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "sqli_scanner maintainers" }]
+keywords = ["security", "sql-injection", "static-analysis", "ast", "sast"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Topic :: Security",
+    "Topic :: Software Development :: Quality Assurance",
+    "Operating System :: OS Independent",
+]
+# 无第三方依赖，标准库即可运行
+dependencies = []
+
+[project.scripts]
+sqli-scanner = "sqli_scanner.cli:main"
+
+[tool.setuptools]
+packages = ["sqli_scanner"]
