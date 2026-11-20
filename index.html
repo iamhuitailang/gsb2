@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>三维布光工作台</title>
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{ "imports": { "three": "./js/vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="app">
+  <aside id="panel"></aside>
+  <main id="viewport-wrap">
+    <canvas id="gl"></canvas>
+    <div id="view-labels">
+      <span id="label-left" class="view-label"></span>
+      <span id="label-right" class="view-label"></span>
+    </div>
+    <div id="diff-panel" class="hidden">
+      <h3>方案差异 <span class="hint">（A → B）</span></h3>
+      <div id="diff-content"></div>
+    </div>
+  </main>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
