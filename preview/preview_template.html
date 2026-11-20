@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>地图切片预览</title>
+<style>
+  :root { --bg:#1e1f24; --panel:#2a2c33; --fg:#e8e8ea; --accent:#4da3ff; --bad:#ff5252; }
+  * { box-sizing: border-box; }
+  body { margin:0; display:flex; height:100vh; font:13px/1.5 -apple-system,"PingFang SC",sans-serif;
+         background:var(--bg); color:var(--fg); }
+  #side { width:280px; min-width:280px; background:var(--panel); padding:14px; overflow-y:auto; }
+  #side h1 { font-size:15px; margin:0 0 10px; }
+  #side h2 { font-size:12px; color:#9aa; margin:14px 0 6px; text-transform:uppercase; }
+  .row { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin:4px 0; }
+  button { background:#3a3d46; color:var(--fg); border:1px solid #4a4d57; border-radius:4px;
+           padding:3px 10px; cursor:pointer; font-size:12px; }
+  button.active { background:var(--accent); border-color:var(--accent); color:#10131a; font-weight:600; }
+  button:hover { filter:brightness(1.15); }
+  label { user-select:none; cursor:pointer; }
+  #info { background:#23232a; background:#22232a; border-radius:6px; padding:8px; white-space:pre-wrap;
+          font-family:ui-monospace,Menlo,monospace; font-size:11px; min-height:60px; word-break:break-all; }
+  #missing-list { max-height:180px; overflow-y:auto; font-family:ui-monospace,Menlo,monospace;
+                  font-size:11px; color:var(--bad); }
+  #view { flex:1; position:relative; overflow:hidden; cursor:grab; }
+  #view.dragging { cursor:grabbing; }
+  canvas { position:absolute; inset:0; }
+  #hud { position:absolute; left:10px; bottom:10px; background:rgba(0,0,0,.55); padding:4px 10px;
+         border-radius:4px; font-family:ui-monospace,Menlo,monospace; font-size:11px; pointer-events:none; }
+  .stat b { color:var(--accent); }
+  .bad { color:var(--bad); }
+</style>
+</head>
+<body>
+<div id="side">
+  <h1>地图切片预览</h1>
+  <div id="summary" class="stat"></div>
+  <h2>缩放层级</h2>
+  <div class="row" id="levels"></div>
+  <div class="row"><span>视图缩放</span><input id="zoom" type="range" min="10" max="400" value="100" style="flex:1"><span id="zoomv">100%</span></div>
+  <h2>检查</h2>
+  <div class="row">
+    <label><input type="checkbox" id="seams"> 接缝检查（瓦片边界+重叠区）</label>
+  </div>
+  <div class="row">
+    <label><input type="checkbox" id="coords"> 显示瓦片坐标</label>
+  </div>
+  <h2>缺失瓦片 <span id="missing-count" class="bad"></span></h2>
+  <div id="missing-list"></div>
+  <h2>瓦片信息（点击画布）</h2>
+  <div id="info">尚未选择瓦片</div>
+</div>
+<div id="view">
+  <canvas id="cv"></canvas>
+  <div id="hud"></div>
+</div>
+<script>
+"use strict";
+const MANIFEST = /*__MANIFEST__*/null;
+if (!MANIFEST) document.body.innerHTML = "<p style='padding:2em'>清单未内嵌，请用 maptiler slice 生成预览页。</p>";
+
+const cfg = MANIFEST.config;
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+const view = document.getElementById("view");
+
+let curLevel = 0;
+let zoom = 1.0;            // 视图缩放（在当前层级图基础上）
+let panX = 0, panY = 0;    // 画布平移（屏幕像素）
+const images = new Map();  // file -> {img, ok}
+const missing = [];
+
+// ---- 加载瓦片 ----
+function loadLevel(level) {
+  for (const t of MANIFEST.tiles) {
+    if (t.level !== level || images.has(t.file)) continue;
+    const rec = { img: new Image(), ok: null };
+    rec.img.onload = () => { rec.ok = true; draw(); };
+    rec.img.onerror = () => {
+      rec.ok = false;
+      missing.push(t);
+      updateMissing();
+      draw();
+    };
+    rec.img.src = t.file;
+    images.set(t.file, rec);
+  }
+}
+
+function levelInfo(l) { return MANIFEST.levels.find(x => x.level === l); }
+
+// ---- 绘制 ----
+function draw() {
+  const dpr = window.devicePixelRatio || 1;
+  const W = view.clientWidth, H = view.clientHeight;
+  if (cv.width !== W * dpr || cv.height !== H * dpr) {
+    cv.width = W * dpr; cv.height = H * dpr;
+    cv.style.width = W + "px"; cv.style.height = H + "px";
+  }
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  // 透明底纹
+  ctx.save();
+  ctx.translate(panX, panY); ctx.scale(zoom, zoom);
+  const li = levelInfo(curLevel);
+  ctx.fillStyle = "#26272c"; ctx.fillRect(0, 0, li.width, li.height);
+  ctx.fillStyle = "#2e2f35";
+  const sq = 32;
+  for (let y = 0; y < li.height; y += sq)
+    for (let x = (y / sq % 2) * sq; x < li.width; x += sq * 2)
+      ctx.fillRect(x, y, sq, sq);
+
+  const seams = document.getElementById("seams").checked;
+  const showCoords = document.getElementById("coords").checked;
+  const font = Math.max(10, 14 / zoom);
+
+  for (const t of MANIFEST.tiles) {
+    if (t.level !== curLevel) continue;
+    const rec = images.get(t.file);
+    if (rec && rec.ok) {
+      ctx.imageSmoothingEnabled = zoom < 1;
+      ctx.drawImage(rec.img, t.x, t.y, t.width, t.height);
+    } else if (rec && rec.ok === false) {
+      // 缺失瓦片：红色斜纹 + 标注
+      ctx.save();
+      ctx.beginPath(); ctx.rect(t.x, t.y, t.width, t.height); ctx.clip();
+      ctx.fillStyle = "rgba(255,82,82,.25)";
+      ctx.fillRect(t.x, t.y, t.width, t.height);
+      ctx.strokeStyle = "rgba(255,82,82,.9)"; ctx.lineWidth = 2 / zoom;
+      const step = 24;
+      for (let d = -t.height; d < t.width; d += step) {
+        ctx.beginPath();
+        ctx.moveTo(t.x + d, t.y); ctx.lineTo(t.x + d + t.height, t.y + t.height);
+        ctx.stroke();
+      }
+      ctx.restore();
+      ctx.strokeStyle = "#ff5252"; ctx.lineWidth = 2 / zoom;
+      ctx.strokeRect(t.x, t.y, t.width, t.height);
+      ctx.fillStyle = "#ff5252"; ctx.font = `bold ${font * 1.2}px monospace`;
+      ctx.fillText(`缺失 ${t.col},${t.row}`, t.x + 6 / zoom, t.y + font * 1.4);
+    }
+    if (seams) {
+      // 瓦片边界
+      ctx.strokeStyle = "rgba(77,163,255,.9)"; ctx.lineWidth = 1 / zoom;
+      ctx.strokeRect(t.x, t.y, t.width, t.height);
+      // 重叠区（右/下边缘与下一块共享的部分）
+      if (cfg.overlap > 0) {
+        ctx.fillStyle = "rgba(255,196,0,.28)";
+        const li2 = levelInfo(curLevel);
+        const cols = li2.cols, rows = li2.rows;
+        if (t.col < cols - 1)
+          ctx.fillRect(t.x + t.width - cfg.overlap, t.y, cfg.overlap, t.height);
+        if (t.row < rows - 1)
+          ctx.fillRect(t.x, t.y + t.height - cfg.overlap, t.width, cfg.overlap);
+      }
+    }
+    if (showCoords) {
+      ctx.fillStyle = "rgba(255,255,255,.85)"; ctx.font = `${font}px monospace`;
+      ctx.fillText(`${t.col},${t.row}`, t.x + 4 / zoom, t.y + font);
+    }
+  }
+  ctx.restore();
+  document.getElementById("hud").textContent =
+    `level ${curLevel}  ${li.width}x${li.height}  缩放 ${(zoom * 100).toFixed(0)}%`;
+}
+
+// ---- 交互：平移 / 缩放 / 点选 ----
+let drag = null;
+view.addEventListener("mousedown", e => {
+  drag = { x: e.clientX - panX, y: e.clientY - panY, moved: false };
+  view.classList.add("dragging");
+});
+window.addEventListener("mousemove", e => {
+  if (!drag) return;
+  const nx = e.clientX - drag.x, ny = e.clientY - drag.y;
+  if (Math.abs(nx - panX) + Math.abs(ny - panY) > 2) drag.moved = true;
+  panX = nx; panY = ny; draw();
+});
+window.addEventListener("mouseup", e => {
+  if (drag && !drag.moved) pick(e);
+  drag = null; view.classList.remove("dragging");
+});
+view.addEventListener("wheel", e => {
+  e.preventDefault();
+  const rect = view.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  const k = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+  const nz = Math.min(8, Math.max(0.05, zoom * k));
+  panX = mx - (mx - panX) * (nz / zoom);
+  panY = my - (my - panY) * (nz / zoom);
+  zoom = nz;
+  document.getElementById("zoom").value = Math.round(zoom * 100);
+  document.getElementById("zoomv").textContent = Math.round(zoom * 100) + "%";
+  draw();
+}, { passive: false });
+
+function pick(e) {
+  const rect = view.getBoundingClientRect();
+  const lx = (e.clientX - rect.left - panX) / zoom;
+  const ly = (e.clientY - rect.top - panY) / zoom;
+  const hits = MANIFEST.tiles.filter(t =>
+    t.level === curLevel && lx >= t.x && lx < t.x + t.width && ly >= t.y && ly < t.y + t.height);
+  const info = document.getElementById("info");
+  if (!hits.length) { info.textContent = "此处无瓦片"; return; }
+  info.textContent = hits.map(t => {
+    const rec = images.get(t.file);
+    const st = rec && rec.ok === false ? "缺失!" : "正常";
+    return `瓦片 ${t.col},${t.row} @level ${t.level}  [${st}]\n` +
+           `文件: ${t.file}\n层级图: x=${t.x} y=${t.y} ${t.width}x${t.height}\n` +
+           `源图: x=${t.src[0]} y=${t.src[1]} ${t.src[2]}x${t.src[3]}\nsha256: ${t.sha256.slice(0, 16)}…`;
+  }).join("\n\n");
+}
+
+// ---- 侧栏 ----
+function buildUI() {
+  const s = MANIFEST.source, c = MANIFEST.config;
+  const total = MANIFEST.tiles.length;
+  document.getElementById("summary").innerHTML =
+    `源图 <b>${s.file}</b> ${s.width}x${s.height}<br>` +
+    `瓦片 <b>${c.tile_w}x${c.tile_h}</b> 重叠 <b>${c.overlap}px</b> ` +
+    `边缘 <b>${c.edge === "pad" ? "补透明" : "裁切"}</b><br>共 <b>${total}</b> 块瓦片`;
+  const lv = document.getElementById("levels");
+  for (const li of MANIFEST.levels) {
+    const b = document.createElement("button");
+    b.textContent = `L${li.level} (${li.cols}x${li.rows})`;
+    b.onclick = () => { curLevel = li.level; fitView(); refreshLevelBtns(); loadLevel(li.level); draw(); };
+    b.dataset.level = li.level;
+    lv.appendChild(b);
+  }
+  refreshLevelBtns();
+  document.getElementById("seams").onchange = draw;
+  document.getElementById("coords").onchange = draw;
+  document.getElementById("zoom").oninput = e => {
+    zoom = e.target.value / 100;
+    document.getElementById("zoomv").textContent = e.target.value + "%";
+    draw();
+  };
+}
+function refreshLevelBtns() {
+  for (const b of document.getElementById("levels").children)
+    b.classList.toggle("active", +b.dataset.level === curLevel);
+}
+function fitView() {
+  const li = levelInfo(curLevel);
+  zoom = Math.min(view.clientWidth / li.width, view.clientHeight / li.height) * 0.96;
+  panX = (view.clientWidth - li.width * zoom) / 2;
+  panY = (view.clientHeight - li.height * zoom) / 2;
+  document.getElementById("zoom").value = Math.round(zoom * 100);
+  document.getElementById("zoomv").textContent = Math.round(zoom * 100) + "%";
+}
+function updateMissing() {
+  document.getElementById("missing-count").textContent = missing.length ? `(${missing.length})` : "";
+  document.getElementById("missing-list").innerHTML = missing.map(t =>
+    `<div>L${t.level} col=${t.col} row=${t.row}  ${t.file}</div>`).join("");
+}
+
+buildUI();
+loadLevel(curLevel);
+fitView();
+window.addEventListener("resize", draw);
+draw();
+</script>
+</body>
+</html>
