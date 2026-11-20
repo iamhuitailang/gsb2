@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>镜头路径编辑器 · Camera Path Editor</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app" class="app-shell">
+    <header class="topbar" id="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <div class="brand-text">
+          <strong>镜头路径编辑器</strong>
+          <span>Camera Path Editor · WebGL2</span>
+        </div>
+      </div>
+      <nav class="topbar-actions" id="topbar-actions"></nav>
+    </header>
+
+    <main class="workspace">
+      <aside class="sidebar sidebar-left" id="sidebar-left" aria-label="路径与镜头设置"></aside>
+
+      <section class="stage">
+        <div class="viewport" id="viewport">
+          <canvas id="gl" class="gl-canvas"></canvas>
+          <div class="viewport-overlay" id="viewport-overlay" aria-hidden="true"></div>
+          <div class="viewport-hud" id="viewport-hud"></div>
+          <div class="viewport-toolbar" id="viewport-toolbar"></div>
+          <div class="viewport-hint" id="viewport-hint">
+            左键旋转 · 右键/中键平移 · 滚轮缩放 · 拖拽控制点 · 双击路径加点
+          </div>
+          <div class="toast" id="toast" role="status" aria-live="polite"></div>
+        </div>
+        <div class="transport" id="transport"></div>
+        <div class="timeline-panel" id="timeline-panel"></div>
+      </section>
+
+      <aside class="sidebar sidebar-right" id="sidebar-right" aria-label="镜头与构图"></aside>
+    </main>
+  </div>
+  <script type="module" src="main.js"></script>
+</body>
+</html>
