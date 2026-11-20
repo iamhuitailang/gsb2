@@ -1,0 +1,7 @@
+# 统一换行符，工程文件与源码均为 UTF-8 文本
+* text=auto eol=lf
+*.ts text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.html text eol=lf
+*.md text eol=lf

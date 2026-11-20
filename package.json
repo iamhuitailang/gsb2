@@ -1,0 +1,20 @@
+{
+  "name": "terrain-editor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "浏览器内运行的三维地形编辑器（TypeScript + WebGL2，分区块、多图层、可保存）",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "smoke": "tsx tools/smoke.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
+  }
+}
