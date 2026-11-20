@@ -1,0 +1,21 @@
+{
+  "name": "uv-inspector",
+  "version": "1.0.0",
+  "description": "3D mesh UV inspection and unwrapping tool",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:browser": "node tests/cdp-interaction.mjs",
+    "gen:sample": "python3 -I tools/generate_sample_mesh.py"
+  },
+  "dependencies": {
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0",
+    "vitest": "^2.1.0"
+  }
+}

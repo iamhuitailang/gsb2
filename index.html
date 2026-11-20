@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UV Inspector — 三维 UV 检查与展开工具</title>
+    <link rel="stylesheet" href="/src/ui/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="toolbar">
+        <div class="brand">UV Inspector</div>
+        <div class="tool-group">
+          <button id="btn-load-sample" title="加载内置示例网格">加载示例</button>
+          <label class="file-btn" title="导入本地 OBJ">
+            导入 OBJ
+            <input id="file-obj" type="file" accept=".obj" hidden />
+          </label>
+        </div>
+        <div class="tool-group">
+          <select id="select-mode" title="交互模式">
+            <option value="select">选择 (面)</option>
+            <option value="seam">切缝 (标记边)</option>
+          </select>
+          <button id="btn-unwrap" title="展开选中面（无选中则展开全部）">展开选中</button>
+          <select id="select-unwrap-mode" title="展开算法">
+            <option value="isometric">等距展开</option>
+            <option value="planar">平面投影</option>
+          </select>
+          <button id="btn-clear-seam" title="清除全部切缝">清除切缝</button>
+        </div>
+        <div class="tool-group">
+          <button id="btn-pack" title="自动排布所有 UV 岛">自动排布</button>
+          <label class="inline">留白
+            <input id="input-margin" type="number" min="0" max="0.2" step="0.005" value="0.02" />
+          </label>
+        </div>
+        <div class="tool-group uv-transform">
+          <button data-xf="left" title="岛左移">◀</button>
+          <button data-xf="right">▶</button>
+          <button data-xf="up">▲</button>
+          <button data-xf="down">▼</button>
+          <button data-xf="rot+" title="顺时针旋转 15°">⟳</button>
+          <button data-xf="rot-">⟲</button>
+          <button data-xf="grow" title="放大">＋</button>
+          <button data-xf="shrink" title="缩小">－</button>
+        </div>
+        <div class="tool-group">
+          <select id="select-uvset" title="切换 UV 套"></select>
+          <button id="btn-add-uvset" title="新增一套 UV（复制当前套）">＋UV套</button>
+          <button id="btn-del-uvset" title="删除当前 UV 套">－UV套</button>
+        </div>
+        <div class="tool-group">
+          <button id="btn-save-project">保存项目</button>
+          <label class="file-btn">打开项目
+            <input id="file-project" type="file" accept=".json,.uvproj" hidden />
+          </label>
+          <button id="btn-export-obj">导出 OBJ</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="viewport" id="viewport-3d">
+          <div class="view-title">模型视图 <span class="hint">左键旋转 · 右键平移 · 滚轮缩放 · 点击选面</span></div>
+          <canvas id="canvas-3d"></canvas>
+        </section>
+        <section class="viewport" id="viewport-uv">
+          <div class="view-title">UV 平面 <span class="hint">点击岛/面定位 · 框选移动 · 滚轮缩放</span></div>
+          <canvas id="canvas-uv"></canvas>
+        </section>
+        <aside class="sidebar">
+          <h3>检查报告 <button id="btn-refresh-report" class="small">重新检查</button></h3>
+          <div id="report-summary" class="report-summary"></div>
+          <div id="report-list" class="report-list"></div>
+          <h3>当前状态</h3>
+          <div id="status-panel" class="status-panel"></div>
+          <h3>操作说明</h3>
+          <ol class="help">
+            <li>「选择」模式点模型面，UV 中对应区域高亮；点 UV 面也会高亮模型。</li>
+            <li>「切缝」模式点模型边标记/取消切缝，再用「展开选中」按缝展开。</li>
+            <li>UV 视图中可直接拖动选中岛，顶部按钮做旋转/缩放。</li>
+            <li>「自动排布」按留白重排所有岛，报告实时更新。</li>
+            <li>多套 UV 独立保存，切换编辑互不覆盖。</li>
+          </ol>
+        </aside>
+      </main>
+      <footer class="statusbar"><span id="status-text">就绪</span></footer>
+    </div>
+    <script type="module" src="/src/ui/main.js"></script>
+  </body>
+</html>
