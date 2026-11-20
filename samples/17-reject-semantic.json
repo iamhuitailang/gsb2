@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0",
+  "package": {
+    "id": "semantic-demo",
+    "name": "语义错误样例",
+    "revision": 1
+  },
+  "default_action": "deny",
+  "rules": [
+    {
+      "id": "bad-cidr",
+      "name": "主机位非零的 CIDR",
+      "priority": 10,
+      "action": "allow",
+      "direction": "inbound",
+      "protocols": ["tcp"],
+      "source_cidrs": ["10.20.0.7/24"],
+      "destination_cidrs": ["10.30.0.0/24"],
+      "destination_ports": ["443"]
+    },
+    {
+      "id": "bad-port",
+      "name": "越界端口区间",
+      "priority": 20,
+      "action": "allow",
+      "direction": "inbound",
+      "protocols": ["tcp"],
+      "source_cidrs": ["10.20.0.0/24"],
+      "destination_cidrs": ["10.30.0.0/24"],
+      "destination_ports": ["9000-8000", "70000"]
+    },
+    {
+      "id": "icmp-with-port",
+      "name": "ICMP 携带端口",
+      "priority": 30,
+      "action": "deny",
+      "direction": "inbound",
+      "protocols": ["icmp"],
+      "source_cidrs": ["10.20.0.0/24"],
+      "destination_cidrs": ["10.30.0.0/24"],
+      "destination_ports": [443]
+    }
+  ]
+}

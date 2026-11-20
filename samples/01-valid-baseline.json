@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "package": {
+    "id": "baseline-office",
+    "name": "办公网基础策略",
+    "description": "初始基线：仅放行必要的内网服务",
+    "revision": 1
+  },
+  "default_action": "deny",
+  "rules": [
+    {
+      "id": "allow-dns",
+      "name": "允许内网 DNS 查询",
+      "description": "只允许访问内网 DNS 服务器",
+      "enabled": true,
+      "priority": 10,
+      "action": "allow",
+      "direction": "outbound",
+      "protocols": ["udp", "tcp"],
+      "source_cidrs": ["10.20.0.0/16"],
+      "destination_cidrs": ["10.20.0.53/32"],
+      "destination_ports": [53]
+    },
+    {
+      "id": "allow-https-egress",
+      "name": "允许访问网关 HTTPS",
+      "enabled": true,
+      "priority": 20,
+      "action": "allow",
+      "direction": "outbound",
+      "protocols": ["tcp"],
+      "source_cidrs": ["10.20.0.0/16"],
+      "destination_cidrs": ["10.20.1.0/24"],
+      "destination_ports": ["443"]
+    },
+    {
+      "id": "deny-admin-from-office",
+      "name": "拒绝办公网直连管理端口",
+      "description": "管理面只能从运维网访问",
+      "enabled": true,
+      "priority": 30,
+      "action": "deny",
+      "direction": "inbound",
+      "protocols": ["tcp"],
+      "source_cidrs": ["10.20.0.0/16"],
+      "destination_cidrs": ["10.30.0.0/24"],
+      "destination_ports": ["22", "3389"]
+    }
+  ]
+}

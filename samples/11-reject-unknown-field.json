@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "package": {
+    "id": "unknown-field-demo",
+    "name": "未知字段样例",
+    "revision": 1,
+    "owner": "someone@example.com"
+  },
+  "default_action": "deny",
+  "rules": [
+    {
+      "id": "allow-dns",
+      "name": "允许内网 DNS 查询",
+      "priority": 10,
+      "action": "allow",
+      "direction": "outbound",
+      "protocols": ["udp"],
+      "source_cidrs": ["10.20.0.0/16"],
+      "destination_cidrs": ["10.20.0.53/32"],
+      "destination_ports": [53],
+      "log_level": "verbose"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>本地安全策略管理台</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <noscript>这个管理台需要启用 JavaScript。</noscript>
+  </div>
+  <script src="/vendor/vue.global.prod.js"></script>
+  <script>
+    // 运行时缺失时给出明确指引，而不是留在空白页。
+    if (!window.Vue) {
+      document.getElementById("app").innerHTML =
+        '<div style="max-width:680px;margin:80px auto;padding:24px;border:1px solid #263357;' +
+        'border-radius:14px;background:#141d38;color:#e8eefc;font-family:sans-serif;line-height:1.8">' +
+        "<h2>缺少 Vue 3 运行时</h2>" +
+        "<p>页面依赖本地文件 <code>web/vendor/vue.global.prod.js</code>，" +
+        "不会从 CDN 加载任何资源。</p>" +
+        "<p>在仓库根目录执行以下任一命令后刷新本页：</p>" +
+        "<pre style=\"background:#0c1428;padding:12px;border-radius:8px\">npm install\n" +
+        "# 或手动放置任意 Vue 3.5 的 vue.global.prod.js" +
+        "</pre>" +
+        "<p style=\"color:#93a1c2\">后端 API 已在运行，可先用 " +
+        "<code>python3 -m app.cli validate samples/01-valid-baseline.json</code> 验证。</p></div>";
+    }
+  </script>
+  <script src="/app.js"></script>
+</body>
+</html>

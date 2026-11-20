@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0",
+  "package": {
+    "id": "dup-field-demo",
+    "name": "重复字段样例",
+    "revision": 1
+  },
+  "default_action": "deny",
+  "rules": [
+    {
+      "id": "allow-dns",
+      "name": "允许内网 DNS 查询",
+      "action": "allow",
+      "action": "deny",
+      "priority": 10,
+      "direction": "outbound",
+      "protocols": ["udp"],
+      "source_cidrs": ["10.20.0.0/16"],
+      "destination_cidrs": ["10.20.0.53/32"],
+      "destination_ports": [53]
+    }
+  ]
+}

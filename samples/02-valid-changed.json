@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "package": {
+    "id": "baseline-office",
+    "name": "办公网策略 v2",
+    "description": "在基线之上收紧 HTTPS 端口并新增运维网的 SSH 放行",
+    "revision": 2
+  },
+  "default_action": "deny",
+  "rules": [
+    {
+      "id": "allow-dns",
+      "name": "允许内网 DNS 查询",
+      "description": "只允许访问内网 DNS 服务器",
+      "enabled": true,
+      "priority": 10,
+      "action": "allow",
+      "direction": "outbound",
+      "protocols": ["udp", "tcp"],
+      "source_cidrs": ["10.20.0.0/16"],
+      "destination_cidrs": ["10.20.0.53/32"],
+      "destination_ports": [53]
+    },
+    {
+      "id": "allow-https-egress",
+      "name": "允许访问网关 HTTPS",
+      "description": "仅放行标准 HTTPS 端口，并覆盖新的网关地址段",
+      "enabled": true,
+      "priority": 20,
+      "action": "allow",
+      "direction": "outbound",
+      "protocols": ["tcp"],
+      "source_cidrs": ["10.20.0.0/16"],
+      "destination_cidrs": ["10.20.1.0/24", "10.20.2.0/24"],
+      "destination_ports": ["443", "8443"]
+    },
+    {
+      "id": "allow-ops-ssh",
+      "name": "允许运维网 SSH 管理",
+      "description": "新增：仅运维网可访问管理面 22 端口",
+      "enabled": true,
+      "priority": 25,
+      "action": "allow",
+      "direction": "inbound",
+      "protocols": ["tcp"],
+      "source_cidrs": ["10.30.5.0/24"],
+      "destination_cidrs": ["10.30.0.0/24"],
+      "destination_ports": ["22"]
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0",
+  "package": {
+    "id": "conflict-demo",
+    "name": "规则冲突样例",
+    "revision": 3
+  },
+  "default_action": "deny",
+  "rules": [
+    {
+      "id": "allow-db",
+      "name": "允许办公网访问数据库",
+      "priority": 40,
+      "action": "allow",
+      "direction": "inbound",
+      "protocols": ["tcp"],
+      "source_cidrs": ["10.20.0.0/16"],
+      "destination_cidrs": ["10.30.7.0/24"],
+      "destination_ports": ["5432"]
+    },
+    {
+      "id": "deny-db",
+      "name": "拒绝办公网访问数据库",
+      "priority": 40,
+      "action": "deny",
+      "direction": "inbound",
+      "protocols": ["tcp"],
+      "source_cidrs": ["10.20.5.0/24"],
+      "destination_cidrs": ["10.30.7.0/24"],
+      "destination_ports": ["5432"]
+    },
+    {
+      "id": "allow-db-2",
+      "name": "重复的数据库规则标识",
+      "priority": 50,
+      "action": "allow",
+      "direction": "inbound",
+      "protocols": ["tcp"],
+      "source_cidrs": ["10.20.6.0/24"],
+      "destination_cidrs": ["10.30.7.0/24"],
+      "destination_ports": ["5432"]
+    },
+    {
+      "id": "allow-db-2",
+      "name": "重复标识的另一条规则",
+      "priority": 60,
+      "action": "deny",
+      "direction": "inbound",
+      "protocols": ["tcp"],
+      "source_cidrs": ["10.20.7.0/24"],
+      "destination_cidrs": ["10.30.7.0/24"],
+      "destination_ports": ["5432"]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "local-security-policy-console",
+  "version": "1.0.0",
+  "private": true,
+  "description": "本地安全策略管理台的 Vue 3 运行时来源（仅用于把 vue.global.prod.js 复制到 web/vendor）",
+  "scripts": {
+    "postinstall": "node scripts/copy-vue.mjs",
+    "vendor:vue": "node scripts/copy-vue.mjs"
+  },
+  "dependencies": {
+    "vue": "3.5.13"
+  }
+}
