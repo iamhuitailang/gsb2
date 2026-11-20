@@ -1,0 +1,29 @@
+{
+  "key_file": "keys/demo.key",
+  "files": [
+    {
+      "input": "data/customers.csv",
+      "output": "out/customers.csv",
+      "columns": [
+        {"name": "客户编号", "field": "customer_id", "scope": "demo"},
+        {"name": "手机号", "field": "phone", "scope": "demo", "normalize": "strip"},
+        {"name": "邮箱", "field": "email", "scope": "demo", "normalize": "strip_lower"}
+      ]
+    },
+    {
+      "input": "data/orders.csv",
+      "output": "out/orders.csv",
+      "columns": [
+        {"name": "客户编号", "field": "customer_id", "scope": "demo"},
+        {"name": "联系手机", "field": "phone", "scope": "demo", "normalize": "strip"}
+      ]
+    },
+    {
+      "input": "data/tickets.csv",
+      "output": "out/tickets.csv",
+      "columns": [
+        {"name": "联系邮箱", "field": "email", "scope": "demo", "normalize": "strip_lower"}
+      ]
+    }
+  ]
+}

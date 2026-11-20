@@ -45,3 +45,7 @@ coverage/
 
 # 生成的示例素材(可用 npm run generate:samples 恢复)
 public/samples/
+
+# ---- pseudonymize 运行期产物(密钥与脱敏输出不进仓库) ----
+examples/keys/
+examples/out/
