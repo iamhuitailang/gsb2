@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>本地三维模型查看器 · OBJ / MTL / WebGL</title>
+  </head>
+  <body>
+    <div id="app">
+      <aside id="sidebar-left" class="sidebar">
+        <div id="toolbar"></div>
+        <section class="panel">
+          <header class="panel-header">
+            <h2>模型结构</h2>
+            <span id="tree-summary" class="panel-hint"></span>
+          </header>
+          <div id="scene-tree" class="panel-body"></div>
+        </section>
+        <section class="panel panel-grow">
+          <header class="panel-header">
+            <h2>读取警告</h2>
+            <span id="warning-summary" class="panel-hint"></span>
+          </header>
+          <div id="warning-list" class="panel-body"></div>
+        </section>
+      </aside>
+
+      <main id="viewport">
+        <div id="view-toolbar"></div>
+        <canvas id="gl-canvas"></canvas>
+        <div id="empty-state" class="empty-state">
+          <p><strong>尚未载入模型</strong></p>
+          <p>点击左上「打开文件」选择 OBJ / MTL / 贴图，或「载入示例」查看内置样例。</p>
+          <p class="hint">也可以把文件直接拖入窗口</p>
+        </div>
+        <div id="status-bar"></div>
+      </main>
+
+      <aside id="sidebar-right" class="sidebar">
+        <section class="panel">
+          <header class="panel-header"><h2>选中项信息</h2></header>
+          <div id="details-panel" class="panel-body"></div>
+        </section>
+        <section class="panel panel-grow">
+          <header class="panel-header"><h2>材质</h2></header>
+          <div id="material-panel" class="panel-body"></div>
+        </section>
+      </aside>
+    </div>
+    <div id="toast-container"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
