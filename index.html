@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>本地视频审片台</title>
+<link rel="stylesheet" href="src/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">🎬 本地视频审片台</div>
+  <div class="top-actions">
+    <button id="btn-open-video" class="btn">打开本地视频</button>
+    <button id="btn-replace-video" class="btn" disabled>替换为修订版…</button>
+    <span class="divider"></span>
+    <button id="btn-save" class="btn" disabled>保存项目</button>
+    <button id="btn-open-project" class="btn">打开项目</button>
+    <span class="divider"></span>
+    <button id="btn-export-report" class="btn primary" disabled>导出审片报告</button>
+    <button id="btn-export-json" class="btn" disabled>导出 JSON 清单</button>
+    <button id="btn-export-csv" class="btn" disabled>导出 CSV</button>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- ========== 左侧：播放区 ========== -->
+  <section class="stage-col">
+    <div class="stage-toolbar">
+      <div class="zoom-group">
+        <button id="btn-zoom-out" class="btn icon" title="缩小">−</button>
+        <span id="zoom-label" class="zoom-label">适应窗口</span>
+        <button id="btn-zoom-in" class="btn icon" title="放大">＋</button>
+        <button id="btn-zoom-fit" class="btn small" title="适应窗口">适应</button>
+        <button id="btn-zoom-100" class="btn small" title="实际像素">100%</button>
+      </div>
+      <label class="fps-box">帧率
+        <input id="fps-input" type="number" min="1" max="240" step="1" value="30"> fps
+      </label>
+      <label class="check"><input type="checkbox" id="toggle-all-markers" checked>显示全部标记</label>
+      <span id="media-badge" class="media-badge empty">未加载视频</span>
+    </div>
+
+    <div id="stage-scroll" class="stage-scroll">
+      <div id="stage" class="stage">
+        <video id="video" playsinline preload="auto"></video>
+        <div id="overlay" class="overlay">
+          <svg id="marker-svg" class="marker-layer" preserveAspectRatio="none"></svg>
+          <div id="marker-html" class="marker-html"></div>
+          <canvas id="draw-canvas" class="draw-canvas"></canvas>
+        </div>
+        <div id="stage-hint" class="stage-hint">
+          <p>还没有加载视频</p>
+          <p class="sub">点击右上角「打开本地视频」，或把视频文件拖到此处<br>
+          视频仅在本机浏览器内读取，不会上传到任何服务器</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="transport">
+      <button id="btn-play" class="btn transport-btn" title="播放/暂停（空格）">▶</button>
+      <button id="btn-prev-frame" class="btn" title="上一帧（← / ,）">⏮ 帧</button>
+      <button id="btn-next-frame" class="btn" title="下一帧（→ / .）">帧 ⏭</button>
+      <button id="btn-prev-comment" class="btn" title="上一条意见（[）">上条</button>
+      <button id="btn-next-comment" class="btn" title="下一条意见（]）">下条</button>
+      <div class="scrub-wrap">
+        <input id="scrub" type="range" min="0" max="0" step="0.001" value="0" disabled>
+        <div id="scrub-ticks" class="scrub-ticks"></div>
+      </div>
+      <div class="time-readout">
+        <div class="tc-line"><span id="tc-current" class="tc">00:00:00:00</span> / <span id="tc-duration" class="tc dim">00:00:00:00</span></div>
+        <div class="frame-line">第 <input id="frame-jump" type="text" inputmode="numeric" value="0" title="支持帧号（45）、秒（1.5）、时间码（00:00:01:10）" disabled> / <span id="frame-count">0</span> 帧
+          <button id="btn-jump-frame" class="btn small" disabled>跳转</button>
+        </div>
+      </div>
+      <button id="btn-add-point" class="btn" title="在当前帧添加点意见（N）">＋ 点意见</button>
+      <button id="btn-add-rect" class="btn" title="拖拽画矩形标记（R）">▭ 矩形标记</button>
+    </div>
+  </section>
+
+  <!-- ========== 右侧：意见面板 ========== -->
+  <aside class="side-col">
+    <div class="side-tabs">
+      <button class="tab active" data-tab="comments">意见 <span id="count-badge" class="count-badge">0</span></button>
+      <button class="tab" data-tab="revision">修订对照</button>
+      <button class="tab" data-tab="project">项目</button>
+    </div>
+
+    <!-- 意见列表 -->
+    <div class="tab-panel active" id="panel-comments">
+      <div class="filters">
+        <input id="filter-text" class="input" type="search" placeholder="搜索意见内容…">
+        <select id="filter-status" class="input">
+          <option value="all">全部状态</option>
+          <option value="open">未完成</option>
+          <option value="done">已完成</option>
+          <option value="needs-confirm">待人工确认</option>
+        </select>
+        <select id="filter-type" class="input">
+          <option value="all">全部类型</option>
+          <option value="point">点意见</option>
+          <option value="range">时间段</option>
+        </select>
+        <label class="check"><input type="checkbox" id="filter-current-frame">仅当前帧可见</label>
+      </div>
+      <div id="comment-list" class="comment-list"></div>
+    </div>
+
+    <!-- 修订对照 -->
+    <div class="tab-panel" id="panel-revision">
+      <div class="revision-panel">
+        <p class="hint-text">替换为修订版视频后，系统会用画面相似度把原意见迁移到新时间轴：高置信自动迁移，其余标记为「待人工确认」。</p>
+        <button id="btn-run-mapping" class="btn" disabled>重新执行画面匹配</button>
+        <div id="revision-summary" class="revision-summary"></div>
+        <div id="revision-list" class="revision-list"></div>
+      </div>
+    </div>
+
+    <!-- 项目信息 -->
+    <div class="tab-panel" id="panel-project">
+      <div class="project-panel">
+        <h4>素材</h4>
+        <div id="project-media-info" class="kv-list"><div class="empty-text">未加载</div></div>
+        <h4>版本历史</h4>
+        <div id="version-list" class="version-list"></div>
+        <h4>项目统计</h4>
+        <div id="project-stats" class="kv-list"></div>
+        <h4>说明</h4>
+        <p class="hint-text">项目文件（.vrs.json）保存素材信息、全部意见与标记、版本历史。视频文件本身不写入项目文件，重新打开项目时需要重新选择本地视频。</p>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<!-- 意见编辑弹窗 -->
+<div id="modal-backdrop" class="modal-backdrop hidden">
+  <div class="modal">
+    <h3 id="modal-title">新建意见</h3>
+    <div class="form-row">
+      <label>类型</label>
+      <div id="modal-type-readout" class="readonly"></div>
+    </div>
+    <div class="form-row">
+      <label>时间范围（帧）</label>
+      <div class="range-edit">
+        <input id="modal-frame-start" type="number" min="0" class="input">
+        <span>至</span>
+        <input id="modal-frame-end" type="number" min="0" class="input">
+      </div>
+    </div>
+    <div class="form-row">
+      <label>矩形标记 <span class="dim">（归一化 0–1，留空则为点意见）</span></label>
+      <div id="modal-marker-readout" class="readonly"></div>
+    </div>
+    <div class="form-row">
+      <label>意见内容</label>
+      <textarea id="modal-text" rows="4" class="input" placeholder="例如：此处字幕有错别字 / 画面过曝需要压高光…"></textarea>
+    </div>
+    <div class="form-row">
+      <label>作者</label>
+      <input id="modal-author" type="text" class="input" value="审阅人">
+    </div>
+    <div class="form-row">
+      <label>状态</label>
+      <select id="modal-status" class="input">
+        <option value="open">未完成</option>
+        <option value="done">已完成</option>
+        <option value="needs-confirm">待人工确认</option>
+      </select>
+    </div>
+    <div id="modal-mapping-box" class="mapping-box hidden">
+      <label class="check"><input type="checkbox" id="modal-confirm-mapping">该意见在修订版中的位置已人工确认</label>
+    </div>
+    <div class="modal-actions">
+      <button id="modal-delete" class="btn danger">删除</button>
+      <span class="spacer"></span>
+      <button id="modal-cancel" class="btn">取消</button>
+      <button id="modal-save" class="btn primary">保存意见</button>
+    </div>
+  </div>
+</div>
+
+<!-- 修订替换弹窗 -->
+<div id="replace-backdrop" class="modal-backdrop hidden">
+  <div class="modal">
+    <h3>替换为修订版视频</h3>
+    <p class="hint-text">选择修订版本地视频文件。原意见将先按帧号保留，再通过画面匹配自动迁移；时长变化或匹配不可靠的意见会被标记为「待人工确认」。</p>
+    <ol id="replace-steps" class="steps"></ol>
+    <div class="modal-actions">
+      <button id="replace-cancel" class="btn">取消</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="src/util.js"></script>
+<script src="src/timecode.js"></script>
+<script src="src/store.js"></script>
+<script src="src/thumbnails.js"></script>
+<script src="src/player.js"></script>
+<script src="src/markers.js"></script>
+<script src="src/comments.js"></script>
+<script src="src/revision.js"></script>
+<script src="src/exporter.js"></script>
+<script src="src/app.js"></script>
+</body>
+</html>

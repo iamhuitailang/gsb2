@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "projectId": "prj_demo_review_0001",
+  "name": "样片审片演示项目",
+  "createdAt": 1763600000000,
+  "updatedAt": 1763600000000,
+  "fps": 30,
+  "media": {
+    "name": "sample_v1.mp4",
+    "size": 0,
+    "hash": "",
+    "type": "video/mp4",
+    "width": 960,
+    "height": 540,
+    "frameCount": 90,
+    "loadedAt": 1763600000000
+  },
+  "comments": [
+    {
+      "id": "cmt_demo_01",
+      "startFrame": 12,
+      "endFrame": null,
+      "rect": { "x": 0.042, "y": 0.278, "w": 0.167, "h": 0.185 },
+      "text": "LOGO 区域留白偏小，建议右侧再留出 20px 安全边距，避免电视台标遮挡。",
+      "author": "审阅人-小王",
+      "status": "open",
+      "createdAt": 1763600010000,
+      "updatedAt": 1763600010000,
+      "thumbnail": null,
+      "history": []
+    },
+    {
+      "id": "cmt_demo_02",
+      "startFrame": 25,
+      "endFrame": null,
+      "rect": null,
+      "text": "这一帧圆点运动轨迹开始变快，确认一下运镜节奏是否符合分镜要求。",
+      "author": "审阅人-小王",
+      "status": "open",
+      "createdAt": 1763600020000,
+      "updatedAt": 1763600020000,
+      "thumbnail": null,
+      "history": []
+    },
+    {
+      "id": "cmt_demo_03",
+      "startFrame": 25,
+      "endFrame": null,
+      "rect": { "x": 0.62, "y": 0.6, "w": 0.12, "h": 0.16 },
+      "text": "同一帧的第二条意见：圆点颜色与背景彩条对比度不足，建议提高圆点亮度。",
+      "author": "审阅人-小李",
+      "status": "done",
+      "createdAt": 1763600030000,
+      "updatedAt": 1763600040000,
+      "thumbnail": null,
+      "history": []
+    },
+    {
+      "id": "cmt_demo_04",
+      "startFrame": 60,
+      "endFrame": 74,
+      "rect": null,
+      "text": "时间段意见：这一段（60–74 帧）节奏拖沓，建议压缩到 8 帧以内。替换修订版后该段会整体后移 15 帧，可验证自动迁移。",
+      "author": "审阅人-小王",
+      "status": "open",
+      "createdAt": 1763600050000,
+      "updatedAt": 1763600050000,
+      "thumbnail": null,
+      "history": []
+    }
+  ],
+  "revisions": []
+}
