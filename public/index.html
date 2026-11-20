@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>本地身份提供方发现与信任核验演示</title>
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <h1>本地身份信任核验演示台</h1>
+    <p class="subtitle">离线运行 · 模拟身份提供方发现 / JWKS 密钥轮换 / fail-closed 核验</p>
+  </div>
+  <div class="top-actions">
+    <button id="btn-reset" class="btn warn">重置演示数据</button>
+    <span id="health" class="pill">连接中…</span>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="col providers-col">
+    <div class="section-head">
+      <h2>身份提供方（<span id="provider-count">0</span>）</h2>
+      <button id="btn-new-provider" class="btn">+ 新建提供方</button>
+    </div>
+    <div id="provider-list" class="provider-list"></div>
+
+    <div class="card info-card">
+      <h3>缓存规则（可解释、一致）</h3>
+      <ul>
+        <li>发现/JWKS 缓存按提供方各自独立，键为 providerId，绝不跨提供方复用。</li>
+        <li>TTL 内命中缓存；过期或强制刷新时重新获取，<b>获取失败不回退旧缓存</b>。</li>
+        <li>管理员改配置 → configVersion+1 并清空缓存；旧核验结果标记为“已过期(stale)”。</li>
+        <li>缓存内容带哈希完整性校验，被污染直接拒绝。</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="col detail-col">
+    <div id="provider-detail"><p class="empty-hint">从左侧选择一个提供方查看详情。</p></div>
+  </section>
+
+  <section class="col audit-col">
+    <div class="section-head">
+      <h2>审计记录</h2>
+      <select id="audit-filter"><option value="">全部提供方</option></select>
+    </div>
+    <div id="audit-list" class="audit-list"></div>
+    <p class="note">审计仅记录提供方、配置版本、缓存代数、kid、令牌指纹与原因，不含令牌/私钥。</p>
+  </section>
+</main>
+
+<dialog id="dlg-provider">
+  <form method="dialog" id="form-provider">
+    <h3 id="dlg-title">新建身份提供方</h3>
+    <label>名称 <input name="name" required placeholder="例如：模拟银行身份服务" /></label>
+    <label>预期签发方 issuer <input name="issuer" required placeholder="https://bank.demo.local" /></label>
+    <label>预期登录端点 <input name="authorizationEndpoint" required /></label>
+    <label>预期密钥地址 jwks_uri <input name="jwksUri" required /></label>
+    <label>允许的签名算法
+      <select name="algs" multiple size="2">
+        <option value="RS256" selected>RS256</option>
+        <option value="ES256">ES256</option>
+      </select>
+    </label>
+    <div class="dlg-actions">
+      <button value="cancel" class="btn">取消</button>
+      <button id="dlg-save" value="save" class="btn primary">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast hidden"></div>
+<script src="/app.js"></script>
+</body>
+</html>

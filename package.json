@@ -1,0 +1,17 @@
+{
+  "name": "local-identity-trust-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "离线本地身份提供方发现与信任核验演示工具（零外部依赖）",
+  "scripts": {
+    "seed": "node scripts/seed.js",
+    "start": "node server.js",
+    "dev": "node server.js",
+    "generate:samples": "node scripts/seed.js",
+    "test": "node scripts/selftest.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
