@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OIDC 配置检查台</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>OIDC 配置检查台</h1>
+    <p class="subtitle">本地运行 · 不连接任何真实身份提供方 · 仅使用导入的发现文档与 JWKS 快照</p>
+    <div class="header-actions">
+      <button id="export-all" type="button">导出全部检查结果 (JSON)</button>
+    </div>
+  </header>
+
+  <main>
+    <aside>
+      <section class="panel">
+        <h2>导入环境</h2>
+        <form id="import-form">
+          <label>环境名称（唯一）
+            <input type="text" id="env-name" placeholder="例如：生产环境" required>
+          </label>
+          <label>预期签发者（issuer，需与文档完全一致）
+            <input type="text" id="expected-issuer" placeholder="https://idp.example.com" required>
+          </label>
+          <label>发现文档（.json，一份）
+            <input type="file" id="discovery-file" accept=".json,application/json">
+          </label>
+          <label>JWKS 快照（.json，可多选，按选择顺序比较）
+            <input type="file" id="jwks-files" accept=".json,application/json" multiple>
+          </label>
+          <button type="submit">导入并检查</button>
+        </form>
+        <div id="import-errors" class="errors" hidden></div>
+      </section>
+
+      <section class="panel">
+        <h2>载入示例</h2>
+        <p class="hint">一键载入内置演示数据，覆盖各类典型问题。</p>
+        <div id="example-buttons" class="example-buttons"></div>
+      </section>
+
+      <section class="panel">
+        <h2>已导入环境</h2>
+        <ul id="env-list" class="env-list"></ul>
+      </section>
+    </aside>
+
+    <section id="detail" class="detail">
+      <p class="placeholder">请从左侧导入环境或载入示例，然后选择一个环境查看检查结论。</p>
+    </section>
+  </main>
+
+  <script src="js/checks.js"></script>
+  <script src="js/examples.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
