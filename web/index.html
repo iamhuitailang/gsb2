@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CSP 策略审查工作台（离线）</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark">🛡️</span>
+      <div>
+        <h1>CSP 策略审查工作台</h1>
+        <p class="subtitle">纯本地运行 · 不发起任何网络请求 · 不执行导入内容</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button id="btn-load-demo" class="btn btn-ghost" type="button">载入演示数据</button>
+      <button id="btn-export-all" class="btn btn-ghost" type="button">导出全部</button>
+      <label class="btn btn-ghost file-label">
+        导入策略
+        <input id="file-import" type="file" accept=".txt,.json,.csp,text/plain,application/json" hidden />
+      </label>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="policies" role="tab" type="button">① 策略管理与编辑</button>
+    <button class="tab" data-tab="check" role="tab" type="button">② 检查结果</button>
+    <button class="tab" data-tab="coverage" role="tab" type="button">③ 资源覆盖分析</button>
+    <button class="tab" data-tab="verify" role="tab" type="button">④ 样例验证</button>
+    <button class="tab" data-tab="compare" role="tab" type="button">⑤ 策略比较</button>
+  </nav>
+
+  <main class="content">
+    <!-- ① 策略管理 -->
+    <section class="panel active" id="panel-policies">
+      <div class="split">
+        <aside class="sidebar">
+          <div class="sidebar-head">
+            <h2>本地策略（<span id="policy-count">0</span>）</h2>
+            <button id="btn-new-policy" class="btn btn-primary btn-sm" type="button">+ 新建</button>
+          </div>
+          <ul id="policy-list" class="policy-list"></ul>
+          <p class="storage-note" id="storage-note">数据仅保存在当前浏览器的 localStorage</p>
+        </aside>
+
+        <div class="editor">
+          <div class="editor-head">
+            <input id="edit-name" class="input-name" type="text" placeholder="策略名称" />
+            <label class="mode-switch">
+              下发模式
+              <select id="edit-mode">
+                <option value="enforce">强制模式（Content-Security-Policy）</option>
+                <option value="report-only">报告模式（Content-Security-Policy-Report-Only）</option>
+              </select>
+            </label>
+          </div>
+          <input id="edit-desc" class="input-desc" type="text" placeholder="备注说明（可选）" />
+          <div class="text-area-wrap">
+            <textarea id="edit-text" spellcheck="false"
+              placeholder="default-src 'self'; script-src 'nonce-xxx'; object-src 'none'"></textarea>
+            <div id="edit-live-errors" class="live-errors"></div>
+          </div>
+          <div class="editor-actions">
+            <button id="btn-save" class="btn btn-primary" type="button">保存</button>
+            <button id="btn-parse" class="btn" type="button">仅解析检查</button>
+            <button id="btn-delete" class="btn btn-danger" type="button">删除</button>
+            <button id="btn-copy-canonical" class="btn btn-ghost" type="button">复制规范化文本</button>
+            <span id="save-state" class="save-state"></span>
+          </div>
+          <div class="canonical-box">
+            <h3>规范化结果（判断以此为准，原文保留在上方）</h3>
+            <pre id="canonical-view" class="canonical-pre">（保存或解析后显示）</pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ② 检查结果 -->
+    <section class="panel" id="panel-check">
+      <div class="panel-toolbar">
+        <label>选择策略
+          <select id="check-policy-select"></select>
+        </label>
+        <span class="legend">
+          <span class="chip chip-error">error</span>
+          <span class="chip chip-warning">warning</span>
+          <span class="chip chip-info">info</span>
+        </span>
+      </div>
+      <div id="check-summary" class="check-summary"></div>
+      <div id="check-issues" class="issue-list"></div>
+    </section>
+
+    <!-- ③ 覆盖分析 -->
+    <section class="panel" id="panel-coverage">
+      <div class="panel-toolbar">
+        <label>选择策略
+          <select id="coverage-policy-select"></select>
+        </label>
+      </div>
+      <div id="coverage-view"></div>
+    </section>
+
+    <!-- ④ 样例验证 -->
+    <section class="panel" id="panel-verify">
+      <div class="panel-toolbar">
+        <label>被测策略（可多选，模拟多策略头）
+          <select id="verify-policy-select" multiple size="1"></select>
+        </label>
+        <button id="btn-load-sample" class="btn btn-ghost btn-sm" type="button">载入演示样例</button>
+      </div>
+      <div class="verify-form">
+        <label>资源类型
+          <select id="verify-type"></select>
+        </label>
+        <label class="check-line">
+          <input id="verify-inline" type="checkbox" /> 内联资源
+        </label>
+        <label class="check-line">
+          <input id="verify-redirected" type="checkbox" /> 经过重定向
+        </label>
+        <label class="check-line verify-trusted-line" hidden>
+          <input id="verify-trusted" type="checkbox" /> 由受信脚本传播（strict-dynamic）
+        </label>
+      </div>
+      <div class="verify-form" id="verify-url-row">
+        <label class="grow">来源地址（仅做本地字符串匹配，不会访问）
+          <input id="verify-url" type="text" placeholder="https://cdn.example.com/app.js" />
+        </label>
+        <label class="grow" id="redirect-url-row" hidden>重定向后地址
+          <input id="verify-redirect-url" type="text" placeholder="https://cdn.example.com/final.js" />
+        </label>
+      </div>
+      <div class="verify-form" id="verify-inline-row" hidden>
+        <label class="grow">nonce（不含引号前缀）
+          <input id="verify-nonce" type="text" placeholder="a1b2c3..." />
+        </label>
+        <label>哈希算法
+          <select id="verify-hash-algo">
+            <option value="">不使用哈希</option>
+            <option value="sha256">sha256</option>
+            <option value="sha384">sha384</option>
+            <option value="sha512">sha512</option>
+          </select>
+        </label>
+        <label class="grow">哈希值（base64）
+          <input id="verify-hash-value" type="text" placeholder="base64 摘要" />
+        </label>
+      </div>
+      <div class="editor-actions">
+        <button id="btn-run-verify" class="btn btn-primary" type="button">运行验证</button>
+      </div>
+      <div id="verify-result"></div>
+    </section>
+
+    <!-- ⑤ 比较 -->
+    <section class="panel" id="panel-compare">
+      <div class="panel-toolbar">
+        <label>策略 A（基准）
+          <select id="compare-a"></select>
+        </label>
+        <label>策略 B（对比）
+          <select id="compare-b"></select>
+        </label>
+        <button id="btn-run-compare" class="btn btn-primary btn-sm" type="button">开始比较</button>
+      </div>
+      <div id="compare-view"></div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    所有分析在浏览器本地完成 · 演示域名（example.com / demo.local / .test / .invalid）仅用于字符串判断 ·
+    <a href="#" id="link-offline-note">离线说明</a>
+  </footer>
+
+  <div id="offline-modal" class="modal" hidden>
+    <div class="modal-body">
+      <h2>离线与安全说明</h2>
+      <ul>
+        <li>本工作台不加载任何外部脚本、样式或统计资源，可在内网/断网环境运行。</li>
+        <li>策略与样例数据仅保存在当前浏览器 localStorage，不上传、不落盘到其他位置。</li>
+        <li>输入的地址只经过字符串级 URL 解析与来源匹配，<strong>不会发起任何网络请求</strong>。</li>
+        <li>导入的策略文本只作为数据解析，<strong>不会被执行</strong>；解析失败一律按拒绝处理。</li>
+      </ul>
+      <button class="btn btn-primary" id="close-modal" type="button">知道了</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
