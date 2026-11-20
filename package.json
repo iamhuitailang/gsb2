@@ -1,0 +1,20 @@
+{
+  "name": "vegetation-scatter-tool",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "游戏场景植被散布工具：在地形上刷树和草，规则化散布、分块编辑、确定性种子、项目保存与实例导出",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "generate:sample": "node scripts/generate-sample.js",
+    "test": "node --test \"test/**/*.test.js\""
+  },
+  "dependencies": {
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.0"
+  }
+}
