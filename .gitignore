@@ -19,6 +19,8 @@ data.json
 *.sqlite
 *.sqlite3
 tmp/
+output/
+samples/
 
 # ---- 依赖与构建产物 ----
 node_modules/
