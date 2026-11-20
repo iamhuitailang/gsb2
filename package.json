@@ -1,0 +1,20 @@
+{
+  "name": "subtitle-qa",
+  "version": "1.0.0",
+  "description": "纯浏览器本地字幕校对工具：边听视频边校对 SRT/WebVTT 的时间与文字",
+  "private": true,
+  "scripts": {
+    "start": "python3 -m http.server 8128",
+    "test": "node tests/run-tests.js",
+    "test:browser": "node tests/cdp-run.js",
+    "generate:samples": "ffmpeg -y -f lavfi -i \"testsrc=size=960x540:rate=25:duration=12\" -f lavfi -i \"sine=frequency=440:duration=12\" -c:v libx264 -pix_fmt yuv420p -c:a aac -shortest -movflags +faststart samples/sample.mp4"
+  },
+  "keywords": [
+    "subtitle",
+    "srt",
+    "vtt",
+    "caption",
+    "browser"
+  ],
+  "license": "MIT"
+}

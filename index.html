@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>本地字幕校对工具</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="toolbar">
+    <div class="brand">字幕校对 <span class="brand-sub">纯本地 · 不上传文件</span></div>
+    <div class="tool-group">
+      <label class="btn">导入 SRT / VTT
+        <input type="file" id="file-input" accept=".srt,.vtt,text/plain" hidden>
+      </label>
+      <label class="btn">导入视频
+        <input type="file" id="video-input" accept="video/*" hidden>
+      </label>
+      <button class="btn" id="add-cue">+ 新增条目</button>
+      <button class="btn danger" id="clear-all">清空</button>
+    </div>
+    <div class="tool-group">
+      <label class="inline">显示
+        <select id="mode-select">
+          <option value="ms">毫秒 (HH:MM:SS,mmm)</option>
+          <option value="frame">按帧率 (HH:MM:SS:FF)</option>
+        </select>
+      </label>
+      <label class="inline">帧率
+        <input type="number" id="fps-input" value="25" min="1" max="120" step="1" class="small-input"> fps
+      </label>
+      <span id="mode-label" class="mode-label">毫秒模式</span>
+    </div>
+    <div class="tool-group">
+      <button class="btn" id="undo-text" disabled>↶ 撤销文字</button>
+      <button class="btn" id="redo-text" disabled>↷ 重做文字</button>
+      <button class="btn" id="undo-time" disabled>↶ 撤销时间</button>
+      <button class="btn" id="redo-time" disabled>↷ 重做时间</button>
+    </div>
+    <div class="tool-group">
+      <button class="btn primary" id="export-srt">导出 SRT</button>
+      <button class="btn primary" id="export-vtt">导出 WebVTT</button>
+    </div>
+  </header>
+
+  <div class="stats-bar">
+    <span>文件：<b id="stat-file">未导入</b></span>
+    <span>条目：<b id="stat-count">0</b></span>
+    <span>检查：<b id="stat-issues">-</b></span>
+    <span id="zoom-label"></span>
+    <span class="hint">快捷键：空格 播放/暂停 · Ctrl/⌘+Z 撤销文字（加 Shift 重做、加 Alt 操作时间栈）· Ctrl/⌘+F 搜索 · 方向键微调时间（Shift×10，Alt 平移整条，[ ] 调终点）</span>
+  </div>
+
+  <div id="parse-errors" class="parse-errors hidden"></div>
+
+  <main class="layout">
+    <!-- 左：视频 + 搜索 -->
+    <section class="left-pane">
+      <div class="video-wrap">
+        <video id="video" controls preload="metadata" src="samples/sample.mp4"></video>
+      </div>
+      <div class="panel search-panel">
+        <div class="panel-title">搜索替换</div>
+        <div class="search-row">
+          <input type="text" id="search-input" placeholder="搜索文本（支持正则）">
+          <input type="text" id="replace-input" placeholder="替换为">
+        </div>
+        <div class="search-opts">
+          <label><input type="checkbox" id="opt-case"> 区分大小写</label>
+          <label><input type="checkbox" id="opt-regex"> 正则表达式</label>
+          <button class="btn small" id="replace-all" disabled>全部替换</button>
+          <span id="search-count" class="search-count"></span>
+        </div>
+        <div id="search-error" class="search-error hidden"></div>
+        <div id="search-results" class="search-results"></div>
+      </div>
+    </section>
+
+    <!-- 中：字幕列表 -->
+    <section class="center-pane">
+      <div class="panel list-panel">
+        <div class="panel-title">字幕列表 <span class="panel-hint">顺序与原文即文件原始顺序</span></div>
+        <div id="list" class="cue-list"></div>
+      </div>
+    </section>
+
+    <!-- 右：检查结果 -->
+    <section class="right-pane">
+      <div class="panel issue-panel">
+        <div class="panel-title">质量检查</div>
+        <div id="issue-panel"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 底部：时间轴 -->
+  <section class="timeline-section">
+    <div class="timeline-toolbar">
+      <span class="panel-title">时间轴</span>
+      <button class="btn small" id="zoom-out">－ 缩小</button>
+      <button class="btn small" id="zoom-in">＋ 放大</button>
+      <button class="btn small" id="zoom-fit">适应宽度</button>
+      <span class="hint">Ctrl/⌘ + 滚轮缩放 · 拖动块体平移 · 拖左右边缘改起止点（松手自动试听）· 双击跳转</span>
+    </div>
+    <div id="timeline-wrap" class="timeline-wrap">
+      <canvas id="timeline"></canvas>
+    </div>
+  </section>
+
+  <div id="drop-overlay" class="drop-overlay hidden">
+    <div class="drop-inner">松开以导入字幕或视频</div>
+  </div>
+  <div id="toast" class="toast"></div>
+
+  <script src="js/time.js"></script>
+  <script src="js/serializer.js"></script>
+  <script src="js/parser.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/validator.js"></script>
+  <script src="js/timeline.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
