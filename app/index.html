@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>点云检查工具 Point Cloud Inspector</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="sidebar">
+  <h1>点云检查工具</h1>
+
+  <section>
+    <h2>1. 数据</h2>
+    <div class="row">
+      <button id="loadA">载入扫描 A</button>
+      <button id="loadB">载入扫描 B</button>
+    </div>
+    <input type="file" id="fileA" accept=".xyz,.txt,.csv,.pts,.asc" hidden>
+    <input type="file" id="fileB" accept=".xyz,.txt,.csv,.pts,.asc" hidden>
+    <div id="cloudInfoA" class="info">A: 未载入</div>
+    <div id="cloudInfoB" class="info">B: 未载入</div>
+    <div id="badLines" class="warn"></div>
+    <div class="row">
+      <label>当前操作对象
+        <select id="activeCloud">
+          <option value="A">扫描 A</option>
+          <option value="B">扫描 B</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. 视图</h2>
+    <div class="row">
+      <label>模式
+        <select id="viewMode">
+          <option value="overlay">叠加</option>
+          <option value="side">并排</option>
+        </select>
+      </label>
+      <label>点大小 <input type="range" id="pointSize" min="1" max="8" step="0.5" value="2"></label>
+    </div>
+    <div class="row">
+      <label>预览点数上限
+        <select id="pointBudget">
+          <option value="200000">20 万</option>
+          <option value="500000" selected>50 万</option>
+          <option value="1000000">100 万</option>
+          <option value="2000000">200 万</option>
+        </select>
+      </label>
+    </div>
+    <div class="hint">拖动旋转 / 右键平移 / 滚轮缩放；Shift+拖动 框选</div>
+    <div id="renderInfo" class="info"></div>
+  </section>
+
+  <section>
+    <h2>3. 变换（当前对象）</h2>
+    <div class="grid3">
+      <label>平移X <input id="tx" type="number" step="0.1"></label>
+      <label>平移Y <input id="ty" type="number" step="0.1"></label>
+      <label>平移Z <input id="tz" type="number" step="0.1"></label>
+      <label>旋转X° <input id="rx" type="number" step="1"></label>
+      <label>旋转Y° <input id="ry" type="number" step="1"></label>
+      <label>旋转Z° <input id="rz" type="number" step="1"></label>
+    </div>
+    <div class="row">
+      <button id="resetTransform">重置变换</button>
+    </div>
+    <div class="row">
+      <button id="runIcp">自动配准（当前对象 → 另一份）</button>
+      <span id="icpStatus" class="info"></span>
+    </div>
+    <h3>当前变换矩阵</h3>
+    <pre id="matrixView">—</pre>
+    <div id="rmsView" class="info">配准误差: —</div>
+  </section>
+
+  <section>
+    <h2>4. 框选 / 裁剪</h2>
+    <div id="selectInfo" class="info">未选择</div>
+    <div class="row">
+      <button id="cropKeep">保留框内</button>
+      <button id="cropRemove">删除框内</button>
+      <button id="clearSel">清除选择</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>5. 滤波 / 采样</h2>
+    <div class="grid2">
+      <label>邻域点数 k <input id="outK" type="number" value="8" min="2" max="50"></label>
+      <label>标准差倍数 <input id="outStd" type="number" value="2.0" step="0.1" min="0.1"></label>
+    </div>
+    <div class="row"><button id="previewOutlier">预览离群点筛除</button></div>
+    <div class="grid2">
+      <label>体素边长 <input id="voxelSize" type="number" value="0" step="0.01" min="0"></label>
+      <label>随机保留比 <input id="sampleRatio" type="number" value="1" step="0.05" min="0.01" max="1"></label>
+    </div>
+    <div class="row"><button id="previewDownsample">预览稀疏采样</button></div>
+    <div id="filterInfo" class="info"></div>
+    <div class="row">
+      <button id="applyFilter" disabled>应用</button>
+      <button id="cancelFilter" disabled>取消</button>
+    </div>
+    <div class="row">
+      <button id="undo">撤销一步</button>
+      <span id="undoInfo" class="info"></span>
+    </div>
+  </section>
+
+  <section>
+    <h2>6. 项目 / 导出</h2>
+    <div class="row">
+      <button id="saveProject">保存项目</button>
+      <button id="loadProject">载入项目</button>
+      <input type="file" id="projectFile" accept=".json" hidden>
+    </div>
+    <div class="row">
+      <button id="exportA">导出 A</button>
+      <button id="exportB">导出 B</button>
+      <button id="exportNotes">导出项目说明</button>
+    </div>
+  </section>
+</div>
+
+<div id="viewport">
+  <canvas id="canvas"></canvas>
+  <div id="selectBox" hidden></div>
+  <div id="statusbar">就绪。所有处理均在本机完成，数据不会上传。</div>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script src="vendor/OrbitControls.js"></script>
+<script src="js/io.js"></script>
+<script src="js/cloud.js"></script>
+<script src="js/align.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

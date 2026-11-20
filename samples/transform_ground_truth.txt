@@ -1,0 +1,6 @@
+# B 相对 A 的真实变换（先绕Z后绕X，欧拉角XYZ序）
+rotation_deg_x = 4.0000
+rotation_deg_y = 0.0000
+rotation_deg_z = 20.0000
+translation = 0.6, -0.4, 0.25
+# 注意：在工具中对 B 施加其逆变换（或将 A 配准到 B）即可对齐
