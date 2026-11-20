@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>微型三维场景编辑器</title>
+  </head>
+  <body>
+    <div id="app">
+      <header id="toolbar">
+        <div class="tb-group" id="mode-group">
+          <button data-mode="translate" title="平移 (W)" class="active">平移</button>
+          <button data-mode="rotate" title="旋转 (E)">旋转</button>
+          <button data-mode="scale" title="缩放 (R)">缩放</button>
+        </div>
+        <div class="tb-group" id="space-group">
+          <button data-space="local" title="局部 / 世界坐标切换">局部</button>
+          <button data-space="world" class="active">世界</button>
+        </div>
+        <div class="tb-sep"></div>
+        <div class="tb-group">
+          <button id="btn-duplicate" title="复制 (Ctrl/Cmd+D)">复制</button>
+          <button id="btn-delete" title="删除 (Delete)">删除</button>
+        </div>
+        <div class="tb-sep"></div>
+        <div class="tb-group">
+          <button id="btn-undo" title="撤销 (Ctrl/Cmd+Z)">撤销</button>
+          <button id="btn-redo" title="重做 (Ctrl/Cmd+Shift+Z)">重做</button>
+        </div>
+        <div class="tb-sep"></div>
+        <div class="tb-group">
+          <label class="tb-label">场景
+            <select id="sample-select">
+              <option value="">— 载入内置场景 —</option>
+              <optgroup label="示例">
+                <option value="sample:diorama">几何体小场景</option>
+              </optgroup>
+              <optgroup label="检查场景（父子变换）">
+                <option value="test:nested">嵌套层级与世界保持</option>
+                <option value="test:nonuniform">非均匀缩放 + 旋转一致性</option>
+                <option value="test:reparent">重挂接/循环父子检查</option>
+                <option value="test:picking">重叠与隐藏对象选择</option>
+                <option value="test:delete">删除父对象（保留/删除子对象）</option>
+              </optgroup>
+            </select>
+          </label>
+        </div>
+        <div class="tb-sep"></div>
+        <div class="tb-group">
+          <button id="btn-save">保存场景文件</button>
+          <button id="btn-open">打开场景文件</button>
+          <input type="file" id="file-input" accept=".json,application/json" hidden />
+        </div>
+      </header>
+
+      <main id="workspace">
+        <aside id="tree-panel">
+          <div class="panel-title">场景树
+            <span class="panel-hint">拖动节点调整层级</span>
+          </div>
+          <div id="tree-root" class="tree"></div>
+        </aside>
+
+        <section id="viewport">
+          <canvas id="gl-canvas"></canvas>
+          <div id="overlay-hint" class="overlay-hint"></div>
+          <div id="cycle-badge" class="cycle-badge" hidden>
+            命中 <span id="cycle-index">1</span>/<span id="cycle-total">1</span>
+            <button id="cycle-next" title="切换到下一个重叠对象 (Tab)">下一个 (Tab)</button>
+          </div>
+        </section>
+
+        <aside id="inspector-panel">
+          <div class="panel-title">检查器</div>
+          <div id="inspector"></div>
+        </aside>
+      </main>
+
+      <footer id="statusbar">
+        <span id="status-message">就绪</span>
+        <span id="status-selection"></span>
+      </footer>
+
+      <div id="modal-backdrop" class="modal-backdrop" hidden>
+        <div class="modal" role="dialog" aria-modal="true">
+          <h3 id="modal-title">删除对象</h3>
+          <p id="modal-message"></p>
+          <div class="modal-actions">
+            <button id="modal-cancel" class="btn-secondary">取消</button>
+            <button id="modal-keep" class="btn-secondary">保留子对象</button>
+            <button id="modal-remove" class="btn-danger">连同子对象一起删除</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

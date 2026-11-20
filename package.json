@@ -1,0 +1,25 @@
+{
+  "name": "mini-scene-editor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A small WebGL/TypeScript 3D scene editor: hierarchy editing, gizmo transforms, picking, undo/redo, scene save/restore.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "tsx --test src/core/*.test.ts",
+    "e2e": "tsx e2e/editor.e2e.ts"
+  },
+  "dependencies": {
+    "three": "^0.169.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "@types/three": "^0.169.0",
+    "playwright": "^1.65.1",
+    "tsx": "^4.19.2",
+    "typescript": "^7.0.2",
+    "vite": "^5.4.11"
+  }
+}
