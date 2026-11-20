@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>taintbench · 本地 Python 源码命令注入检查工作台</title>
+<style>
+  :root {
+    --bg: #0f141b; --panel: #161d27; --panel2: #1d2632; --border: #2a3646;
+    --text: #d7dee8; --muted: #8a98a8; --accent: #5eb1ff;
+    --high: #ff6b6b; --medium: #f0b35e; --safe: #59c98f; --error: #e8798a;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 14px/1.6 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  header { padding: 14px 20px; border-bottom: 1px solid var(--border); background: var(--panel); }
+  header h1 { margin: 0; font-size: 17px; }
+  header h1 span { color: var(--accent); }
+  .notice { margin-top: 6px; font-size: 12.5px; color: var(--muted); }
+  .notice b { color: var(--medium); font-weight: 600; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); height: calc(100vh - 64px); }
+  .pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .pane.left { border-right: 1px solid var(--border); }
+  .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--panel); }
+  select, button, input { font: inherit; color: var(--text); background: var(--panel2);
+    border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; }
+  button { cursor: pointer; }
+  button:hover, select:hover { border-color: var(--accent); }
+  button.primary { background: #1f4b7a; border-color: #2d6aa8; }
+  .file-tabs { display: flex; gap: 4px; padding: 8px 12px 0; overflow-x: auto; background: var(--panel); }
+  .tab { padding: 5px 12px; border: 1px solid var(--border); border-bottom: none;
+    border-radius: 6px 6px 0 0; cursor: pointer; white-space: nowrap; color: var(--muted); font-size: 12.5px; }
+  .tab.active { background: var(--bg); color: var(--text); }
+  .tab .x { margin-left: 8px; color: var(--muted); }
+  .editor-wrap { display: flex; flex: 1; min-height: 0; background: var(--bg); }
+  .gutter { padding: 10px 8px 10px 12px; text-align: right; color: var(--muted);
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.7; overflow: hidden;
+    white-space: pre; user-select: none; background: var(--panel); min-width: 3.2em; }
+  textarea#editor { flex: 1; resize: none; border: none; outline: none; background: var(--bg);
+    color: var(--text); font-family: var(--mono); font-size: 12.5px; line-height: 1.7;
+    padding: 10px 14px; tab-size: 4; }
+  .results { flex: 1; overflow-y: auto; padding: 14px 16px; }
+  .summary { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .chip { padding: 4px 12px; border-radius: 999px; border: 1px solid var(--border);
+    font-size: 12.5px; cursor: pointer; background: var(--panel2); }
+  .chip.active { outline: 1.5px solid var(--accent); }
+  .chip.high b { color: var(--high); } .chip.medium b { color: var(--medium); }
+  .chip.safe b { color: var(--safe); } .chip.error b { color: var(--error); }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; margin-bottom: 12px; }
+  .card.high { border-left: 3px solid var(--high); }
+  .card.medium { border-left: 3px solid var(--medium); }
+  .card.safe { border-left: 3px solid var(--safe); }
+  .card.error { border-left: 3px solid var(--error); }
+  .card h3 { margin: 0 0 6px; font-size: 13.5px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .badge { font-size: 11px; padding: 1px 8px; border-radius: 999px; font-weight: 600; }
+  .badge.high { background: rgba(255,107,107,.15); color: var(--high); }
+  .badge.medium { background: rgba(240,179,94,.15); color: var(--medium); }
+  .badge.safe { background: rgba(89,201,143,.15); color: var(--safe); }
+  .badge.error { background: rgba(232,121,138,.15); color: var(--error); }
+  .mono { font-family: var(--mono); font-size: 12px; }
+  .kv { color: var(--muted); font-size: 12.5px; margin: 2px 0; }
+  .kv b { color: var(--text); font-weight: 600; }
+  .path { margin: 6px 0 0; padding-left: 18px; font-family: var(--mono); font-size: 12px; color: #aebdd0; }
+  .path li { margin: 2px 0; }
+  .basis { margin-top: 8px; padding: 8px 10px; border-radius: 6px; background: var(--panel2);
+    font-size: 12px; color: var(--muted); }
+  .jump { float: right; font-size: 12px; color: var(--accent); cursor: pointer; background: none;
+    border: none; padding: 0; }
+  .rules { padding: 10px 16px; border-top: 1px solid var(--border); max-height: 34%; overflow-y: auto; background: var(--panel); }
+  .rules summary { cursor: pointer; color: var(--muted); font-size: 12.5px; }
+  .rules .rule { font-size: 12px; color: var(--muted); margin: 4px 0; }
+  .rules code { color: var(--accent); }
+  .empty { color: var(--muted); font-size: 13px; padding: 30px 10px; text-align: center; }
+  mark.flash { background: rgba(94,177,255,.28); border-radius: 3px; }
+</style>
+</head>
+<body>
+<header>
+  <h1><span>taintbench</span> · Python 源码命令注入静态检查工作台 <small style="color:var(--muted);font-weight:400">（仅本机运行 · 只解析不执行）</small></h1>
+  <div class="notice">
+    <b>局限提示：</b>本工具基于已知规则与静态污点分析，只能发现可识别模式下的可疑数据流，<b>不能证明源码绝对安全</b>；结果需要开发者结合传播路径人工复查。
+  </div>
+</header>
+
+<div class="layout">
+  <!-- 左：源码编辑 -->
+  <div class="pane left">
+    <div class="toolbar">
+      <label style="color:var(--muted);font-size:12.5px">内置示例
+        <select id="sampleSelect"><option value="">— 选择示例加载 —</option></select>
+      </label>
+      <button id="loadSampleBtn">加载示例</button>
+      <button id="addFileBtn">新建文件</button>
+      <button id="checkBtn" class="primary">重新检查</button>
+      <span id="editorMeta" style="color:var(--muted);font-size:12px;margin-left:auto"></span>
+    </div>
+    <div class="file-tabs" id="fileTabs"></div>
+    <div class="editor-wrap">
+      <div class="gutter" id="gutter"></div>
+      <textarea id="editor" spellcheck="false" autocomplete="off"></textarea>
+    </div>
+  </div>
+
+  <!-- 右：检查结果 -->
+  <div class="pane">
+    <div class="toolbar">
+      <span style="color:var(--muted);font-size:12.5px">风险筛选：</span>
+      <span class="chip active" data-filter="all">全部</span>
+      <span class="chip high" data-filter="high">高危 <b id="cntHigh">0</b></span>
+      <span class="chip medium" data-filter="medium">可能风险 <b id="cntMedium">0</b></span>
+      <span class="chip safe" data-filter="safe">规则上安全 <b id="cntSafe">0</b></span>
+      <span class="chip error" data-filter="error">分析失败 <b id="cntError">0</b></span>
+    </div>
+    <div class="results" id="results">
+      <div class="empty">加载示例或编辑源码后点击「重新检查」。</div>
+    </div>
+    <details class="rules">
+      <summary>规则依据（点击展开）</summary>
+      <div id="ruleCatalog"></div>
+    </details>
+  </div>
+</div>
+
+<script>
+"use strict";
+const state = {
+  files: [],            // {name, code}
+  active: 0,
+  results: [],
+  filter: "all",
+  samples: [],
+};
+
+const $ = (id) => document.getElementById(id);
+const editor = $("editor"), gutter = $("gutter"), tabs = $("fileTabs");
+
+// ----------------------------------------------------------- 编辑器与文件标签
+
+function renderTabs() {
+  tabs.innerHTML = "";
+  state.files.forEach((f, i) => {
+    const t = document.createElement("div");
+    t.className = "tab" + (i === state.active ? " active" : "");
+    t.textContent = f.name;
+    const x = document.createElement("span");
+    x.className = "x"; x.textContent = "✕";
+    x.onclick = (e) => { e.stopPropagation(); removeFile(i); };
+    t.appendChild(x);
+    t.onclick = () => { saveActive(); state.active = i; syncEditor(); };
+    tabs.appendChild(t);
+  });
+}
+
+function syncEditor() {
+  const f = state.files[state.active];
+  if (!f) { editor.value = ""; gutter.textContent = ""; $("editorMeta").textContent = ""; renderTabs(); return; }
+  editor.value = f.code;
+  updateGutter();
+  $("editorMeta").textContent = `${f.name} · ${f.code.length} 字符`;
+  renderTabs();
+}
+
+function saveActive() {
+  if (state.files[state.active]) state.files[state.active].code = editor.value;
+}
+
+function updateGutter() {
+  const lines = editor.value.split("\n").length;
+  gutter.textContent = Array.from({ length: lines }, (_, i) => i + 1).join("\n");
+  gutter.scrollTop = editor.scrollTop;
+}
+
+editor.addEventListener("scroll", () => { gutter.scrollTop = editor.scrollTop; });
+editor.addEventListener("input", () => { saveActive(); updateGutter(); });
+editor.addEventListener("keydown", (e) => {
+  if (e.key === "Tab") {  // 输入空格而不是跳出焦点
+    e.preventDefault();
+    const s = editor.selectionStart;
+    editor.setRangeText("    ", s, editor.selectionEnd, "end");
+    saveActive(); updateGutter();
+  }
+});
+
+function removeFile(i) {
+  saveActive();
+  if (state.files.length <= 1) { state.files = [{ name: "editor.py", code: "" }]; state.active = 0; }
+  else { state.files.splice(i, 1); state.active = Math.min(state.active, state.files.length - 1); }
+  syncEditor();
+}
+
+$("addFileBtn").onclick = () => {
+  saveActive();
+  const n = state.files.length + 1;
+  state.files.push({ name: `untitled-${n}.py`, code: "" });
+  state.active = state.files.length - 1;
+  syncEditor();
+};
+
+// ----------------------------------------------------------- 示例加载
+
+async function init() {
+  const [samp, rules] = await Promise.all([
+    fetch("/api/samples").then(r => r.json()),
+    fetch("/api/rules").then(r => r.json()),
+  ]);
+  state.samples = samp.samples || [];
+  const sel = $("sampleSelect");
+  state.samples.forEach((s, i) => {
+    const o = document.createElement("option");
+    o.value = String(i); o.textContent = s.name;
+    sel.appendChild(o);
+  });
+  const cat = $("ruleCatalog");
+  const section = (title, items) => {
+    const h = document.createElement("div");
+    h.innerHTML = `<b>${title}</b>`; cat.appendChild(h);
+    items.forEach(r => {
+      const d = document.createElement("div");
+      d.className = "rule";
+      d.innerHTML = `<code>${r.rule_id}</code> ${r.label} —— ${r.basis}`;
+      cat.appendChild(d);
+    });
+  };
+  section("命令执行位置", rules.sinks);
+  section("安全处理", rules.sanitizers);
+  section("判定依据", rules.decisions);
+  // 默认加载第一个示例
+  if (state.samples.length) { sel.value = "0"; loadSample(); }
+}
+
+function loadSample() {
+  const idx = parseInt($("sampleSelect").value, 10);
+  if (Number.isNaN(idx)) return;
+  const sample = state.samples[idx];
+  // 多文件示例按目录归组加载
+  const groupPrefix = sample.name.includes("/") ? sample.name.split("/")[0] + "/" : null;
+  const group = groupPrefix
+    ? state.samples.filter(s => s.name.startsWith(groupPrefix))
+    : [sample];
+  saveActive();
+  state.files = group.map(s => ({ name: s.name, code: s.code }));
+  state.active = 0;
+  syncEditor();
+  runCheck();
+}
+$("loadSampleBtn").onclick = loadSample;
+
+// ----------------------------------------------------------- 检查请求
+
+async function runCheck() {
+  saveActive();
+  if (!state.files.length) return;
+  const resp = await fetch("/api/check", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ files: state.files.map(f => ({ name: f.name, code: f.code })) }),
+  });
+  const data = await resp.json();
+  if (data.error) { $("results").innerHTML = `<div class="empty">请求被拒绝：${data.error}</div>`; return; }
+  state.results = data.results || [];
+  renderResults(data.summary, data.notice);
+}
+$("checkBtn").onclick = runCheck;
+
+// ----------------------------------------------------------- 结果渲染与筛选
+
+document.querySelectorAll(".chip").forEach(chip => {
+  chip.onclick = () => {
+    state.filter = chip.dataset.filter;
+    document.querySelectorAll(".chip").forEach(c => c.classList.toggle("active", c === chip));
+    renderResults();
+  };
+});
+
+function flatten() {
+  const items = [];
+  state.results.forEach(r => {
+    r.findings.forEach(f => items.push({ type: f.severity, data: f, file: r.file }));
+    r.safe_calls.forEach(s => items.push({ type: "safe", data: s, file: r.file }));
+    r.errors.forEach(e => items.push({ type: "error", data: e, file: r.file }));
+  });
+  // 稳定排序：级别（高→可能→安全→失败）、文件、行号、规则
+  const rank = { high: 0, medium: 1, safe: 2, error: 3 };
+  items.sort((a, b) => rank[a.type] - rank[b.type]
+    || a.file.localeCompare(b.file) || a.data.line - b.data.line
+    || (a.data.rule_id || "").localeCompare(b.data.rule_id || ""));
+  return items;
+}
+
+function renderResults(summary, notice) {
+  const items = flatten();
+  $("cntHigh").textContent = summary ? summary.high : items.filter(i => i.type === "high").length;
+  $("cntMedium").textContent = summary ? summary.medium : items.filter(i => i.type === "medium").length;
+  $("cntSafe").textContent = summary ? summary.safe_calls : items.filter(i => i.type === "safe").length;
+  $("cntError").textContent = summary ? summary.errors : items.filter(i => i.type === "error").length;
+
+  const box = $("results");
+  box.innerHTML = "";
+  if (notice) {
+    const n = document.createElement("div");
+    n.className = "kv"; n.style.marginBottom = "10px";
+    n.innerHTML = `ℹ️ ${notice}`;
+    box.appendChild(n);
+  }
+  const shown = items.filter(i => state.filter === "all" || i.type === state.filter);
+  if (!shown.length) {
+    box.innerHTML += `<div class="empty">当前筛选下没有结果。<br>没有发现风险不等于源码绝对安全。</div>`;
+    return;
+  }
+  shown.forEach(item => box.appendChild(renderCard(item)));
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function renderCard(item) {
+  const card = document.createElement("div");
+  card.className = "card " + item.type;
+  const d = item.data;
+  const title = item.type === "high" ? "高危 · 命令注入"
+    : item.type === "medium" ? "可能风险 · 待人工确认"
+    : item.type === "safe" ? "规则上安全的命令调用"
+    : "文件分析失败";
+  const jump = (item.type !== "error" || d.line > 0)
+    ? `<button class="jump" data-file="${esc(item.file)}" data-line="${d.line || 1}">跳到第 ${d.line || 1} 行 ↗</button>` : "";
+  card.innerHTML = `
+    <h3><span class="badge ${item.type}">${title}</span>
+        <span class="mono">${esc(item.file)}:${d.line || "?"}</span>${jump}</h3>`;
+
+  if (item.type === "high" || item.type === "medium") {
+    card.innerHTML += `
+      <div class="kv">规则：<b class="mono">${esc(d.rule_id)}</b>（${d.certainty === "确定" ? "确定风险" : "可能风险"}）</div>
+      <div class="kv">输入来源：<b>${esc(d.source_labels.join("、"))}</b>（来源行 ${d.source_lines.join("、")}）</div>
+      <div class="kv">危险调用：<b>${esc(d.sink_label)}</b></div>
+      <div class="kv">传播说明：${esc(d.propagation)}</div>
+      <ul class="path">${d.paths.map(p => "<li>" + p.map(esc).join(" → ") + "</li>").join("")}</ul>
+      <div class="basis">📏 规则依据：${esc(d.rule_basis)}</div>`;
+  } else if (item.type === "safe") {
+    card.innerHTML += `
+      <div class="kv">调用：<b>${esc(d.sink_label)}</b> · 规则 <span class="mono">${esc(d.rule_id)}</span></div>
+      <div class="basis">📏 ${esc(d.reason)}<br>${esc(d.rule_id)} 的判定仅对当前可见的语法形态有效。</div>`;
+  } else {
+    card.innerHTML += `
+      <div class="kv">失败类型：<b>${esc(d.kind)}</b>${d.line ? ` · 位置：第 ${d.line} 行` : ""}</div>
+      <div class="basis">${esc(d.message)}<br>该文件的失败不影响其他文件的检查结果。</div>`;
+  }
+  card.querySelectorAll(".jump").forEach(btn => {
+    btn.onclick = () => jumpTo(btn.dataset.file, parseInt(btn.dataset.line, 10));
+  });
+  return card;
+}
+
+// ----------------------------------------------------------- 跳回源码位置
+
+function jumpTo(fileName, line) {
+  saveActive();
+  const idx = state.files.findIndex(f => f.name === fileName);
+  if (idx < 0) return;
+  state.active = idx;
+  syncEditor();
+  const lines = editor.value.split("\n");
+  let offset = 0;
+  for (let i = 0; i < line - 1 && i < lines.length; i++) offset += lines[i].length + 1;
+  const end = offset + (lines[line - 1] ? lines[line - 1].length : 0);
+  editor.focus();
+  editor.setSelectionRange(offset, end);
+  // 滚动使目标行大致位于编辑器上三分之一
+  const lineHeight = parseFloat(getComputedStyle(editor).lineHeight) * 1.7 / 1.7;
+  editor.scrollTop = Math.max(0, (line - 3) * parseFloat(getComputedStyle(editor).lineHeight));
+  gutter.scrollTop = editor.scrollTop;
+}
+
+init();
+</script>
+</body>
+</html>
