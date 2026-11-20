@@ -1,0 +1,24 @@
+{
+  "name": "interview-annotator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "采访录音时间标注台：波形上创建/移动/拉伸区间，标注说话人、声音事件与听不清片段，支持循环试听与 JSON/CSV 导入导出。",
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "dev": "node scripts/serve.mjs",
+    "generate:samples": "node scripts/generate-samples.mjs",
+    "test": "node --test tests/*.test.js",
+    "verify": "node scripts/verify.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "audio",
+    "annotation",
+    "waveform",
+    "interview"
+  ],
+  "license": "MIT"
+}

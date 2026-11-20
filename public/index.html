@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>时间标注台 · 采访录音标注</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b0f14'/%3E%3Cpath d='M6 16h3l2-6 3 12 3-9 2 5 3-2h4' fill='none' stroke='%23f2b45e' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app" id="app">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 16h3.5l2-6.5L12 25l3-13 2.4 8L20 14h2.5" />
+              <path d="M25 12.5v7" />
+            </svg>
+          </div>
+          <div class="brand-text">
+            <strong>时间标注台</strong>
+            <span>Interview annotator</span>
+          </div>
+        </div>
+
+        <div class="project-title">
+          <label class="sr-only" for="project-name">工程名称</label>
+          <input id="project-name" class="project-name" type="text" spellcheck="false" value="未命名采访" maxlength="200" />
+          <span id="save-state" class="save-state" data-state="idle">本地草稿</span>
+        </div>
+
+        <div class="toolbar">
+          <div class="menu-wrap">
+            <button id="btn-open" class="btn" aria-haspopup="menu" aria-expanded="false">
+              <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2.5 6.5h6l1.6 2h7.4v7.5h-15z" stroke-linejoin="round"/><path d="M2.5 6.5V4h5l1.4 2.5" stroke-linejoin="round"/></svg>
+              打开
+            </button>
+            <div class="menu" id="menu-open" role="menu" hidden>
+              <button role="menuitem" data-action="open-project">打开工程文件…<small>含标注与音频</small></button>
+              <button role="menuitem" data-action="replace-audio">加载音频文件…<small>替换当前音频</small></button>
+              <button role="menuitem" data-action="load-sample">载入内置示例<small>多段语音 · 重叠 · 空白</small></button>
+            </div>
+          </div>
+
+          <div class="menu-wrap">
+            <button id="btn-save" class="btn primary" aria-haspopup="menu" aria-expanded="false">
+              <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 2.8h9.5L16.8 6v11.2H4z" stroke-linejoin="round"/><path d="M7 2.8v5h6v-5M7 17.2v-6h6v6" stroke-linejoin="round"/></svg>
+              保存
+            </button>
+            <div class="menu" id="menu-save" role="menu" hidden>
+              <button role="menuitem" data-action="save-project">保存工程（含音频）<small>可重新打开继续编辑</small></button>
+              <button role="menuitem" data-action="export-json">导出标注 JSON<small>时间 / 标签 / 说话人 / 备注</small></button>
+              <button role="menuitem" data-action="export-csv">导出标注 CSV<small>适合表格查看</small></button>
+            </div>
+          </div>
+
+          <div class="menu-wrap">
+            <button id="btn-import" class="btn" aria-haspopup="menu" aria-expanded="false">
+              <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 2.8v9.4M6.6 9l3.4 3.4L13.4 9" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.2 14.4v2.8h13.6v-2.8" stroke-linecap="round"/></svg>
+              导入
+            </button>
+            <div class="menu" id="menu-import" role="menu" hidden>
+              <button role="menuitem" data-action="import-json">导入标注 JSON…</button>
+              <button role="menuitem" data-action="import-csv">导入标注 CSV…</button>
+            </div>
+          </div>
+
+          <div class="toolbar-divider" aria-hidden="true"></div>
+
+          <button id="btn-undo" class="icon-btn" title="撤销 (⌘Z)" aria-label="撤销" disabled>
+            <svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 5.5 3.8 9l3.7 3.5"/><path d="M3.8 9h7.3a4.6 4.6 0 0 1 0 9.2H8.2"/></svg>
+          </button>
+          <button id="btn-redo" class="icon-btn" title="重做 (⇧⌘Z)" aria-label="重做" disabled>
+            <svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 5.5 16.2 9l-3.7 3.5"/><path d="M16.2 9H8.9a4.6 4.6 0 0 0 0 9.2h2.9"/></svg>
+          </button>
+          <button id="btn-manage" class="icon-btn" title="管理标注类型与说话人" aria-label="管理标注类型与说话人">
+            <svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="7" r="2.6"/><path d="M2.8 16.4c0-2.3 1.9-4.1 4.2-4.1s4.2 1.8 4.2 4.1"/><path d="M13.2 6.2a2.3 2.3 0 0 1 0 4.2M14.2 12.6c1.8.5 3 2 3 3.8"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <section class="transport" aria-label="播放与缩放">
+        <div class="transport-group">
+          <button id="btn-skip-start" class="icon-btn" title="回到开头 (Home)" aria-label="回到开头">
+            <svg viewBox="0 0 20 20" width="17" height="17" fill="currentColor"><rect x="3.5" y="4" width="2.2" height="12" rx="1"/><path d="M16 5.2v9.6L8 10z"/></svg>
+          </button>
+          <button id="btn-prev-region" class="icon-btn" title="上一个区间 (↑)" aria-label="上一个区间">
+            <svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 5 7 10l5.5 5"/><path d="M4.5 5v10"/></svg>
+          </button>
+          <button id="btn-play" class="play-btn" title="播放 / 暂停 (空格)" aria-label="播放">
+            <svg class="icon-play" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><path d="M8.2 5.4v13.2L19 12z"/></svg>
+            <svg class="icon-pause" viewBox="0 0 24 24" width="22" height="22" fill="currentColor"><rect x="6.6" y="5.4" width="3.8" height="13.2" rx="1.1"/><rect x="13.6" y="5.4" width="3.8" height="13.2" rx="1.1"/></svg>
+          </button>
+          <button id="btn-next-region" class="icon-btn" title="下一个区间 (↓)" aria-label="下一个区间">
+            <svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 5 13 10l-5.5 5"/><path d="M15.5 5v10"/></svg>
+          </button>
+          <button id="btn-loop" class="icon-btn toggle" title="循环选中区间 (L)" aria-label="循环选中区间" aria-pressed="false">
+            <svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.2V7.4A2.4 2.4 0 0 1 6.4 5h8.2"/><path d="m12.6 3 2.4 2-2.4 2"/><path d="M16 11.8v.8a2.4 2.4 0 0 1-2.4 2.4H5.4"/><path d="m7.4 17-2.4-2 2.4-2"/></svg>
+          </button>
+        </div>
+
+        <div class="time-display" aria-live="off">
+          <span id="current-time" class="time-current">00:00.000</span>
+          <span class="time-sep">/</span>
+          <span id="total-time" class="time-total">00:00.000</span>
+          <span class="time-unit">秒</span>
+        </div>
+
+        <div class="transport-group right">
+          <label class="volume-control" title="音量">
+            <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8h2.8L10 5.2v9.6L6.3 12H3.5z"/><path d="M13 7.2a3.6 3.6 0 0 1 0 5.6"/></svg>
+            <input id="volume" type="range" min="0" max="100" value="90" aria-label="音量" />
+          </label>
+          <div class="zoom-control">
+            <button id="btn-zoom-out" class="icon-btn small" title="缩小 (-)" aria-label="缩小">−</button>
+            <span id="zoom-label" class="zoom-label">90 px/s</span>
+            <button id="btn-zoom-in" class="icon-btn small" title="放大 (+)" aria-label="放大">+</button>
+          </div>
+          <button id="btn-fit" class="btn ghost small" title="适合窗口 (0)">适合窗口</button>
+          <button id="btn-follow" class="btn ghost small toggle active" title="播放时跟随播放头" aria-pressed="true">跟随</button>
+          <button id="btn-add-region" class="btn accent small" title="在播放头新建区间 (N)">+ 区间</button>
+        </div>
+      </section>
+
+      <main class="workspace">
+        <section class="stage" aria-label="时间轴">
+          <div class="stage-head">
+            <div class="stage-title">
+              <span>时间轴</span>
+              <span class="unit-badge">时间单位：秒</span>
+            </div>
+            <div class="stage-stats" id="stage-stats"></div>
+          </div>
+
+          <div class="timeline-shell" id="timeline-shell">
+            <div class="ruler-row">
+              <canvas id="ruler-canvas" aria-hidden="true"></canvas>
+            </div>
+            <div class="lanes-scroll" id="lanes-scroll">
+              <div class="lanes-inner" id="lanes-inner">
+                <canvas id="wave-canvas" tabindex="0" aria-label="音频波形与标注区间。拖动空白处创建区间，拖动区间移动，拖动边缘调整起止点。"></canvas>
+                <canvas id="overlay-canvas" aria-hidden="true"></canvas>
+                <div id="timeline-tooltip" class="timeline-tooltip" hidden></div>
+              </div>
+            </div>
+            <div class="empty-state" id="empty-state" hidden>
+              <div class="empty-icon" aria-hidden="true">
+                <svg viewBox="0 0 48 48" width="44" height="44" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 24h5l3.5-11L20 36l5-21 3.5 14L33 20h4"/><path d="M41 18v12"/></svg>
+              </div>
+              <h2>把采访录音放到这里</h2>
+              <p>支持 WAV / MP3 / M4A / OGG。也可以先看看内置的多段示例。</p>
+              <div class="empty-actions">
+                <button class="btn primary" data-action="pick-audio">选择音频文件</button>
+                <button class="btn" data-action="load-sample">载入示例</button>
+              </div>
+              <p class="empty-note">音频只保存在你的浏览器里，不会上传。</p>
+            </div>
+            <div class="overview-row">
+              <span class="overview-label">总览</span>
+              <canvas id="overview-canvas" aria-label="总览，点击可定位"></canvas>
+            </div>
+            <div class="drop-overlay" id="drop-overlay" hidden>
+              <strong>松开以载入</strong>
+              <span>音频、工程文件或标注 JSON / CSV</span>
+            </div>
+          </div>
+        </section>
+
+        <aside class="sidebar" aria-label="标注列表与属性">
+          <section class="list-panel">
+            <div class="panel-head">
+              <h2>标注区间 <span id="region-count" class="count">0</span></h2>
+              <div class="list-filters">
+                <select id="filter-label" aria-label="按类型筛选"><option value="">全部类型</option></select>
+                <select id="filter-speaker" aria-label="按说话人筛选"><option value="">全部说话人</option></select>
+              </div>
+            </div>
+            <div class="region-list" id="region-list" role="listbox" aria-label="标注区间列表"></div>
+            <div class="list-empty" id="list-empty">
+              <p>还没有标注区间</p>
+              <span>在波形上拖动即可创建，或按 <kbd>N</kbd> 在播放头新建。</span>
+            </div>
+          </section>
+
+          <section class="inspector" id="inspector" aria-label="区间属性"></section>
+        </aside>
+      </main>
+
+      <footer class="statusbar">
+        <div class="status-audio" id="audio-info">未加载音频</div>
+        <div class="status-hint" id="status-hint">拖动空白处创建区间 · 空格播放 · 拖动边界时自动循环试听</div>
+        <div class="status-actions">
+          <button id="btn-shortcuts" class="link-btn" title="快捷键 (?)">快捷键</button>
+          <button id="btn-manage-2" class="link-btn">类型与说话人</button>
+        </div>
+      </footer>
+    </div>
+
+    <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+    <dialog id="manage-dialog" class="modal wide">
+      <form method="dialog" class="modal-head">
+        <div>
+          <h2>标注类型与说话人</h2>
+          <p>修改名称会同步到所有引用它的区间，音频时间保持不变。</p>
+        </div>
+        <button class="icon-btn" value="close" aria-label="关闭">✕</button>
+      </form>
+      <div class="manage-grid">
+        <section class="manage-section">
+          <header><h3>标注类型</h3><button id="add-label" class="btn ghost small">+ 添加类型</button></header>
+          <div id="label-list" class="entity-list"></div>
+        </section>
+        <section class="manage-section">
+          <header><h3>说话人</h3><button id="add-speaker" class="btn ghost small">+ 添加说话人</button></header>
+          <div id="speaker-list" class="entity-list"></div>
+        </section>
+      </div>
+      <p class="modal-foot">删除类型时，相关区间会自动改用第一个类型；删除说话人时区间保留为「未指定」。</p>
+    </dialog>
+
+    <dialog id="shortcuts-dialog" class="modal">
+      <form method="dialog" class="modal-head">
+        <div>
+          <h2>键盘快捷键</h2>
+          <p>在输入框内时不触发播放类快捷键。</p>
+        </div>
+        <button class="icon-btn" value="close" aria-label="关闭">✕</button>
+      </form>
+      <div class="shortcut-grid">
+        <div><kbd>空格</kbd><span>播放 / 暂停</span></div>
+        <div><kbd>←</kbd><kbd>→</kbd><span>后退 / 前进 0.1 秒（⇧ 1 秒，⌥ 10 毫秒）</span></div>
+        <div><kbd>[</kbd><kbd>]</kbd><span>选中区间起点 −10ms / +10ms（⌥ 100ms）</span></div>
+        <div><kbd>{</kbd><kbd>}</kbd><span>选中区间终点 −10ms / +10ms（⌥ 100ms）</span></div>
+        <div><kbd>,</kbd><kbd>.</kbd><span>整体平移区间 −10ms / +10ms</span></div>
+        <div><kbd>N</kbd><span>在播放头新建 1 秒区间</span></div>
+        <div><kbd>S</kbd><span>在播放头分割选中区间</span></div>
+        <div><kbd>L</kbd><span>循环播放选中区间</span></div>
+        <div><kbd>Delete</kbd><span>删除选中区间</span></div>
+        <div><kbd>↑</kbd><kbd>↓</kbd><span>跳到上一个 / 下一个区间</span></div>
+        <div><kbd>Home</kbd><kbd>End</kbd><span>跳到开头 / 结尾</span></div>
+        <div><kbd>+</kbd><kbd>−</kbd><span>缩放；<kbd>0</kbd> 适合窗口</span></div>
+        <div><kbd>⌘Z</kbd><span>撤销；<kbd>⇧⌘Z</kbd> 重做</span></div>
+        <div><kbd>⌘S</kbd><span>保存工程</span></div>
+        <div><kbd>Esc</kbd><span>关闭弹窗 / 取消选中</span></div>
+      </div>
+      <p class="modal-foot">拖动区间边界时会自动循环试听边界附近的 0.6 秒；按住 <kbd>Alt</kbd> 拖动可临时关闭吸附。</p>
+    </dialog>
+
+    <input id="audio-file-input" type="file" accept="audio/*" hidden />
+    <input id="project-file-input" type="file" accept=".json,.gsb2.json,application/json" hidden />
+    <input id="json-file-input" type="file" accept=".json,application/json" hidden />
+    <input id="csv-file-input" type="file" accept=".csv,text/csv" hidden />
+
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>
