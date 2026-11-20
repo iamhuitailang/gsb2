@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>位图字体工具 · 字形图集与度量生成器</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>位图字体工具</h1>
+  <input id="projectName" type="text" value="未命名字体" title="工程名称">
+  <div class="header-actions">
+    <button id="btnSaveProject">保存工程</button>
+    <button id="btnLoadProject">导入工程</button>
+    <input id="fileProject" type="file" accept=".json,.bfproj" hidden>
+  </div>
+</header>
+
+<main>
+  <!-- 左栏：导入与诊断 -->
+  <section class="panel" id="panel-import">
+    <h2>1. 导入</h2>
+    <div class="row">
+      <button id="btnImportMapping">导入字符映射表</button>
+      <input id="fileMapping" type="file" accept=".json,.csv,.txt" hidden>
+      <button id="btnImportImages">导入字形图片</button>
+      <input id="fileImages" type="file" accept="image/png,image/webp,image/gif" multiple hidden>
+    </div>
+    <p class="hint">映射表：JSON <code>{"A":"A.png","中":"U+4E2D.png"}</code> 或 CSV <code>字符,文件名</code>。
+    无映射表时按文件名推断字符（<code>A.png</code>→A，<code>U+4E2D.png</code>→中，<code>space.png</code>→空格）。</p>
+    <h3>诊断</h3>
+    <ul id="diagnostics" class="diagnostics"><li class="ok">尚未导入任何文件</li></ul>
+  </section>
+
+  <!-- 中栏：字形度量 -->
+  <section class="panel" id="panel-glyphs">
+    <h2>2. 字形度量</h2>
+    <div class="row global-settings">
+      <label>字符间距 <input id="setCharSpacing" type="number" value="1" step="1" style="width:4em"></label>
+      <label>行高 <input id="setLineHeight" type="number" value="40" step="1" style="width:4em"></label>
+      <label>全局基线 <input id="setBaseline" type="number" value="32" step="1" style="width:4em"></label>
+      <label>缺字宽度 <input id="setFallbackAdvance" type="number" value="16" step="1" style="width:4em"></label>
+    </div>
+    <div class="glyph-table-wrap">
+      <table id="glyphTable">
+        <thead><tr>
+          <th>字符</th><th>预览</th><th>尺寸</th>
+          <th>边距</th><th>基线</th><th>前进宽度</th><th>来源文件</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 右栏：预览 -->
+  <section class="panel" id="panel-preview">
+    <h2>3. 排版预览</h2>
+    <textarea id="previewText" rows="3">Hello, World! 你好，世界！
+宽 W M 国，窄 i l . 标点，。！？空格 换行测试</textarea>
+    <div class="row">
+      <label>排版宽度 <input id="previewWidth" type="number" value="360" step="10" style="width:5em"> px</label>
+      <label><input id="showGuides" type="checkbox" checked> 参考线</label>
+    </div>
+    <canvas id="previewCanvas"></canvas>
+    <p class="hint">换行完全按上方度量（前进宽度 + 字符间距）贪心换行；红框为缺字占位。</p>
+  </section>
+
+  <!-- 图集 -->
+  <section class="panel wide" id="panel-atlas">
+    <h2>4. 图集排布</h2>
+    <div class="row">
+      <label>边缘留白 <input id="setEdgePadding" type="number" value="4" step="1" style="width:4em"> px</label>
+      <label>图集尺寸
+        <select id="atlasSize"></select>
+      </label>
+      <button id="btnRepack">重新排布</button>
+      <span id="packStatus"></span>
+    </div>
+    <div class="atlas-flex">
+      <div>
+        <canvas id="atlasCanvas"></canvas>
+        <div id="unplacedList" class="unplaced"></div>
+      </div>
+      <div>
+        <h3>尺寸占用率比较</h3>
+        <table id="sizeTable">
+          <thead><tr><th>尺寸</th><th>占用率</th><th>放不下的字形</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p class="hint">重新排布只改变字形在图集中的位置，字符映射与度量不变。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 导出 -->
+  <section class="panel wide" id="panel-export">
+    <h2>5. 导出</h2>
+    <div class="row">
+      <button id="btnExportAtlas">导出图集 PNG</button>
+      <button id="btnExportMetrics">导出度量清单 JSON</button>
+      <button id="btnExportFnt">导出 BMFont .fnt</button>
+    </div>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
