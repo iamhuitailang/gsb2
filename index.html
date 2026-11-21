@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>智能裁切试验台 · 游戏宣传图多尺寸出图</title>
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">▦</span>
+    <div>
+      <h1>智能裁切试验台</h1>
+      <p>一张原图 · 横幅 / 方图 / 竖图 · 必须保留区不被截掉</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <select id="posterSelect" title="选择内置程序生成海报"></select>
+    <label class="btn btn-ghost" for="uploadInput">导入原图</label>
+    <input type="file" id="uploadInput" accept="image/*" hidden />
+    <button class="btn btn-ghost" id="recalcAllBtn" title="对所有未锁定尺寸重新自动计算">全部重算</button>
+    <button class="btn btn-ghost" id="exportFramesBtn">导出框位清单</button>
+    <button class="btn btn-ghost" id="saveProjectBtn">保存项目</button>
+    <label class="btn btn-ghost" for="importProjectInput">载入项目</label>
+    <input type="file" id="importProjectInput" accept="application/json" hidden />
+    <button class="btn btn-primary" id="exportAllBtn">导出全部图片</button>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- 左：关注区与尺寸管理 -->
+  <aside class="sidebar sidebar-left">
+    <section class="panel">
+      <h2>关注区（坐标绑定原图）</h2>
+      <p class="hint">在画布上用工具框选，或选中后直接拖动 / 拉手柄修改。坐标为原图归一化值。</p>
+      <div class="tool-row">
+        <button class="btn btn-small" id="addRequiredBtn">＋ 框选必须保留</button>
+        <button class="btn btn-small" id="addPreferredBtn">＋ 框选尽量保留</button>
+        <button class="btn btn-small btn-danger" id="deleteRegionBtn">删除选中区</button>
+      </div>
+      <ul class="region-list" id="regionList"></ul>
+    </section>
+
+    <section class="panel">
+      <h2>目标尺寸</h2>
+      <p class="hint">三种尺寸共享同一素材与关注区，各自独立调整；锁定后不会被自动覆盖。</p>
+      <ul class="target-list" id="targetList"></ul>
+      <div class="add-target">
+        <input type="text" id="newTargetName" placeholder="名称，如 朋友圈封面" />
+        <input type="number" id="newTargetW" placeholder="宽 px" min="1" />
+        <input type="number" id="newTargetH" placeholder="高 px" min="1" />
+        <button class="btn btn-small" id="addTargetBtn">添加尺寸</button>
+      </div>
+    </section>
+  </aside>
+
+  <!-- 中：画布 -->
+  <section class="stage-wrap">
+    <div class="stage-toolbar">
+      <div class="tool-group" id="toolGroup">
+        <button class="tool-btn active" data-tool="select" title="选择/移动">⤢ 选择</button>
+        <button class="tool-btn" data-tool="required" title="框选必须保留区">▭ 必须区</button>
+        <button class="tool-btn" data-tool="preferred" title="框选尽量保留区">▭ 尽量区</button>
+        <button class="tool-btn" data-tool="crop" title="拖动当前尺寸的裁切框">⌗ 裁切框</button>
+      </div>
+      <div class="stage-info" id="stageInfo"></div>
+    </div>
+    <div class="stage" id="stage">
+      <canvas id="mainCanvas"></canvas>
+      <div class="stage-empty" id="stageEmpty">正在初始化海报…</div>
+    </div>
+    <div class="stage-legend">
+      <span><i class="dot dot-required"></i>必须保留（红）</span>
+      <span><i class="dot dot-preferred"></i>尽量保留（蓝）</span>
+      <span><i class="dot dot-crop"></i>当前裁切框（黄）</span>
+      <span><i class="dot dot-locked"></i>锁定（实心黄）</span>
+    </div>
+  </section>
+
+  <!-- 右：当前尺寸方案 -->
+  <aside class="sidebar sidebar-right">
+    <section class="panel" id="targetPanel">
+      <h2 id="currentTargetTitle">裁切方案</h2>
+      <div class="mode-row">
+        <label><input type="radio" name="outMode" value="crop" checked /> 裁切输出（无补边）</label>
+        <label><input type="radio" name="outMode" value="pad" /> 带留白输出（补边）</label>
+      </div>
+      <label class="pad-color-row">补边色
+        <input type="color" id="padColor" value="#0b1020" />
+        <span class="hint">默认深色，可改品牌色</span>
+      </label>
+
+      <div class="stat-grid">
+        <div class="stat">
+          <span class="stat-label">有效图像占比</span>
+          <strong id="effectiveRatio">100%</strong>
+          <small id="effectiveNote">裁切模式：全部为原图内容</small>
+        </div>
+        <div class="stat">
+          <span class="stat-label">输出分辨率</span>
+          <strong id="outputRes">—</strong>
+          <small id="outputModeNote">自动裁切</small>
+        </div>
+      </div>
+
+      <div class="lock-row">
+        <label class="lock-check"><input type="checkbox" id="lockCheck" /> 锁定手动位置（重算不覆盖）</label>
+        <button class="btn btn-small" id="resetAutoBtn">恢复自动</button>
+      </div>
+
+      <div class="status-block" id="statusBlock"></div>
+
+      <h3>关注区保留情况</h3>
+      <ul class="retention-list" id="retentionList"></ul>
+
+      <h3>裁切框坐标（原图 px / 归一化）</h3>
+      <pre class="coord-box" id="coordBox"></pre>
+
+      <button class="btn btn-primary btn-block" id="exportOneBtn">导出当前尺寸图片</button>
+    </section>
+  </aside>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/geometry.js"></script>
+<script src="js/cropper.js"></script>
+<script src="js/posters.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/exporter.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

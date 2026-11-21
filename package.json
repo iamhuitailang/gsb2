@@ -1,0 +1,17 @@
+{
+  "name": "smart-crop-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "游戏宣传图智能裁切试验台：一张原图多尺寸出图，必须保留区冲突检测与带留白/手动锁定策略",
+  "scripts": {
+    "test": "node test/algorithm.test.js",
+    "start": "python3 -m http.server 8080"
+  },
+  "keywords": [
+    "image-cropping",
+    "responsive-images",
+    "canvas",
+    "game-promo"
+  ],
+  "license": "MIT"
+}
