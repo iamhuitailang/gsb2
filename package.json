@@ -1,0 +1,15 @@
+{
+  "name": "storyloom",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "剧情织机 — 游戏对话与剧情分支编辑器",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "test": "node --test tests/",
+    "test:verbose": "node scripts/check.mjs",
+    "build:sample": "node scripts/build-sample.js",
+    "verify": "sh scripts/verify.sh"
+  }
+}
