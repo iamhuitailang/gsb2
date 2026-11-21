@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232a78d6'/%3E%3Cpath d='M3 12 L7 5 L10 9 L13 4' stroke='white' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<title>纸面草稿清理 · sketchclean</title>
+<style>
+  :root {
+    --surface-1: #fcfcfb; --page: #f9f9f7;
+    --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+    --grid: #e1e0d9; --border: rgba(11,11,11,.10);
+    --blue: #2a78d6; --orange: #eb6834; --aqua: #1baf7a;
+    --yellow: #eda100; --red: #e34948;
+    --dark-bg: #1f2125;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font: 13px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--ink); background: var(--page);
+  }
+  header {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding: 10px 16px; background: var(--surface-1);
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 15px; margin: 0; font-weight: 650; }
+  button, .btn-label {
+    font: inherit; padding: 5px 12px; border: 1px solid var(--border);
+    border-radius: 7px; background: #fff; cursor: pointer; color: var(--ink);
+  }
+  button:hover { background: #f2f2ef; }
+  button.active { background: var(--blue); color: #fff; border-color: var(--blue); }
+  button.primary { background: var(--blue); color: #fff; border-color: var(--blue); }
+  input[type=file] { display: none; }
+  .layout { display: grid; grid-template-columns: 1fr 330px; height: calc(100vh - 57px); }
+  .main { display: flex; flex-direction: column; min-width: 0; }
+  .toolbar {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    padding: 8px 14px; border-bottom: 1px solid var(--border); background: var(--surface-1);
+  }
+  .toolbar .sep { width: 1px; height: 20px; background: var(--grid); }
+  #stage { flex: 1; position: relative; overflow: hidden; background: var(--dark-bg); }
+  #viewer { position: absolute; inset: 0; width: 100%; height: 100%; cursor: grab; }
+  .side {
+    overflow-y: auto; padding: 14px; border-left: 1px solid var(--border);
+    background: var(--surface-1);
+  }
+  .side h2 { font-size: 12px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: .06em; margin: 18px 0 8px; font-weight: 600; }
+  .side h2:first-child { margin-top: 4px; }
+  .ctl { margin-bottom: 10px; }
+  .ctl label { display: flex; justify-content: space-between; color: var(--ink-2); margin-bottom: 3px; }
+  .ctl label b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: var(--blue); }
+  .hist-wrap { background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px; }
+  canvas.hist { width: 100%; height: 140px; display: block; }
+  #hist-tip { color: var(--muted); font-size: 11px; min-height: 16px; }
+  .legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11px; color: var(--ink-2); margin-top: 4px; }
+  .legend i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; margin-right: 4px; }
+  .region-row { display: flex; align-items: center; gap: 6px; padding: 5px 0;
+    border-bottom: 1px solid var(--grid); font-size: 12px; }
+  .region-row .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .mini { padding: 1px 7px; font-size: 11px; margin-left: auto; }
+  textarea { width: 100%; height: 70px; font: inherit; padding: 6px;
+    border: 1px solid var(--border); border-radius: 7px; resize: vertical; }
+  input[type=text], input[type=number], select {
+    font: inherit; padding: 4px 7px; border: 1px solid var(--border); border-radius: 7px; width: 100%; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  #status { color: var(--ink-2); font-size: 12px; margin-left: auto; max-width: 46%; }
+  #status a { color: var(--blue); }
+  #batch-result .fail { color: var(--red); font-size: 12px; margin: 4px 0; }
+  #batch-result .fail span { color: var(--muted); }
+  #batch-result .ok { color: var(--aqua); }
+  .hint { color: var(--muted); font-size: 11px; margin: 3px 0 8px; }
+  .chk { display: flex; align-items: center; gap: 7px; color: var(--ink-2); }
+</style>
+</head>
+<body>
+<header>
+  <h1>纸面草稿清理</h1>
+  <label class="btn-label" for="file-input">导入图片（灰度/彩色）</label>
+  <input id="file-input" type="file" accept="image/*">
+  <button id="sample-shadow">样图 1：缓慢阴影 + 浅线</button>
+  <button id="sample-texture">样图 2：折线 + 纸纹</button>
+  <button id="export-btn" class="primary">原尺寸导出</button>
+  <span id="status">未载入图片</span>
+</header>
+
+<div class="layout">
+  <div class="main">
+    <div class="toolbar">
+      <button class="view-btn active" data-view="original">原图</button>
+      <button class="view-btn" data-view="cleaned">清理后</button>
+      <button class="view-btn" data-view="inspect">检查视图</button>
+      <button class="view-btn" data-view="background">背景场</button>
+      <span class="sep"></span>
+      <button class="tool-btn active" data-tool="pan">平移</button>
+      <button class="tool-btn" data-tool="roi">框定纸张</button>
+      <button class="tool-btn" data-tool="polygon">圈选区域</button>
+      <span class="sep"></span>
+      <button id="clear-roi">清除框选</button>
+      <button id="fit-view">适应窗口</button>
+      <button id="reset-params">重置参数</button>
+    </div>
+    <div id="stage"><canvas id="viewer"></canvas></div>
+  </div>
+
+  <aside class="side">
+    <h2>亮度分布（原图）</h2>
+    <div class="hist-wrap"><canvas id="hist" class="hist"></canvas></div>
+    <div id="hist-tip"></div>
+
+    <h2>亮度分布（清理后，灰线为原图基线）</h2>
+    <div class="hist-wrap"><canvas id="hist2" class="hist"></canvas></div>
+
+    <h2>背景校正</h2>
+    <div class="ctl"><label>背景平滑尺度 <b id="bg-scale-v"></b></label>
+      <input id="bg-scale" type="range" min="0.03" max="0.25" step="0.005"></div>
+    <div class="ctl"><label>纸张目标白点 <b id="white-target-v"></b></label>
+      <input id="white-target" type="range" min="220" max="252" step="1"></div>
+    <div class="ctl"><label>Gamma（越大浅线越明显）<b id="gamma-v"></b></label>
+      <input id="gamma" type="range" min="0.8" max="1.8" step="0.01"></div>
+
+    <h2>小点去除</h2>
+    <div class="ctl chk"><input id="despeckle" type="checkbox">
+      <label style="margin:0">启用软去点（只清小而近圆的碎块）</label></div>
+    <div class="ctl"><label>面积阈值 <b id="despeckle-size-v"></b></label>
+      <input id="despeckle-size" type="range" min="2" max="40" step="1"></div>
+    <div class="ctl"><label>去除强度（软融合）<b id="despeckle-strength-v"></b></label>
+      <input id="despeckle-strength" type="range" min="0.2" max="1" step="0.05"></div>
+
+    <h2>检查视图灵敏度</h2>
+    <div class="ctl"><label>墨迹灰度阈值 <b id="ink-th-v"></b></label>
+      <input id="ink-th" type="range" min="120" max="240" step="2"></div>
+    <div class="ctl"><label>断裂判定距离 <b id="break-dist-v"></b></label>
+      <input id="break-dist" type="range" min="0.004" max="0.04" step="0.001"></div>
+    <div class="ctl"><label>阴影残留阈值 <b id="shadow-th-v"></b></label>
+      <input id="shadow-th" type="range" min="4" max="40" step="1"></div>
+    <div class="legend">
+      <span><i style="background:var(--red)"></i>连线断裂</span>
+      <span><i style="background:var(--orange)"></i>小点误判</span>
+      <span><i style="background:var(--blue)"></i>阴影残留</span>
+    </div>
+
+    <h2>圈选区域（双击结束绘制）</h2>
+    <div class="row2">
+      <select id="region-mode">
+        <option value="exclude">排除处理（保留原样）</option>
+        <option value="adjust">单独调整</option>
+      </select>
+      <div></div>
+    </div>
+    <div class="row2" style="margin-top:6px">
+      <div class="ctl"><label>区域 Gamma <b></b></label>
+        <input id="region-gamma" type="number" value="1.0" step="0.05" min="0.5" max="2.5"></div>
+      <div class="ctl"><label>区域白点 <b></b></label>
+        <input id="region-wt" type="number" value="245" step="1" min="200" max="255"></div>
+    </div>
+    <div id="region-list"></div>
+
+    <h2>批量处理</h2>
+    <p class="hint">每行一个文件或目录路径；无法读取的图片会列出，其余照常导出。</p>
+    <textarea id="batch-paths" placeholder="/Users/me/photos/scan1.png&#10;/Users/me/photos/folder/"></textarea>
+    <div class="ctl" style="margin-top:6px">
+      <input id="batch-outdir" type="text" placeholder="输出目录（留空使用默认）">
+    </div>
+    <button id="batch-btn" style="width:100%">开始批量清理</button>
+    <div id="batch-result" style="margin-top:8px"></div>
+  </aside>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

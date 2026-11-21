@@ -1,0 +1,5 @@
+numpy>=1.26
+pillow>=10
+opencv-python>=4.8
+flask>=3.0
+pytest>=7.4
