@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>贴花预览器 · Decal Previewer</title>
+<link rel="stylesheet" href="css/style.css">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="app">
+  <aside id="sidebar">
+    <h1>贴花预览器</h1>
+
+    <section>
+      <h2>工程</h2>
+      <div class="row wrap">
+        <button id="btn-save">保存</button>
+        <button id="btn-load">载入</button>
+        <button id="btn-export">导出 JSON</button>
+        <button id="btn-import">导入 JSON</button>
+        <button id="btn-reset" class="danger">重置演示</button>
+        <input type="file" id="file-import" accept=".json" hidden>
+      </div>
+      <div id="save-status" class="hint"></div>
+    </section>
+
+    <section>
+      <h2>场景物体</h2>
+      <div class="row wrap">
+        <button id="btn-add-box">+ 箱体</button>
+        <button id="btn-add-cylinder">+ 圆柱</button>
+        <button id="btn-add-sphere">+ 球体</button>
+      </div>
+      <div class="row wrap">
+        <span class="hint">变换模式：</span>
+        <button class="mode-btn" data-mode="translate">移动</button>
+        <button class="mode-btn" data-mode="rotate">旋转</button>
+        <button class="mode-btn" data-mode="scale">缩放</button>
+      </div>
+      <ul id="object-list" class="item-list"></ul>
+    </section>
+
+    <section>
+      <h2>贴花</h2>
+      <div class="row">
+        <button id="btn-add-decal">+ 从当前视角新建贴花</button>
+      </div>
+      <ul id="decal-list" class="item-list"></ul>
+      <div id="decal-editor" class="editor" hidden>
+        <h3>贴花设置</h3>
+        <label>名称 <input type="text" id="dec-name"></label>
+        <label>依附对象 <select id="dec-target"></select></label>
+        <label>纹样
+          <select id="dec-pattern">
+            <option value="plate">编号牌</option>
+            <option value="stripes">警示条纹</option>
+            <option value="arrow">箭头</option>
+            <option value="roundel">圆形标记</option>
+          </select>
+        </label>
+        <label>文字 <input type="text" id="dec-text" maxlength="8"></label>
+        <label>宽度 <input type="range" id="dec-width" min="0.2" max="6" step="0.05"><span class="val" id="dec-width-v"></span></label>
+        <label>高度 <input type="range" id="dec-height" min="0.2" max="6" step="0.05"><span class="val" id="dec-height-v"></span></label>
+        <label>投影厚度 <input type="range" id="dec-depth" min="0.2" max="30" step="0.1"><span class="val" id="dec-depth-v"></span></label>
+        <label>纹样旋转 <input type="range" id="dec-roll" min="-180" max="180" step="1"><span class="val" id="dec-roll-v"></span></label>
+        <label>最大倾角° <input type="range" id="dec-angle" min="5" max="90" step="1"><span class="val" id="dec-angle-v"></span></label>
+        <div class="row wrap">
+          <button id="dec-from-camera">从相机视角放置</button>
+          <button id="dec-look-target">对准依附对象</button>
+        </div>
+        <label class="chk"><input type="checkbox" id="dec-edit-projector"> 用 gizmo 编辑投影器（移动/旋转）</label>
+        <div class="row">
+          <span class="hint">复制配置到：</span>
+          <select id="dec-copy-target"></select>
+          <button id="dec-copy">复制</button>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>检查视图</h2>
+      <label class="chk"><input type="checkbox" id="dbg-box" checked> 投影范围（选中贴花）</label>
+      <label class="chk"><input type="checkbox" id="dbg-clipped"> 被裁掉区域（红）</label>
+      <label class="chk"><input type="checkbox" id="dbg-rejected"> 被拒面 · 背面/过斜（黄）</label>
+    </section>
+
+    <footer class="hint">
+      左键拖动旋转 · 右键平移 · 滚轮缩放<br>
+      点击物体选中 · W/E/R 切换移动/旋转/缩放<br>
+      贴花沿投影方向贴附目标表面，超出投影盒即裁掉
+    </footer>
+  </aside>
+  <main id="viewport"></main>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
