@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>透明排序局限 · 对照实验台</title>
+<style>
+  :root{
+    --bg:#14171d; --panel:#1d222b; --panel2:#232a35; --line:#313a47;
+    --text:#e6eaf0; --dim:#9aa6b5; --accent:#5eb3ff; --warn:#ffb454;
+    --bad:#ff6b6b; --good:#7ee0a1; --chip:#2b3442;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font:13px/1.5 -apple-system,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif}
+  h1{font-size:16px;margin:0}
+  h2{font-size:13px;margin:0 0 8px;color:var(--dim);font-weight:600;
+    text-transform:uppercase;letter-spacing:.08em}
+  button{background:var(--panel2);color:var(--text);border:1px solid var(--line);
+    border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px}
+  button:hover{border-color:var(--accent)}
+  button.active{background:#24394f;border-color:var(--accent);color:#cfe7ff}
+  input[type=range]{width:130px;accent-color:var(--accent)}
+  label{color:var(--dim)}
+  .topbar{display:flex;align-items:center;gap:14px;padding:10px 16px;
+    background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .topbar .sub{color:var(--dim);font-size:12px}
+  .toolbar{display:flex;gap:18px;padding:10px 16px;background:var(--panel);
+    border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center}
+  .ctl{display:flex;align-items:center;gap:8px}
+  .ctl .val{color:var(--accent);min-width:42px;font-variant-numeric:tabular-nums}
+  .divider{width:1px;height:26px;background:var(--line)}
+  .main{padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .pane{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:10px;min-width:0}
+  .pane h3{margin:0 0 8px;font-size:13px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .tag{font-size:11px;color:var(--dim);font-weight:400}
+  .canvas-wrap{position:relative;border-radius:8px;overflow:hidden;
+    border:1px solid var(--line);background:#0b0d11}
+  canvas{display:block;width:100%;aspect-ratio:1/1;cursor:grab;touch-action:none}
+  canvas.dragging{cursor:grabbing}
+  .probe-x{position:absolute;width:18px;height:18px;margin:-9px 0 0 -9px;
+    pointer-events:none;border:1.5px solid #fff;box-shadow:0 0 0 1px #000}
+  .probe-x::before,.probe-x::after{content:"";position:absolute;background:#fff}
+  .probe-x::before{left:8px;top:-7px;width:1px;height:30px}
+  .probe-x::after{top:8px;left:-7px;height:1px;width:30px}
+  .hud{position:absolute;left:8px;bottom:8px;background:rgba(10,12,16,.72);
+    padding:4px 8px;border-radius:6px;font-size:11px;color:var(--dim);
+    font-variant-numeric:tabular-nums;pointer-events:none}
+  .paneorder{margin-top:8px;font-size:11.5px;color:var(--dim);
+    background:var(--panel2);border-radius:6px;padding:6px 8px;min-height:34px}
+  .paneorder b{color:var(--text);font-weight:600}
+  .bottom{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;
+    padding:0 16px 20px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:12px 14px;min-width:0}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{text-align:left;color:var(--dim);font-weight:600;padding:5px 6px;
+    border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:5px 6px;border-bottom:1px solid #262e3a;
+    font-variant-numeric:tabular-nums;white-space:nowrap}
+  tr.selectable{cursor:pointer}
+  tr.selectable:hover{background:var(--panel2)}
+  tr.sel{background:#24394f}
+  tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+  .swatch{display:inline-block;width:10px;height:10px;border-radius:2px;
+    margin-right:6px;vertical-align:-1px;border:1px solid rgba(255,255,255,.35)}
+  .mono{font-family:ui-monospace,Menlo,monospace}
+  .badge{display:inline-block;padding:1px 6px;border-radius:10px;font-size:10.5px}
+  .badge.opaque{background:#3a3326;color:#e8c98a}
+  .badge.trans{background:#26354a;color:#9cc8ff}
+  .badge.face{background:#332b45;color:#c9b3ff}
+  .badge.warn{background:#4a3520;color:var(--warn)}
+  .badge.bad{background:#472424;color:var(--bad)}
+  .badge.good{background:#21402e;color:var(--good)}
+  .swatchrow{display:flex;gap:14px;flex-wrap:wrap;margin:4px 0 10px;font-size:11.5px;color:var(--dim)}
+  .swatchrow span{display:flex;align-items:center;gap:5px}
+  .probe-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+  .probe-box{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px}
+  .probe-box .t{font-size:11px;color:var(--dim);margin-bottom:4px}
+  .patch{height:34px;border-radius:6px;border:1px solid var(--line);margin:6px 0}
+  .rgb{font-size:11.5px;font-variant-numeric:tabular-nums}
+  .delta{font-size:11.5px;margin-top:4px}
+  .layers{font-size:11.5px;max-height:230px;overflow:auto}
+  .layer{display:grid;grid-template-columns:24px 1fr auto auto;gap:6px;align-items:center;
+    padding:3px 4px;border-radius:5px}
+  .layer:nth-child(odd){background:var(--panel2)}
+  .layer .idx{color:var(--dim)}
+  .layer .d{color:var(--dim);font-variant-numeric:tabular-nums}
+  .lim{border-left:3px solid var(--warn);background:var(--panel2);padding:8px 10px;
+    border-radius:0 8px 8px 0;margin-bottom:8px;font-size:12px}
+  .lim b{color:var(--warn)}
+  .lim.good{border-left-color:var(--good)}
+  .lim.good b{color:var(--good)}
+  .note{font-size:11.5px;color:var(--dim);margin-top:6px}
+  .scroll{max-height:330px;overflow:auto}
+  .legend-inline{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px}
+  .chk{display:flex;align-items:center;gap:5px;color:var(--dim);font-size:12px}
+  .footer{padding:10px 16px 24px;color:var(--dim);font-size:11.5px;
+    border-top:1px solid var(--line);background:var(--panel)}
+  code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:11px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <h1>透明排序局限 · 对照实验台</h1>
+  <span class="sub">本地几何体 · 原生 WebGL 管线 · 左右共享同一镜头与素材，仅透明绘制方式不同</span>
+</div>
+
+<div class="toolbar">
+  <div class="ctl">
+    <strong>固定观察角度</strong>
+    <button data-preset="front">正视</button>
+    <button data-preset="oblique">斜侧 3/4</button>
+    <button data-preset="cross">沿交叉线</button>
+    <button data-preset="center">穿过盒中心</button>
+    <button data-preset="inside">进入盒内</button>
+  </div>
+  <div class="divider"></div>
+  <div class="ctl">
+    <label>薄片透明度 α</label>
+    <input id="alphaPlane" type="range" min="0.05" max="1" step="0.01" value="0.42">
+    <span class="val" id="alphaPlaneV">0.42</span>
+  </div>
+  <div class="ctl">
+    <label>封闭体透明度 α</label>
+    <input id="alphaBox" type="range" min="0.05" max="1" step="0.01" value="0.34">
+    <span class="val" id="alphaBoxV">0.34</span>
+  </div>
+  <div class="ctl">
+    <label>遮挡块位置 z</label>
+    <input id="occZ" type="range" min="-3.2" max="3.2" step="0.05" value="1.1">
+    <span class="val" id="occZV">1.10</span>
+  </div>
+  <div class="divider"></div>
+  <label class="chk"><input type="checkbox" id="faceMode" checked>表格显示逐面数据</label>
+  <label class="chk"><input type="checkbox" id="showMark" checked>标记问题区域</label>
+  <button id="resetCam">复位镜头</button>
+</div>
+
+<div class="main">
+  <!-- 左：对象级排序 -->
+  <div class="pane">
+    <h3>方式 A · 对象级排序 <span class="tag">每个对象取一个代表距离（包围盒中心），整体 back-to-front</span></h3>
+    <div class="canvas-wrap">
+      <canvas id="gl0" width="560" height="560"></canvas>
+      <div class="probe-x" id="px0" style="display:none"></div>
+      <div class="hud" id="hud0"></div>
+    </div>
+    <div class="paneorder" id="order0"></div>
+  </div>
+  <!-- 右：逐三角形排序 -->
+  <div class="pane">
+    <h3>方式 B · 逐三角形排序 <span class="tag">每个面按自身中心深度独立排序，再 back-to-front</span></h3>
+    <div class="canvas-wrap">
+      <canvas id="gl1" width="560" height="560"></canvas>
+      <div class="probe-x" id="px1" style="display:none"></div>
+      <div class="hud" id="hud1"></div>
+    </div>
+    <div class="paneorder" id="order1"></div>
+  </div>
+</div>
+
+<div class="bottom">
+  <div class="card">
+    <h2>绘制先后 · 判定距离 · 实际深度（点行或点画布可定位对象）</h2>
+    <div class="swatchrow" id="legend"></div>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>对象 / 面</th><th>类型</th><th>判定依据 d(相机→中心)</th>
+            <th>实际深度区间 (view z)</th><th>状态</th>
+          </tr>
+        </thead>
+        <tbody id="ordBody"></tbody>
+      </table>
+    </div>
+    <div class="note">
+      距离相等或镜头穿过中心时，按固定 ID 次序兜底（表中 # 即 tie-break 序号），顺序在任意帧间保持稳定、不闪烁。
+      不透明物一律先画并写深度缓冲；透明物 <code>depthMask=false</code>，只做深度测试。
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>像素位置色彩对比（确认差异来自混合顺序）</h2>
+    <div class="probe-grid">
+      <div class="probe-box">
+        <div class="t">方式 A 像素 <span class="mono" id="coordA"></span></div>
+        <div class="patch" id="patchA"></div>
+        <div class="rgb mono" id="rgbA">—</div>
+      </div>
+      <div class="probe-box">
+        <div class="t">方式 B 像素（同一 NDC 位置）</div>
+        <div class="patch" id="patchB"></div>
+        <div class="rgb mono" id="rgbB">—</div>
+      </div>
+    </div>
+    <div class="delta mono" id="deltaTxt">ΔE = —</div>
+    <div class="delta mono" id="idealTxt">理想 over 合成 = —</div>
+    <div class="note" style="margin-bottom:10px">
+      几何体与 α 完全相同，两侧颜色不同只能来自混合先后；ΔE 越大说明排序造成的偏差越大。
+      <button id="findDiff" style="margin-left:6px">自动找两侧差异最大像素</button>
+    </div>
+    <h2 style="margin-top:6px">该像素的视线层叠（ray 命中，按真实深度）</h2>
+    <div class="layers" id="layerList"><div class="note">在任一画布点击设置探针；拖拽为旋转镜头。</div></div>
+  </div>
+</div>
+
+<div class="bottom" style="padding-top:0">
+  <div class="card">
+    <h2>仅按对象排序无法处理的情况（本样例已内置）</h2>
+    <div class="lim">
+      <b>① 相交薄片：循环遮挡，对象不可分。</b> 两张交叉半透明平面互相穿过——沿视线各自都有一段在前、一段在后，
+      不存在“整个对象在前/在后”的正确次序。逐三角形排序也只能缓解：交叉线两侧仍属于同一批三角形，
+      无法在像素内部翻转先后。正确解法是 <b>按交叉线做几何切分</b>，或 <b>depth peeling</b> 等逐像素多层技术。
+    </div>
+    <div class="lim">
+      <b>② 封闭透明体：自交叠（cyclic overlap）。</b> 闭合四面体的背面与正面投影重叠，
+      背面必须先于正面混合；对象级排序把整盒当作一个距离点，必然丢失盒内层次（方式 A 中盒面发“糊/平”）。
+      逐三角形排序对开口盒基本正确，但闭合体仍可能出现三个面互为前后的环，排序无解，需 depth peeling。
+    </div>
+    <div class="lim">
+      <b>③ 代表距离失真。</b> 对象级只用包围盒中心一个距离，深度跨度大的物体在镜头靠近/穿过中心时
+      代表点失效（中心到相机距离 ≈ 0，方向反转后整对象跳到序列另一端）。逐面排序把判定粒度降到面，
+      但无法跨越“面自身相交”的情形（见 ①）。
+    </div>
+    <div class="lim good">
+      <b>④ 不透明遮挡无需排序，两侧均正确。</b> 拖动“遮挡块位置 z”让不透明方块挡在玻璃前：
+      它先写入深度，被挡像素上的透明片元深度测试失败、不参与混合，两种方式结果一致。
+    </div>
+  </div>
+  <div class="card">
+    <h2>样例素材与操作</h2>
+    <div class="note" style="margin-top:0">
+      开箱即见：<b>两张交叉薄片</b>（青/品红，绕 Y 轴交叉）＋ <b>开口透明盒</b>（5 面）＋
+      <b>闭合透明四面体</b>，配合不透明背景墙、网格地板与可移动不透明遮挡块。
+    </div>
+    <div class="note">
+      镜头：拖拽旋转 · 滚轮缩放 · Shift+拖拽平移目标点。两侧相机矩阵完全共享。<br>
+      探针：单击画布放置，再点别处移动；<b>自动找差异</b>按钮会扫描并定位两侧输出差最大的像素。<br>
+      混合模型：<code>blendFunc(SRC_ALPHA, ONE_MINUS_SRC_ALPHA)</code>，即标准 over 算子
+      <code>C = Cs·α + Cd·(1−α)</code>。
+    </div>
+    <div class="note" id="camInfo"></div>
+  </div>
+</div>
+
+<div class="footer">
+  判定距离 = 相机位置到对象（或面）中心的欧氏距离；实际深度 = 顶点变换到 view space 后的 −z 区间。
+  排序键：先按距离降序（远→近），距离差 &lt; 1e-6 时按固定 ID 升序兜底，保证等距与穿中心时顺序稳定。
+  本页全部几何体在本地代码中生成，无外部资源与网络请求。
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+ * 1. 向量/矩阵工具（column-major，适配 WebGL uniform）
+ * ============================================================ */
+const V3 = {
+  sub:(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]],
+  add:(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]],
+  scale:(a,s)=>[a[0]*s,a[1]*s,a[2]*s],
+  dot:(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2],
+  cross:(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],
+  len:a=>Math.hypot(a[0],a[1],a[2]),
+  norm:a=>{const l=Math.hypot(a[0],a[1],a[2])||1;return[a[0]/l,a[1]/l,a[2]/l];}
+};
+function m4Identity(){const m=new Float32Array(16);m[0]=m[5]=m[10]=m[15]=1;return m;}
+function m4Mul(a,b){const o=new Float32Array(16);
+  for(let c=0;c<4;c++)for(let r=0;r<4;r++){
+    o[c*4+r]=a[r]*b[c*4]+a[4+r]*b[c*4+1]+a[8+r]*b[c*4+2]+a[12+r]*b[c*4+3];}
+  return o;}
+function m4Persp(fovy,asp,near,far){
+  const f=1/Math.tan(fovy/2),nf=1/(near-far),m=new Float32Array(16);
+  m[0]=f/asp;m[5]=f;m[10]=(far+near)*nf;m[11]=-1;m[14]=2*far*near*nf;return m;}
+function m4LookAt(eye,center,up){
+  const z=V3.norm(V3.sub(eye,center)),x=V3.norm(V3.cross(up,z)),
+        y=V3.cross(z,x),m=new Float32Array(16);
+  m[0]=x[0];m[4]=x[1];m[8]=x[2];m[12]=-V3.dot(x,eye);
+  m[1]=y[0];m[5]=y[1];m[9]=y[2];m[13]=-V3.dot(y,eye);
+  m[2]=z[0];m[6]=z[1];m[10]=z[2];m[14]=-V3.dot(z,eye);m[15]=1;return m;}
+function m4Translate(x,y,z){const m=m4Identity();m[12]=x;m[13]=y;m[14]=z;return m;}
+function m4Invert(a){
+  const m=new Float32Array(16);
+  const a00=a[0],a01=a[1],a02=a[2],a03=a[3],a10=a[4],a11=a[5],a12=a[6],a13=a[7],
+        a20=a[8],a21=a[9],a22=a[10],a23=a[11],a30=a[12],a31=a[13],a32=a[14],a33=a[15];
+  const b00=a00*a11-a01*a10,b01=a00*a12-a02*a10,b02=a00*a13-a03*a10,
+        b03=a01*a12-a02*a11,b04=a01*a13-a03*a11,b05=a02*a13-a03*a12,
+        b06=a20*a31-a21*a30,b07=a20*a32-a22*a30,b08=a20*a33-a23*a30,
+        b09=a21*a32-a22*a31,b10=a21*a33-a23*a31,b11=a22*a33-a23*a32;
+  let det=b00*b11-b01*b10+b02*b09+b03*b08-b04*b07+b05*b06;
+  if(!det)return m4Identity();
+  det=1/det;
+  m[0]=(a11*b11-a12*b10+a13*b09)*det; m[1]=(a02*b10-a01*b11-a03*b09)*det;
+  m[2]=(a31*b05-a32*b04+a33*b03)*det; m[3]=(a22*b04-a21*b05-a23*b03)*det;
+  m[4]=(a12*b08-a10*b11-a13*b07)*det; m[5]=(a00*b11-a02*b08+a03*b07)*det;
+  m[6]=(a32*b02-a30*b05-a33*b01)*det; m[7]=(a20*b05-a22*b02+a23*b01)*det;
+  m[8]=(a10*b10-a11*b08+a13*b06)*det; m[9]=(a01*b08-a00*b10-a03*b06)*det;
+  m[10]=(a30*b04-a31*b02+a33*b00)*det;m[11]=(a21*b02-a20*b04-a23*b00)*det;
+  m[12]=(a11*b07-a10*b09-a12*b06)*det;m[13]=(a00*b09-a01*b07+a02*b06)*det;
+  m[14]=(a31*b01-a30*b03-a32*b00)*det;m[15]=(a20*b03-a21*b01+a22*b00)*det;
+  return m;
+}
+function transformPt(m,p){
+  const x=p[0],y=p[1],z=p[2];
+  return [m[0]*x+m[4]*y+m[8]*z+m[12],m[1]*x+m[5]*y+m[9]*z+m[13],
+          m[2]*x+m[6]*y+m[10]*z+m[14],m[3]*x+m[7]*y+m[11]*z+m[15]];
+}
+
+/* ============================================================
+ * 2. 场景素材（全部本地生成）
+ * ============================================================ */
+const LIGHT=V3.norm([-0.45,0.8,0.55]);
+function shadeColor(base,n){
+  const d=Math.max(0,V3.dot(n,LIGHT))*0.35+0.78;
+  return [Math.min(1,base[0]*d),Math.min(1,base[1]*d),Math.min(1,base[2]*d)];
+}
+// 一个 mesh：positions(世界坐标), tris[{vi:[3], faceId, color(可调基色)}]
+function makeMesh(name,opts){return Object.assign({name,faces:[],tris:[],positions:[],
+  transparent:false,alpha:1,id:0,centroid:[0,0,0]},opts);}
+
+function quadMesh(name,cx,cy,cz,w,h,rotY,base,transparent,alpha,rotX){
+  const hw=w/2,hh=h/2,local=[[-hw,-hh,0],[hw,-hh,0],[hw,hh,0],[-hw,hh,0]],
+        cyy=Math.cos(rotY),syy=Math.sin(rotY),cxx=Math.cos(rotX||0),sxx=Math.sin(rotX||0),pos=[];
+  for(const p of local){
+    // 先绕 X 再绕 Y
+    const y1=p[1]*cxx-p[2]*sxx, z1=p[1]*sxx+p[2]*cxx;
+    pos.push([cx+p[0]*cyy+z1*syy,cy+y1,cz-p[0]*syy+z1*cyy]);
+  }
+  // 法线 (0,0,1) 先绕 X 再绕 Y
+  let n=[cxx*syy, -sxx, cxx*cyy];
+  n=V3.norm(n);
+  const m=makeMesh(name,{transparent,alpha,baseColor:base,normal:n});
+  m.positions=pos;
+  m.rotY=rotY;m.rotX=rotX||0;m.halfW=hw;m.halfH=hh;
+  m.tris=[{vi:[0,1,2],faceId:0,color:shadeColor(base,n)},
+          {vi:[0,2,3],faceId:0,color:shadeColor(base,n)}];
+  m.faces=[{id:0,name:name,label:name}];
+  m.centroid=[cx,cy,cz];
+  return m;
+}
+function boxMesh(name,cx,cy,cz,sx,sy,sz,base){
+  const hx=sx/2,hy=sy/2,hz=sz/2,p=[],t=[];
+  const corners=[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]];
+  for(const q of corners)p.push([cx+q[0]*hx,cy+q[1]*hy,cz+q[2]*hz]);
+  const def=[ // 12 三角，每组两个共面
+    [0,1,2],[0,2,3],[4,6,5],[4,7,6],[0,4,5],[0,5,1],
+    [2,6,7],[2,7,3],[0,3,7],[0,7,4],[1,5,6],[1,6,2]
+  ];
+  def.forEach((vi,k)=>t.push({vi,faceId:k>>1,color:[0,0,0]}));
+  const faceNorms=[[0,0,-1],[0,0,1],[0,-1,0],[0,1,0],[-1,0,0],[1,0,0]];
+  const m=makeMesh(name,{transparent:false,baseColor:base});
+  m.positions=p;m.tris=t;m.center=[cx,cy,cz];m.half=[hx,hy,hz];
+  const boxFaceNames=["背","前","底","顶","左","右"];
+  m.faces=faceNorms.map((n,i)=>({id:i,name:boxFaceNames[i],label:name+"·"+boxFaceNames[i],normal:n}));
+  m.tris.forEach(tr=>{tr.color=shadeColor(base,faceNorms[tr.faceId]);});
+  m.centroid=[cx,cy,cz];
+  return m;
+}
+// 开口盒：底 + 4 侧壁，每面 2 三角，各自独立顶点
+function openBoxMesh(name,cx,cy,cz,sx,sy,sz,base,alpha){
+  const hx=sx/2,hy=sy/2,hz=sz/2,pos=[],tris=[];let fid=0;
+  function face(corners,normal){
+    const start=pos.length;
+    for(const q of corners)pos.push([cx+q[0]*hx,cy+q[1]*hy,cz+q[2]*hz]);
+    const col=shadeColor(base,normal);
+    tris.push({vi:[start,start+1,start+2],faceId:fid,color:col});
+    tris.push({vi:[start,start+2,start+3],faceId:fid,color:col});
+    fid++;
+  }
+  face([[-1,-1,-1],[1,-1,-1],[1,-1,1],[-1,-1,1]],[0,-1,0]); // 底
+  face([[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]],[0,0,1]);       // 前
+  face([[1,-1,-1],[-1,-1,-1],[-1,1,-1],[1,1,-1]],[0,0,-1]);   // 后
+  face([[-1,-1,-1],[-1,-1,1],[-1,1,1],[-1,1,-1]],[-1,0,0]);   // 左
+  face([[1,-1,1],[1,-1,-1],[1,1,-1],[1,1,1]],[1,0,0]);        // 右
+  const m=makeMesh(name,{transparent:true,alpha,baseColor:base,open:true});
+  m.positions=pos;m.tris=tris;m.center=[cx,cy,cz];m.half=[hx,hy,hz];
+  const openFaceNames=["底","前","后","左","右"];
+  m.faces=tris.filter((_,i)=>i%2===0).map((tr,i)=>({id:i,name:openFaceNames[i],label:name+"·"+openFaceNames[i]}));
+  m.centroid=[cx,cy,cz];
+  return m;
+}
+// 闭合四面体
+function tetraMesh(name,cx,cy,cz,r,base,alpha){
+  const raw=[[1,1,1],[-1,-1,1],[-1,1,-1],[1,-1,-1]].map(q=>V3.scale(V3.norm(q),r));
+  const combos=[[0,1,2],[0,3,1],[0,2,3],[1,3,2]];
+  const pos=[],tris=[];
+  combos.forEach((vi,fid)=>{
+    const a=raw[vi[0]],b=raw[vi[1]],c=raw[vi[2]];
+    const ws=[a,b,c].map(p=>[p[0]+cx,p[1]+cy,p[2]+cz]);
+    const n=V3.norm(V3.cross(V3.sub(ws[1],ws[0]),V3.sub(ws[2],ws[0])));
+    const start=pos.length;ws.forEach(p=>pos.push(p));
+    const col=shadeColor(base,n);
+    tris.push({vi:[start,start+1,start+2],faceId:fid,color:col});
+  });
+  const m=makeMesh(name,{transparent:true,alpha,baseColor:base,closed:true});
+  m.positions=pos;m.tris=tris;m.center=[cx,cy,cz];m.radius=r*1.02;
+  m.faces=tris.map((tr,i)=>({id:i,name:"面"+i,label:name+"·面"+i}));
+  m.centroid=[cx,cy,cz];
+  return m;
+}
+
+const scene=[];
+function addMesh(m){m.id=scene.length;scene.push(m);return m;}
+// 不透明背景与地板
+addMesh(quadMesh("不透明背景墙",0,0.6,-4.2,14,8,0,[0.32,0.36,0.44],false,1));
+const floor=quadMesh("网格地板",0,-1.75,0,16,14,0,[0.20,0.23,0.28],false,1,-Math.PI/2);
+addMesh(floor);
+// 两张交叉半透明薄片（绕 Y 轴交叉）
+addMesh(quadMesh("交叉薄片 A（青）",-1.5,0.25,-0.6,3.4,3.4, Math.PI/4,[0.25,0.85,0.95],true,0.42));
+addMesh(quadMesh("交叉薄片 B（品红）",-1.5,0.25,-0.6,3.4,3.4,-Math.PI/4,[0.95,0.35,0.85],true,0.42));
+// 开口透明盒
+addMesh(openBoxMesh("开口透明盒",1.35,0.0,0.5,2.3,2.3,2.3,[0.45,0.8,0.55],0.34));
+// 闭合透明四面体
+addMesh(tetraMesh("闭合透明四面体",3.3,0.15,-1.3,1.15,[0.95,0.75,0.35],0.34));
+// 不透明遮挡块（可前后移动）
+const occluder=boxMesh("不透明遮挡块",-0.2,0.0,1.1,1.1,1.1,1.1,[0.92,0.55,0.28]);
+addMesh(occluder);
+
+/* ============================================================
+ * 3. GL 初始化（两套独立 context + FBO，共享同一份几何数据）
+ * ============================================================ */
+const VS=`
+attribute vec3 aPos;attribute vec3 aColor;
+uniform mat4 uVP;uniform vec3 uOverride;uniform float uUseOverride;
+varying vec3 vColor;
+void main(){vColor=mix(aColor,uOverride,uUseOverride);gl_Position=uVP*vec4(aPos,1.0);}`;
+const FS=`precision mediump float;varying vec3 vColor;uniform float uAlpha;
+void main(){gl_FragColor=vec4(vColor,uAlpha);}`;
+const LINE_VS=`attribute vec3 aPos;uniform mat4 uVP;
+void main(){gl_Position=uVP*vec4(aPos,1.0);}`;
+const LINE_FS=`precision mediump float;uniform vec4 uCol;
+void main(){gl_FragColor=uCol;}`;
+const QUAD_VS=`attribute vec2 aP;varying vec2 vUv;
+void main(){vUv=vec2(aP.x*0.5+0.5,aP.y*0.5+0.5);gl_Position=vec4(aP,0.0,1.0);}`;
+const QUAD_FS=`precision mediump float;varying vec2 vUv;uniform sampler2D uTex;
+void main(){gl_FragColor=texture2D(uTex,vUv);}`;
+
+function compile(gl,type,src){const sh=gl.createShader(type);gl.shaderSource(sh,src);
+  gl.compileShader(sh);if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS))
+  throw new Error(gl.getShaderInfoLog(sh));return sh;}
+function program(gl,vs,fs){const p=gl.createProgram();
+  gl.attachShader(p,compile(gl,gl.VERTEX_SHADER,vs));
+  gl.attachShader(p,compile(gl,gl.FRAGMENT_SHADER,fs));gl.linkProgram(p);
+  if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(p));
+  return p;}
+
+const FB=512; // 离屏分辨率（探针 readPixels 用）
+function createPane(canvasId,mode){
+  const canvas=document.getElementById(canvasId);
+  const gl=canvas.getContext("webgl",{antialias:false,alpha:false,
+    premultipliedAlpha:false,preserveDrawingBuffer:true});
+  if(!gl)throw new Error("WebGL 不可用");
+  const prog=program(gl,VS,FS),lineProg=program(gl,LINE_VS,LINE_FS),
+        quadProg=program(gl,QUAD_VS,QUAD_FS);
+  // FBO
+  const tex=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,tex);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,FB,FB,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  const depth=gl.createRenderbuffer();gl.bindRenderbuffer(gl.RENDERBUFFER,depth);
+  gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT16,FB,FB);
+  const fbo=gl.createFramebuffer();gl.bindFramebuffer(gl.FRAMEBUFFER,fbo);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,tex,0);
+  gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,depth);
+  if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE)
+    throw new Error("FBO 不完整");
+  // 全屏 quad
+  const quadBuf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,quadBuf);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+  return {canvas,gl,prog,lineProg,quadProg,fbo,tex,quadBuf,mode,
+    lastOrder:null,pixels:new Uint8Array(FB*FB*4)};
+}
+const panes=[createPane("gl0","object"),createPane("gl1","face")];
+
+// 为每个 mesh 上传两份 buffer
+for(const m of scene){
+  m.gpu=panes.map(pane=>{
+    const gl=pane.gl;
+    const vbuf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,vbuf);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(m.positions.flat()),gl.STATIC_DRAW);
+    const packed=[];
+    for(const tr of m.tris)for(const i of tr.vi)packed.push(i);
+    const ibuf=gl.createBuffer();gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ibuf);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(packed),gl.STATIC_DRAW);
+    // 颜色按顶点展开（每个三角自带颜色）
+    const colArr=[];
+    for(const tr of m.tris)for(let k=0;k<3;k++)colArr.push(...tr.color);
+    const cbuf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,cbuf);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(colArr),gl.STATIC_DRAW);
+    // 线框（展开为实际顶点坐标，供 drawArrays 使用）
+    const lines=[];
+    for(const tr of m.tris){const v=tr.vi;
+      lines.push(...m.positions[v[0]],...m.positions[v[1]],
+                 ...m.positions[v[1]],...m.positions[v[2]],
+                 ...m.positions[v[2]],...m.positions[v[0]]);}
+    const lbuf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,lbuf);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(lines),gl.STATIC_DRAW);
+    return {vbuf,ibuf,cbuf,lbuf,indexCount:packed.length,lineCount:lines.length/3};
+  });
+}
+
+/* ============================================================
+ * 4. 相机（共享状态）
+ * ============================================================ */
+const cam={yaw:0.62,pitch:0.32,dist:8.6,target:[0,0.1,-0.4]};
+const PRESETS={
+  front:  {yaw:0,      pitch:0,      dist:8.6},
+  oblique:{yaw:0.62,   pitch:0.32,   dist:8.6},
+  cross:  {yaw:Math.PI/4,pitch:0.06, dist:7.2},   // 沿两薄片交叉方向
+  center: {yaw:-0.05,  pitch:0.02,   dist:5.0,    target:[1.35,0,0.5]}, // 穿过开口盒中心
+  inside: {yaw:0.62,   pitch:0.32,   dist:1.6,    target:[1.35,0,0.5]}  // 进入盒内
+};
+let camTween=null;
+function applyPreset(name){
+  const p=PRESETS[name];
+  camTween={from:{...cam,target:[...cam.target]},
+    to:{yaw:p.yaw,pitch:p.pitch,dist:p.dist,target:[...(p.target||[0,0.1,-0.4])]},t:0};
+}
+function ease(t){return t*t*(3-2*t);}
+function camEye(){
+  const cp=Math.cos(cam.pitch);
+  return [
+    cam.target[0]+cam.dist*cp*Math.sin(cam.yaw),
+    cam.target[1]+cam.dist*Math.sin(cam.pitch),
+    cam.target[2]+cam.dist*cp*Math.cos(cam.yaw)
+  ];
+}
+function camMatrices(){
+  const eye=camEye();
+  const view=m4LookAt(eye,cam.target,[0,1,0]);
+  const proj=m4Persp(45*Math.PI/180,1,0.1,60);
+  return {eye,view,proj,vp:m4Mul(proj,view)};
+}
+
+/* ============================================================
+ * 5. 排序与绘制
+ * ============================================================ */
+const state={alphaPlane:0.42,alphaBox:0.34,occZ:1.1,faceMode:true,showMark:true,
+  selected:null,probe:null};
+
+function viewDepth(p,view){const t=transformPt(view,[p[0],p[1],p[2]]);return -t[2];}
+
+function computeOrder(view,eye,mode){
+  // 返回绘制序列：不透明（固定）+ 透明（按模式排序）
+  const seq=[];
+  for(const m of scene){
+    if(!m.transparent){
+      seq.push({kind:"obj",mesh:m,id:m.id,
+        d:V3.len(V3.sub(m.centroid,eye))});
+    }
+  }
+  const trans=scene.filter(m=>m.transparent);
+  if(mode==="object"){
+    const rows=trans.map(m=>({kind:"obj",mesh:m,id:m.id,
+      d:V3.len(V3.sub(m.centroid,eye))}));
+    rows.sort((a,b)=> (b.d-a.d) || (a.id-b.id)); // 远→近，等距按 ID
+    seq.push(...rows);
+  }else{
+    const rows=[];
+    for(const m of trans){
+      // 每个面取中心
+      for(let f=0;f<m.faces.length;f++){
+        const tris=m.tris.filter(tr=>tr.faceId===f);
+        let c=[0,0,0],n=0;
+        for(const tr of tris)for(const vi of tr.vi){c=V3.add(c,m.positions[vi]);n++;}
+        c=V3.scale(c,1/n);
+        rows.push({kind:"face",mesh:m,face:f,id:m.id*100+f,
+          centroid:c,d:V3.len(V3.sub(c,eye))});
+      }
+    }
+    rows.sort((a,b)=>(b.d-a.d)||(a.id-b.id));
+    seq.push(...rows);
+  }
+  // 标注实际 view-z 深度区间
+  for(const r of seq){
+    const m=r.mesh;
+    if(r.kind==="face"){
+      const tris=m.tris.filter(tr=>tr.faceId===r.face);
+      const zs=[];
+      for(const tr of tris)for(const vi of tr.vi)zs.push(viewDepth(m.positions[vi],view));
+      r.zmin=Math.min(...zs);r.zmax=Math.max(...zs);
+    }else{
+      const zs=m.positions.map(p=>viewDepth(p,view));
+      r.zmin=Math.min(...zs);r.zmax=Math.max(...zs);
+    }
+  }
+  return seq;
+}
+
+function bindAndDraw(pane,m,gl,viewProj,override,alpha){
+  const gg=m.gpu[panes.indexOf(pane)];
+  const p=pane.prog;
+  gl.useProgram(p);
+  gl.bindBuffer(gl.ARRAY_BUFFER,gg.vbuf);
+  const locPos=gl.getAttribLocation(p,"aPos");
+  gl.enableVertexAttribArray(locPos);
+  gl.vertexAttribPointer(locPos,3,gl.FLOAT,false,0,0);
+  gl.bindBuffer(gl.ARRAY_BUFFER,gg.cbuf);
+  const locCol=gl.getAttribLocation(p,"aColor");
+  gl.enableVertexAttribArray(locCol);
+  gl.vertexAttribPointer(locCol,3,gl.FLOAT,false,0,0);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,gg.ibuf);
+  gl.uniformMatrix4fv(gl.getUniformLocation(p,"uVP"),false,viewProj);
+  gl.uniform3fv(gl.getUniformLocation(p,"uOverride"),override||[0,0,0]);
+  gl.uniform1f(gl.getUniformLocation(p,"uUseOverride"),override?1:0);
+  gl.uniform1f(gl.getUniformLocation(p,"uAlpha"),alpha);
+  gl.drawElements(gl.TRIANGLES,gg.indexCount,gl.UNSIGNED_SHORT,0);
+}
+function drawFace(pane,m,faceId,gl,viewProj,alpha){
+  const gg=m.gpu[panes.indexOf(pane)],p=pane.prog;
+  // 重建该面的临时缓冲（面数很少，直接按索引绘制多次 drawArrays 风格：用子区间）
+  // 这里采用：上传一次整体后，用 offset 不可行（非连续），改为按三角循环 drawElements 配合子缓冲。
+  // 简化：为该面动态建 buffer 并缓存。
+  if(!gg.faceBufs)gg.faceBufs={};
+  let fb=gg.faceBufs[faceId];
+  if(!fb){
+    const tris=m.tris.filter(tr=>tr.faceId===faceId);
+    const v=[],c=[];
+    for(const tr of tris)for(const vi of tr.vi){v.push(...m.positions[vi]);c.push(...tr.color);}
+    fb={};
+    fb.vbuf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,fb.vbuf);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(v),gl.STATIC_DRAW);
+    fb.cbuf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,fb.cbuf);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(c),gl.STATIC_DRAW);
+    fb.count=v.length/3;
+    gg.faceBufs[faceId]=fb;
+  }
+  gl.useProgram(p);
+  const locPos=gl.getAttribLocation(p,"aPos"),locCol=gl.getAttribLocation(p,"aColor");
+  gl.bindBuffer(gl.ARRAY_BUFFER,fb.vbuf);
+  gl.enableVertexAttribArray(locPos);gl.vertexAttribPointer(locPos,3,gl.FLOAT,false,0,0);
+  gl.bindBuffer(gl.ARRAY_BUFFER,fb.cbuf);
+  gl.enableVertexAttribArray(locCol);gl.vertexAttribPointer(locCol,3,gl.FLOAT,false,0,0);
+  gl.uniformMatrix4fv(gl.getUniformLocation(p,"uVP"),false,viewProj);
+  gl.uniform3fv(gl.getUniformLocation(p,"uOverride"),[0,0,0]);
+  gl.uniform1f(gl.getUniformLocation(p,"uUseOverride"),0);
+  gl.uniform1f(gl.getUniformLocation(p,"uAlpha"),alpha);
+  gl.drawArrays(gl.TRIANGLES,0,fb.count);
+}
+function drawWire(pane,m,gl,viewProj,color,faceId){
+  const gg=m.gpu[panes.indexOf(pane)];
+  const p=pane.lineProg;gl.useProgram(p);
+  const locPos=gl.getAttribLocation(p,"aPos");
+  if(faceId===undefined){
+    gl.bindBuffer(gl.ARRAY_BUFFER,gg.lbuf);
+    gl.enableVertexAttribArray(locPos);
+    gl.vertexAttribPointer(locPos,3,gl.FLOAT,false,0,0);
+    gl.uniformMatrix4fv(gl.getUniformLocation(p,"uVP"),false,viewProj);
+    gl.uniform4fv(gl.getUniformLocation(p,"uCol"),color);
+    gl.drawArrays(gl.LINES,0,gg.lineCount);
+  }else{
+    // 单面边线（缓存，避免每帧新建 buffer）
+    if(!gg.faceLineBufs)gg.faceLineBufs={};
+    let b=gg.faceLineBufs[faceId];
+    if(!b){
+      const tris=m.tris.filter(tr=>tr.faceId===faceId);
+      const v=[];
+      for(const tr of tris){const vi=tr.vi;v.push(...m.positions[vi[0]],...m.positions[vi[1]],
+        ...m.positions[vi[1]],...m.positions[vi[2]],...m.positions[vi[2]],...m.positions[vi[0]]);}
+      b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);
+      gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(v),gl.STATIC_DRAW);
+      b.count=v.length/3;
+      gg.faceLineBufs[faceId]=b;
+    }else{
+      gl.bindBuffer(gl.ARRAY_BUFFER,b);
+    }
+    gl.enableVertexAttribArray(locPos);
+    gl.vertexAttribPointer(locPos,3,gl.FLOAT,false,0,0);
+    gl.uniformMatrix4fv(gl.getUniformLocation(p,"uVP"),false,viewProj);
+    gl.uniform4fv(gl.getUniformLocation(p,"uCol"),color);
+    gl.drawArrays(gl.LINES,0,b.count);
+  }
+}
+
+// 问题区域标记：交叉线位置画两个黄色环（buffer 在 pane 上缓存一次）
+function drawMarkers(pane,gl,vp){
+  if(!pane.markerBuf){
+    const center=[-1.5,0.25,-0.6],pts=[];pane.markerRanges=[];
+    for(let k=0;k<2;k++){
+      const R=0.55+k*0.28,start=pts.length/3;
+      for(let i=0;i<=40;i++){
+        const a=i/40*Math.PI*2;
+        pts.push(center[0]+Math.cos(a)*R,center[1]+Math.sin(a)*R,center[2]);
+      }
+      pane.markerRanges.push([start,41]);
+    }
+    pane.markerBuf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,pane.markerBuf);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(pts),gl.STATIC_DRAW);
+  }else{
+    gl.bindBuffer(gl.ARRAY_BUFFER,pane.markerBuf);
+  }
+  const p=pane.lineProg;gl.useProgram(p);
+  const loc=gl.getAttribLocation(p,"aPos");
+  gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,3,gl.FLOAT,false,0,0);
+  gl.uniformMatrix4fv(gl.getUniformLocation(p,"uVP"),false,vp);
+  gl.uniform4fv(gl.getUniformLocation(p,"uCol"),[1,0.85,0.3,0.95]);
+  for(const [start,count] of pane.markerRanges)
+    gl.drawArrays(gl.LINE_STRIP,start,count);
+}
+
+function renderPane(pane,camData){
+  const gl=pane.gl;
+  gl.bindFramebuffer(gl.FRAMEBUFFER,pane.fbo);
+  gl.viewport(0,0,FB,FB);
+  gl.clearColor(0.055,0.065,0.085,1);
+  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);
+  gl.disable(gl.BLEND);gl.depthMask(true);
+  gl.disable(gl.CULL_FACE);
+
+  const order=computeOrder(camData.view,camData.eye,pane.mode);
+  pane.lastOrder=order;
+  const vp=camData.vp;
+
+  for(const row of order){
+    const m=row.mesh;
+    const alpha=m.transparent?(m.open||m.closed?state.alphaBox:state.alphaPlane):1;
+    if(!m.transparent){
+      bindAndDraw(pane,m,gl,vp,null,1);
+    }
+  }
+  // 透明 pass
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+  gl.depthMask(false);
+  for(const row of order){
+    const m=row.mesh;
+    if(!m.transparent)continue;
+    const alpha=(m.open||m.closed)?state.alphaBox:state.alphaPlane;
+    if(row.kind==="obj"){
+      bindAndDraw(pane,m,gl,vp,null,alpha);
+    }else{
+      drawFace(pane,m,row.face,gl,vp,alpha);
+    }
+  }
+  gl.depthMask(true);
+  // 选中高亮与问题标记（overlay，关深度测试，保证可见）
+  gl.disable(gl.DEPTH_TEST);
+  if(state.selected){
+    const sel=state.selected;
+    const m=scene[sel.meshId];
+    drawWire(pane,m,gl,vp,[1,1,1,0.95],sel.face);
+  }
+  if(state.showMark)drawMarkers(pane,gl,vp);
+  gl.enable(gl.DEPTH_TEST);
+
+  // blit 到可见 canvas
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  const W=pane.canvas.clientWidth*dpr;
+  if(pane.canvas.width!==W){pane.canvas.width=W;pane.canvas.height=W;}
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+  gl.viewport(0,0,pane.canvas.width,pane.canvas.height);
+  gl.disable(gl.DEPTH_TEST);gl.disable(gl.BLEND);
+  gl.useProgram(pane.quadProg);
+  gl.bindBuffer(gl.ARRAY_BUFFER,pane.quadBuf);
+  const loc=gl.getAttribLocation(pane.quadProg,"aP");
+  gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+  gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,pane.tex);
+  gl.uniform1i(gl.getUniformLocation(pane.quadProg,"uTex"),0);
+  gl.drawArrays(gl.TRIANGLES,0,3);
+  gl.enable(gl.DEPTH_TEST);
+  // 读取离屏像素供探针
+  gl.bindFramebuffer(gl.FRAMEBUFFER,pane.fbo);
+  gl.readPixels(0,0,FB,FB,gl.RGBA,gl.UNSIGNED_BYTE,pane.pixels);
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+  return order;
+}
+
+/* ============================================================
+ * 6. 表格 / HUD / 探针
+ * ============================================================ */
+const $=id=>document.getElementById(id);
+function typeBadge(m,face){
+  if(!m.transparent)return '<span class="badge opaque">不透明</span>';
+  if(face!==undefined)return '<span class="badge face">透明·面</span>';
+  return '<span class="badge trans">透明·对象</span>';
+}
+function statusBadge(row){
+  if(!row.mesh.transparent)return '<span class="badge good">深度缓冲</span>';
+  if(row.kind==="obj"&&(row.zmax-row.zmin)>2.5)
+    return '<span class="badge warn">深度跨度大</span>';
+  if(row.kind==="face")return '<span class="badge">按面深度</span>';
+  return '<span class="badge">按中心距离</span>';
+}
+function tableRows(orderA,orderB){
+  // 面模式：不透明行（两侧一致，取 A）+ 右侧逐面序列；对象模式：左侧完整对象序列
+  if(!state.faceMode)return orderA.slice();
+  const opaque=orderA.filter(r=>!r.mesh.transparent);
+  const faces=orderB.filter(r=>r.kind==="face");
+  // 按真实绘制先后合并：不透明永远在最前，其后是面序列
+  return [...opaque,...faces];
+}
+function renderTable(orderA,orderB){
+  const body=$("ordBody");body.innerHTML="";
+  const rows=tableRows(orderA,orderB);
+  rows.forEach((r,idx)=>{
+    const m=r.mesh;
+    const tr=document.createElement("tr");
+    tr.className="selectable";
+    const sel=state.selected;
+    if(sel&&sel.meshId===m.id&&(r.face===undefined||sel.face===r.face))tr.classList.add("sel");
+    const col=m.baseColor;
+    const sw=`<span class="swatch" style="background:rgb(${col.map(v=>Math.round(v*255)).join(",")})"></span>`;
+    const name=r.kind==="face"?sw+m.faces[r.face].label:sw+m.name;
+    tr.innerHTML=`<td>${idx+1}</td><td>${name}</td><td>${typeBadge(m,r.face)}</td>
+      <td class="mono">${r.d.toFixed(3)}</td>
+      <td class="mono">${r.zmin.toFixed(2)} → ${r.zmax.toFixed(2)}</td>
+      <td>${statusBadge(r)}</td>`;
+    tr.onclick=()=>{
+      state.selected={meshId:m.id,face:r.face};
+      scheduleRender();
+    };
+    body.appendChild(tr);
+  });
+}
+function renderPaneOrder(order,paneIdx){
+  const names=order.map((r,i)=>{
+    const m=r.mesh;
+    const t=r.kind==="face"?m.faces[r.face].label:m.name;
+    return `${i+1}.${t}`;
+  });
+  $("order"+paneIdx).innerHTML="本侧实际绘制序列：<b>"+names.join(" → ")+"</b>";
+}
+function renderLegend(){
+  $("legend").innerHTML=scene.map(m=>{
+    const c=m.baseColor.map(v=>Math.round(v*255)).join(",");
+    return `<span><i class="legend-inline" style="background:rgb(${c})"></i>${m.name}${m.transparent?"（α 可调）":""}</span>`;
+  }).join("");
+}
+
+// ---- ray cast（探针层叠）----
+function rayVsQuad(ro,rd,m){
+  const n=m.normal,den=V3.dot(rd,n);
+  if(Math.abs(den)<1e-6)return null;
+  const t=V3.dot(V3.sub(m.centroid,ro),n)/den;
+  if(t<0.05)return null;
+  const p=V3.add(ro,V3.scale(rd,t));
+  // 逆变换回 quad 的 local 空间做矩形边界判断
+  const d=V3.sub(p,m.centroid);
+  const ang=m.rotY||0, tilt=m.rotX||0;
+  // 先逆 Y
+  const cc=Math.cos(-ang),ss=Math.sin(-ang);
+  const x1=d[0]*cc+d[2]*ss, y1=d[1], z1=-d[0]*ss+d[2]*cc;
+  // 再逆 X
+  const cx2=Math.cos(-tilt),sx2=Math.sin(-tilt);
+  const lx=x1, ly=y1*cx2-z1*sx2, lz=y1*sx2+z1*cx2;
+  if(Math.abs(lx)>m.halfW||Math.abs(ly)>m.halfH)return null;
+  return {t,point:p,color:m.baseColor,transparent:m.transparent,
+    alpha:m.transparent?state.alphaPlane:1,name:m.name,mesh:m,backface:den>0};
+}
+function rayVsBox(ro,rd,m){
+  // AABB slab（遮挡块）
+  const c=m.center,h=m.half;let tmin=0,tmax=Infinity,axis=-1;
+  for(let a=0;a<3;a++){
+    if(Math.abs(rd[a])<1e-8){if(ro[a]<c[a]-h[a]||ro[a]>c[a]+h[a])return null;}
+    else{
+      let t1=(c[a]-h[a]-ro[a])/rd[a],t2=(c[a]+h[a]-ro[a])/rd[a],sign=-1;
+      if(t1>t2){[t1,t2]=[t2,t1];sign=1;}
+      if(t1>tmin){tmin=t1;axis=a;}
+      tmax=Math.min(tmax,t2);
+      if(tmin>tmax)return null;
+    }
+  }
+  if(tmin<0.05)return null;
+  return {t:tmin,point:V3.add(ro,V3.scale(rd,tmin)),color:m.baseColor,
+    transparent:false,alpha:1,name:m.name,mesh:m,backface:false};
+}
+function rayVsFaceGroup(ro,rd,m){
+  // 开口盒/四面体：逐三角面求交，返回所有命中（穿体两面）
+  const hits=[];
+  for(const tr of m.tris){
+    const a=m.positions[tr.vi[0]],b=m.positions[tr.vi[1]],c=m.positions[tr.vi[2]];
+    const e1=V3.sub(b,a),e2=V3.sub(c,a);
+    const pvec=V3.cross(rd,e2);const det=V3.dot(e1,pvec);
+    if(Math.abs(det)<1e-7)continue;
+    const tvec=V3.sub(ro,a),inv=1/det;
+    const u=V3.dot(tvec,pvec)*inv;
+    if(u<0||u>1)continue;
+    const qvec=V3.cross(tvec,e1);
+    const v=V3.dot(rd,qvec)*inv;
+    if(v<0||u+v>1)continue;
+    const t=V3.dot(e2,qvec)*inv;
+    if(t<0.05)continue;
+    hits.push({t,point:V3.add(ro,V3.scale(rd,t)),face:tr.faceId,
+      color:tr.color,transparent:true,
+      alpha:state.alphaBox,name:m.name,label:m.faces[tr.faceId].label,
+      backface:det<0,mesh:m});
+  }
+  return hits;
+}
+function castRay(ndcX,ndcY,camData){
+  const inv=m4Invert(camData.vp);
+  const near=transformPt(inv,[ndcX,ndcY,-1]);
+  const far=transformPt(inv,[ndcX,ndcY,1]);
+  for(const p of [near,far]){p[0]/=p[3];p[1]/=p[3];p[2]/=p[3];}
+  const ro=camData.eye,rd=V3.norm(V3.sub(far,near));
+  const hits=[];
+  for(const m of scene){
+    if(m.normal!==undefined){const h=rayVsQuad(ro,rd,m);if(h)hits.push(h);}
+    else if(!m.transparent&&m.half){const h=rayVsBox(ro,rd,m);if(h)hits.push(h);}
+    else if(m.transparent&&(m.open||m.closed)){hits.push(...rayVsFaceGroup(ro,rd,m));}
+  }
+  hits.sort((a,b)=>a.t-b.t);
+  return {ro,rd,hits};
+}
+function over(dst,src){ // 标准 over：dst=[r,g,b](0..255 内部用 0..1)
+  const a=src[3];
+  return [src[0]*a+dst[0]*(1-a),src[1]*a+dst[1]*(1-a),src[2]*a+dst[2]*(1-a)];
+}
+function updateProbe(camData){
+  const ndc=state.probe;
+  for(let i=0;i<2;i++){
+    const el=$("px"+i);
+    if(!ndc){el.style.display="none";continue;}
+    el.style.display="block";
+    const left=(ndc[0]*0.5+0.5)*100, top=(1-(ndc[1]*0.5+0.5))*100;
+    el.style.left=left+"%";el.style.top=top+"%";
+  }
+  if(!ndc)return;
+  const px=Math.round((ndc[0]*0.5+0.5)*(FB-1));
+  const py=Math.round((1-(ndc[1]*0.5+0.5))*(FB-1));
+  const idx=(py*FB+px)*4;
+  const A=panes[0].pixels.slice(idx,idx+4),B=panes[1].pixels.slice(idx,idx+4);
+  $("coordA").textContent=`(${px},${py})`;
+  $("patchA").style.background=`rgb(${A[0]},${A[1]},${A[2]})`;
+  $("patchB").style.background=`rgb(${B[0]},${B[1]},${B[2]})`;
+  $("rgbA").textContent=`RGBA ${A[0]},${A[1]},${A[2]},${A[3]}`;
+  $("rgbB").textContent=`RGBA ${B[0]},${B[1]},${B[2]},${B[3]}`;
+  const dE=Math.hypot(A[0]-B[0],A[1]-B[1],A[2]-B[2]);
+  const dt=$("deltaTxt");
+  dt.textContent=`两侧色彩差 ΔE(rgb) = ${dE.toFixed(2)} / 441.7`;
+  dt.style.color=dE>6?"var(--bad)":dE>1.5?"var(--warn)":"var(--good)";
+
+  // 视线层叠 + 理想 over 合成
+  const {hits}=castRay(ndc[0],ndc[1],camData);
+  const list=$("layerList");list.innerHTML="";
+  // 找首个不透明命中：其后的层被深度缓冲挡住
+  let firstOpaqueIdx=hits.findIndex(h=>!h.transparent);
+  let acc=[0.055,0.065,0.085]; // clear color
+  let rowHtml="";let depthWarn=false;let prevT=null;
+  const invV=m4Invert(camData.view);
+  hits.forEach((h,i)=>{
+    const blocked=firstOpaqueIdx>=0&&i>firstOpaqueIdx;
+    if(prevT!==null&&Math.abs(h.t-prevT)<0.02)depthWarn=true;
+    prevT=h.t;
+    const c=h.color.map(v=>Math.round(v*255)).join(",");
+    if(!blocked){
+      if(h.transparent)acc=over(acc,[...h.color,h.alpha]);
+      else acc=[...h.color];
+    }
+    const vz=viewDepth(h.point,camData.view);
+    rowHtml+=`<div class="layer" ${blocked?'style="opacity:.4"':""}>
+      <span class="idx">${i+1}</span>
+      <span><span class="swatch" style="background:rgb(${c})"></span>${h.label||h.name}
+        ${h.backface?'<span class="badge face">背面</span>':""}
+        ${blocked?'<span class="badge opaque">被深度遮挡</span>':""}
+        ${h.transparent?`α=${h.alpha.toFixed(2)}`:""}</span>
+      <span class="d">t=${h.t.toFixed(3)}</span>
+      <span class="d">view z=${vz.toFixed(2)}</span></div>`;
+  });
+  if(depthWarn){
+    rowHtml=`<div class="lim" style="margin:0 0 8px"><b>同深度命中：</b>两层距离差 &lt; 0.02，
+      几何在此相交，任何基于排序的方法都无法在该像素给出稳定正确的先后——需 depth peeling。</div>`+rowHtml;
+  }
+  list.innerHTML=rowHtml||'<div class="note">该视线未命中任何物体。</div>';
+  const ideal=acc.map(v=>Math.round(v*255));
+  $("idealTxt").textContent=`理想 over 合成（按真实深度）= rgb(${ideal.join(",")})`+
+    `　方式A 偏差 ${Math.hypot(A[0]-ideal[0],A[1]-ideal[1],A[2]-ideal[2]).toFixed(1)}`+
+    `　方式B 偏差 ${Math.hypot(B[0]-ideal[0],B[1]-ideal[1],B[2]-ideal[2]).toFixed(1)}`;
+}
+function findMaxDiffPixel(){
+  const pa=panes[0].pixels,pb=panes[1].pixels;
+  let best={v:-1,x:0,y:0};
+  for(let y=0;y<FB;y+=4)for(let x=0;x<FB;x+=4){
+    const i=(y*FB+x)*4;
+    const d=Math.abs(pa[i]-pb[i])+Math.abs(pa[i+1]-pb[i+1])+Math.abs(pa[i+2]-pb[i+2]);
+    if(d>best.v)best={v:d,x,y};
+  }
+  const ndcX=best.x/(FB-1)*2-1, ndcY=(1-best.y/(FB-1))*2-1;
+  state.probe=[ndcX,ndcY];
+  scheduleRender();
+}
+
+/* ============================================================
+ * 7. 交互（拖拽 / 缩放 / 点选）
+ * ============================================================ */
+function attachControls(canvas){
+  let drag=null,moved=false;
+  canvas.addEventListener("pointerdown",e=>{
+    canvas.setPointerCapture(e.pointerId);
+    drag={x:e.clientX,y:e.clientY,shift:e.shiftKey};moved=false;
+    canvas.classList.add("dragging");
+  });
+  canvas.addEventListener("pointermove",e=>{
+    if(!drag)return;
+    const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+    if(Math.abs(dx)+Math.abs(dy)>3)moved=true;
+    if(drag.shift){
+      cam.target[0]-=dx*0.012;cam.target[1]+=dy*0.012;
+    }else{
+      cam.yaw-=dx*0.008;cam.pitch=Math.max(-1.45,Math.min(1.45,cam.pitch+dy*0.008));
+    }
+    drag.x=e.clientX;drag.y=e.clientY;
+    scheduleRender();
+  });
+  canvas.addEventListener("pointerup",e=>{
+    canvas.classList.remove("dragging");
+    if(!moved){ // 单击：探针 + 最近对象点选
+      const r=canvas.getBoundingClientRect();
+      const nx=(e.clientX-r.left)/r.width*2-1;
+      const ny=-((e.clientY-r.top)/r.height*2-1);
+      state.probe=[nx,ny];
+      pickObject(nx,ny);
+    }
+    drag=null;scheduleRender();
+  });
+  canvas.addEventListener("wheel",e=>{
+    e.preventDefault();
+    cam.dist=Math.max(1.1,Math.min(22,cam.dist*(1+e.deltaY*0.001)));
+    scheduleRender();
+  },{passive:false});
+}
+panes.forEach(p=>attachControls(p.canvas));
+
+function pickObject(ndcX,ndcY){
+  const camData=camMatrices();
+  const {hits}=castRay(ndcX,ndcY,camData);
+  if(!hits.length){state.selected=null;return;}
+  // 选最近的透明对象优先；否则取最近命中
+  const h=hits.find(x=>x.transparent)||hits[0];
+  state.selected={meshId:h.mesh.id,face:h.face};
+}
+
+/* ============================================================
+ * 8. 主控
+ * ============================================================ */
+let raf=0;
+function scheduleRender(){
+  if(raf)return;
+  raf=requestAnimationFrame(()=>{raf=0;renderAll();});
+}
+function renderAll(){
+  if(camTween){
+    camTween.t=Math.min(1,camTween.t+0.06);
+    const k=ease(camTween.t),a=camTween.from,b=camTween.to;
+    cam.yaw=a.yaw+(b.yaw-a.yaw)*k;cam.pitch=a.pitch+(b.pitch-a.pitch)*k;
+    cam.dist=a.dist+(b.dist-a.dist)*k;
+    cam.target=a.target.map((v,i)=>v+(b.target[i]-v)*k);
+    if(camTween.t>=1)camTween=null;else scheduleRender();
+  }
+  occluder.center[2]=state.occZ;
+  syncOccluder();
+  const camData=camMatrices();
+  const o0=renderPane(panes[0],camData);
+  const o1=renderPane(panes[1],camData);
+  renderTable(o0,o1);
+  renderPaneOrder(o0,0);renderPaneOrder(o1,1);
+  updateProbe(camData);
+  const eye=camData.eye;
+  const hud=`eye=(${eye[0].toFixed(2)},${eye[1].toFixed(2)},${eye[2].toFixed(2)}) dist=${cam.dist.toFixed(2)}`;
+  $("hud0").textContent=hud;$("hud1").textContent=hud;
+  $("camInfo").innerHTML=`当前镜头位置 <code>(${eye[0].toFixed(2)}, ${eye[1].toFixed(2)}, ${eye[2].toFixed(2)})</code>
+    　yaw ${cam.yaw.toFixed(2)} / pitch ${cam.pitch.toFixed(2)} / dist ${cam.dist.toFixed(2)}<br>
+    两侧画布由同一组相机矩阵渲染，画面差异仅来自透明对象的排序粒度。`;
+}
+function syncOccluder(){
+  // boxMesh 顶点按 corner 顺序生成，平移 z
+  const hz=occluder.half[2];
+  const corners=[[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]];
+  corners.forEach((q,i)=>{
+    occluder.positions[i]=[
+      occluder.center[0]+q[0]*occluder.half[0],
+      occluder.center[1]+q[1]*occluder.half[1],
+      occluder.center[2]+q[2]*hz];
+  });
+  // 重新上传两份 buffer（顶点 + 线框，遮挡块会移动）
+  panes.forEach(pane=>{
+    const gl=pane.gl,gg=occluder.gpu[panes.indexOf(pane)];
+    gl.bindBuffer(gl.ARRAY_BUFFER,gg.vbuf);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(occluder.positions.flat()),gl.DYNAMIC_DRAW);
+    const lines=[];
+    for(const tr of occluder.tris){const v=tr.vi;
+      lines.push(...occluder.positions[v[0]],...occluder.positions[v[1]],
+                 ...occluder.positions[v[1]],...occluder.positions[v[2]],
+                 ...occluder.positions[v[2]],...occluder.positions[v[0]]);}
+    gl.bindBuffer(gl.ARRAY_BUFFER,gg.lbuf);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(lines),gl.DYNAMIC_DRAW);
+    gg.faceLineBufs=null; // 单面高亮缓存失效
+  });
+}
+
+// 控件绑定
+$("alphaPlane").oninput=e=>{state.alphaPlane=+e.target.value;$("alphaPlaneV").textContent=(+e.target.value).toFixed(2);scheduleRender();};
+$("alphaBox").oninput=e=>{state.alphaBox=+e.target.value;$("alphaBoxV").textContent=(+e.target.value).toFixed(2);scheduleRender();};
+$("occZ").oninput=e=>{state.occZ=+e.target.value;$("occZV").textContent=(+e.target.value).toFixed(2);scheduleRender();};
+$("faceMode").onchange=e=>{state.faceMode=e.target.checked;scheduleRender();};
+$("showMark").onchange=e=>{state.showMark=e.target.checked;scheduleRender();};
+$("findDiff").onclick=findMaxDiffPixel;
+$("resetCam").onclick=()=>{cam.yaw=0.62;cam.pitch=0.32;cam.dist=8.6;cam.target=[0,0.1,-0.4];
+  state.probe=null;state.selected=null;scheduleRender();};
+document.querySelectorAll("[data-preset]").forEach(b=>
+  b.onclick=()=>{applyPreset(b.dataset.preset);scheduleRender();});
+
+renderLegend();
+// 默认探针放在交叉薄片中心附近，打开即可看到差异
+state.probe=[-0.18,0.05];
+renderAll();
+</script>
+</body>
+</html>
