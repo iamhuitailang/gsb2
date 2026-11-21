@@ -43,5 +43,6 @@ coverage/
 .vscode/
 *.swp
 
-# 生成的示例素材(可用 npm run generate:samples 恢复)
-public/samples/
+# 生成的示例素材: 本项目的示例图片需要随仓库提供, 故不忽略;
+# 如需重新生成可运行 `npm run generate:samples`。
+# public/samples/

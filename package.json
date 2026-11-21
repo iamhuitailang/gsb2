@@ -1,0 +1,17 @@
+{
+  "name": "verso-diff-workbench",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Verso · 本地图片版本对比工作台",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "dev": "node scripts/serve.mjs",
+    "prestart": "node scripts/ensure-samples.mjs",
+    "generate:samples": "node scripts/generate-samples.mjs",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

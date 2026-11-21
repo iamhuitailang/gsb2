@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verso · 本地图片版本对比工作台</title>
+  <meta name="description" content="完全在本机运行的图片版本对比工作台：叠加、闪烁、并排比较，手动与角点配准，差异图、忽略区、项目保存与报告导出。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%230f1a17'/%3E%3Cpath d='M18 22h28M18 32h18M18 42h28' stroke='%237ee2b0' stroke-width='5' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-shell" id="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" width="22" height="22"><path d="M6 9h20M6 16h13M6 23h20" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/></svg>
+        </span>
+        <div class="brand-copy">
+          <strong>Verso</strong>
+          <span>本地图片版本对比</span>
+        </div>
+      </div>
+
+      <div class="project-chip" id="projectChip">
+        <input id="projectName" class="project-name" aria-label="项目名称" spellcheck="false" autocomplete="off">
+        <span class="project-meta" id="projectMeta">—</span>
+      </div>
+
+      <div class="topbar-actions">
+        <button class="btn ghost" id="btnNewPair" type="button" title="新建一组对比 (N)">
+          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          新建对比
+        </button>
+        <button class="btn ghost" id="btnLoadSamples" type="button" title="载入内置示例">
+          示例
+        </button>
+        <span class="divider" aria-hidden="true"></span>
+        <button class="btn ghost icon" id="btnOpenProject" type="button" title="打开项目文件 (O)" aria-label="打开项目文件">
+          <svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true"><path d="M3 6a1.5 1.5 0 0 1 1.5-1.5h3l1.6 2H15A1.5 1.5 0 0 1 16.5 8v6.5A1.5 1.5 0 0 1 15 16H4.5A1.5 1.5 0 0 1 3 14.5z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="btn ghost icon" id="btnSaveProject" type="button" title="保存项目到本机 (⌘S)" aria-label="保存项目">
+          <svg viewBox="0 0 20 20" width="17" height="17" aria-hidden="true"><path d="M4 3.5h9L16.5 7v9.5h-13z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/><path d="M7 3.5h6V7H7zM6.5 16.5v-4h7v4" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="btn primary" id="btnExport" type="button" title="导出差异图与报告">
+          <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M10 3v9m0 0 3.5-3.5M10 12 6.5 8.5M4 15.5h12" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+          导出
+        </button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="rail" id="rail">
+        <div class="rail-head">
+          <span class="eyebrow">对比组</span>
+          <span class="rail-count" id="pairCount">0</span>
+        </div>
+        <div class="pair-list" id="pairList" role="listbox" aria-label="对比组列表"></div>
+        <button class="rail-add" id="railAddPair" type="button">
+          <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          添加一对图片
+        </button>
+        <div class="rail-foot">
+          <div class="rail-stat"><span>项目</span><b id="statPairs">—</b></div>
+          <div class="rail-stat"><span>变化区域</span><b id="statRegions">—</b></div>
+          <div class="rail-stat"><span>累计差异</span><b id="statArea">—</b></div>
+          <button class="btn subtle full" id="btnSaveProjectSide" type="button">保存项目</button>
+          <p class="rail-hint">所有图片与计算都留在本机浏览器内。</p>
+        </div>
+      </aside>
+
+      <section class="stage" id="stage">
+        <div class="stage-toolbar">
+          <div class="seg" id="modeSwitch" role="tablist" aria-label="比较方式">
+            <button class="seg-btn is-active" data-mode="overlay" role="tab" aria-selected="true" type="button">叠加</button>
+            <button class="seg-btn" data-mode="blink" role="tab" aria-selected="false" type="button">闪烁</button>
+            <button class="seg-btn" data-mode="side" role="tab" aria-selected="false" type="button">并排</button>
+            <button class="seg-btn" data-mode="diff" role="tab" aria-selected="false" type="button">差异</button>
+          </div>
+
+          <div class="toolbar-tools" id="overlayTools">
+            <label class="slider-field" title="上方图层不透明度">
+              <span>不透明度</span>
+              <input type="range" id="opacityRange" min="0" max="100" value="55" aria-label="叠加不透明度">
+              <output id="opacityOut">55%</output>
+            </label>
+            <button class="btn ghost sm" id="btnBlinkOnce" type="button">闪一下</button>
+          </div>
+
+          <div class="toolbar-tools hidden" id="blinkTools">
+            <label class="slider-field" title="闪烁间隔">
+              <span>间隔</span>
+              <input type="range" id="blinkRange" min="120" max="1600" step="20" value="520" aria-label="闪烁间隔">
+              <output id="blinkOut">520 ms</output>
+            </label>
+            <button class="btn ghost sm" id="btnBlinkToggle" type="button">暂停</button>
+          </div>
+
+          <div class="toolbar-tools hidden" id="diffTools">
+            <label class="slider-field wide" title="敏感度越高，越小的颜色差就会被标记">
+              <span>敏感度</span>
+              <input type="range" id="sensitivityRange" min="0" max="100" value="55" aria-label="差异敏感度">
+              <output id="sensitivityOut">55</output>
+            </label>
+            <label class="check-field" title="把仅一侧有内容的位置计为差异">
+              <input type="checkbox" id="uncoveredToggle">
+              <span>含新增/移除</span>
+            </label>
+          </div>
+
+          <div class="stage-spacer"></div>
+
+          <div class="zoom-group">
+            <button class="icon-btn" id="btnZoomOut" type="button" title="缩小 (-)" aria-label="缩小">−</button>
+            <button class="zoom-value" id="btnZoomFit" type="button" title="适应窗口 (0)"><span id="zoomLabel">100%</span></button>
+            <button class="icon-btn" id="btnZoomIn" type="button" title="放大 (+)" aria-label="放大">+</button>
+            <button class="icon-btn" id="btnZoomReset" type="button" title="重置视图 (R)" aria-label="重置视图">
+              <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><path d="M4 10a6 6 0 1 0 2-4.5M4 3.5V7h3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+
+          <div class="seg mini" id="alignModeSwitch" aria-label="画布交互模式">
+            <button class="seg-btn is-active" data-tool="hand" type="button" title="拖动平移视图 (V)">浏览</button>
+            <button class="seg-btn" data-tool="align" type="button" title="拖动以平移 B 图，按住 Alt 拖动旋转；请在叠加或差异模式使用 (H)">对齐 B</button>
+            <button class="seg-btn" data-tool="corner" type="button" title="先点 A 图的角点，再点 B 图的同一角点 (C)">角点</button>
+            <button class="seg-btn" data-tool="ignore" type="button" title="涂抹忽略区域 (I)">忽略</button>
+          </div>
+        </div>
+
+        <div class="stage-body" id="stageBody">
+          <div class="empty-state" id="emptyStage">
+            <div class="empty-art" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </div>
+            <h2>从一组图片开始</h2>
+            <p>拖入两张不同版本的图片，或载入内置示例。比较、配准、差异与忽略都只在本机内存中完成。</p>
+            <div class="empty-actions">
+              <button class="btn primary" id="btnEmptyNewPair" type="button">新建对比</button>
+              <button class="btn ghost" id="btnEmptySamples" type="button">载入示例</button>
+            </div>
+            <p class="empty-hint">也可以直接把图片拖到这里</p>
+          </div>
+
+          <div class="viewport" id="viewport" hidden>
+            <canvas id="viewCanvas" class="view-canvas" aria-label="图片对比画布"></canvas>
+            <div class="corner-banner" id="cornerBanner" hidden>
+              <span id="cornerBannerText">请在 A 图上点击角点</span>
+              <button class="btn ghost sm" id="btnCornerUndo" type="button">重选</button>
+              <button class="btn ghost sm" id="btnCornerCancel" type="button">退出</button>
+            </div>
+          </div>
+          <div class="drop-hint" id="dropHint" hidden>松开以添加图片</div>
+        </div>
+
+        <footer class="stage-status">
+          <div class="status-left" id="statusLeft">就绪</div>
+          <div class="status-right">
+            <span id="cursorInfo">—</span>
+            <span class="dot" aria-hidden="true"></span>
+            <span id="alignInfo">对齐 1.000× · 0.00° · (0, 0)</span>
+          </div>
+        </footer>
+      </section>
+
+      <aside class="inspector" id="inspector">
+        <nav class="tabs" id="inspectorTabs" role="tablist" aria-label="检查面板">
+          <button class="tab-btn is-active" data-tab="align" role="tab" aria-selected="true" type="button">对齐</button>
+          <button class="tab-btn" data-tab="diff" role="tab" aria-selected="false" type="button">差异</button>
+          <button class="tab-btn" data-tab="notes" role="tab" aria-selected="false" type="button">备注</button>
+          <button class="tab-btn" data-tab="project" role="tab" aria-selected="false" type="button">项目</button>
+        </nav>
+
+        <div class="inspector-body" id="inspectorBody">
+          <section class="tab-panel" data-panel="align">
+            <div class="panel-head">
+              <h3>配准</h3>
+              <span class="badge" id="alignMethodBadge">初始居中对齐</span>
+            </div>
+
+            <div class="field-grid">
+              <label class="field">
+                <span>平移 X</span>
+                <input type="number" id="alignTx" step="0.5" inputmode="decimal">
+              </label>
+              <label class="field">
+                <span>平移 Y</span>
+                <input type="number" id="alignTy" step="0.5" inputmode="decimal">
+              </label>
+              <label class="field">
+                <span>缩放</span>
+                <input type="number" id="alignScale" step="0.001" min="0.02" max="40" inputmode="decimal">
+              </label>
+              <label class="field">
+                <span>旋转 (°)</span>
+                <input type="number" id="alignRotation" step="0.1" inputmode="decimal">
+              </label>
+            </div>
+
+            <div class="nudge-grid" aria-label="微调平移">
+              <button class="nudge" data-nudge="up" type="button" title="上移 1px">↑</button>
+              <button class="nudge" data-nudge="left" type="button" title="左移 1px">←</button>
+              <button class="nudge" data-nudge="right" type="button" title="右移 1px">→</button>
+              <button class="nudge" data-nudge="down" type="button" title="下移 1px">↓</button>
+              <span class="nudge-hint">按住 Shift = 10 px</span>
+            </div>
+
+            <div class="slider-row">
+              <label class="slider-field">
+                <span>缩放步进</span>
+                <input type="range" id="scaleSlider" min="-200" max="200" step="1" value="0" aria-label="缩放微调">
+              </label>
+            </div>
+            <div class="slider-row">
+              <label class="slider-field">
+                <span>旋转步进</span>
+                <input type="range" id="rotationSlider" min="-450" max="450" step="1" value="0" aria-label="旋转微调">
+              </label>
+            </div>
+
+            <div class="btn-row">
+              <button class="btn subtle sm" id="btnCenterAlign" type="button">居中重置</button>
+              <button class="btn subtle sm" id="btnFitScale" type="button">按画布缩放</button>
+              <button class="btn subtle sm" id="btnCopyAlign" type="button">复制参数</button>
+            </div>
+
+            <div class="divider-line"></div>
+
+            <div class="panel-head">
+              <h3>角点辅助对齐</h3>
+              <span class="badge subtle" id="cornerCount">0 对</span>
+            </div>
+            <p class="panel-note">在画布上用「角点」工具，先点 A 图角点，再点 B 图同一角点。至少 2 对后可拟合缩放、旋转与平移。</p>
+            <div class="corner-list" id="cornerList"></div>
+            <div class="btn-row">
+              <button class="btn subtle sm" id="btnCornerTool" type="button">开始标角点</button>
+              <button class="btn ghost sm" id="btnCornerClear" type="button">清空</button>
+              <button class="btn primary sm" id="btnCornerFit" type="button" disabled>拟合对齐</button>
+            </div>
+            <p class="fit-result" id="fitResult"></p>
+          </section>
+
+          <section class="tab-panel" data-panel="diff" hidden>
+            <div class="panel-head">
+              <h3>差异</h3>
+              <span class="badge" id="diffBadge">待生成</span>
+            </div>
+
+            <label class="field block">
+              <span>敏感度 <em id="sensValue">55</em></span>
+              <input type="range" id="sensRange2" min="0" max="100" value="55" aria-label="敏感度">
+              <small>偏低 → 只显示明显改动；偏高 → 连抗锯齿与压缩噪点也会显示。</small>
+            </label>
+
+            <label class="field block">
+              <span>最小区域 <em id="minAreaValue">24</em> px²</span>
+              <input type="range" id="minAreaRange" min="0" max="400" step="2" value="24" aria-label="最小区域面积">
+              <small>过滤掉小于该面积的零星噪点。</small>
+            </label>
+
+            <label class="check-field block">
+              <input type="checkbox" id="includeUncovered2">
+              <span>把仅一侧存在内容的区域计为差异（新增 / 移除）</span>
+            </label>
+
+            <div class="stat-grid" id="diffStats">
+              <div class="stat"><span>差异面积</span><b id="diffChangedArea">—</b></div>
+              <div class="stat"><span>颜色差异占比</span><b id="diffChangedPct">—</b></div>
+              <div class="stat"><span>变化区域</span><b id="diffRegionCount">—</b></div>
+              <div class="stat"><span>忽略面积</span><b id="diffIgnoredArea">—</b></div>
+            </div>
+
+            <div class="toggle-row">
+              <span>差异图层</span>
+              <label class="switch">
+                <input type="checkbox" id="diffLayerToggle" checked>
+                <span class="track"><span class="knob"></span></span>
+              </label>
+            </div>
+
+            <div class="divider-line"></div>
+
+            <div class="panel-head">
+              <h3>忽略区域</h3>
+              <span class="badge subtle" id="ignoreCount">0 笔</span>
+            </div>
+            <p class="panel-note">用「忽略」工具在画布上涂抹。忽略只是分析蒙版，原图字节不会被改写。</p>
+            <div class="tool-row">
+              <div class="seg mini" id="brushModeSwitch">
+                <button class="seg-btn is-active" data-brush="paint" type="button">涂抹</button>
+                <button class="seg-btn" data-brush="erase" type="button">擦除</button>
+              </div>
+              <label class="field inline">
+                <span>笔刷</span>
+                <input type="range" id="brushSize" min="4" max="160" value="32" aria-label="笔刷尺寸">
+                <em id="brushSizeOut">32 px</em>
+              </label>
+            </div>
+            <div class="btn-row">
+              <button class="btn subtle sm" id="btnUndoStroke" type="button">撤销最后一笔</button>
+              <button class="btn ghost sm" id="btnClearStrokes" type="button">清空忽略区</button>
+            </div>
+
+            <div class="divider-line"></div>
+            <div class="panel-head">
+              <h3>变化区域</h3>
+              <span class="badge subtle" id="regionListCount">0</span>
+            </div>
+            <div class="region-list" id="regionList"></div>
+          </section>
+
+          <section class="tab-panel" data-panel="notes" hidden>
+            <div class="panel-head">
+              <h3>版本与备注</h3>
+              <span class="badge subtle" id="pairStatusBadge">待检查</span>
+            </div>
+
+            <label class="field block">
+              <span>对比组名称</span>
+              <input type="text" id="pairName" autocomplete="off" spellcheck="false">
+            </label>
+
+            <div class="image-fields" id="imageFields"></div>
+
+            <div class="field block">
+              <span>检查状态</span>
+              <div class="seg status-seg" id="statusSwitch" aria-label="检查状态">
+                <button class="seg-btn" data-status="unreviewed" type="button">待检查</button>
+                <button class="seg-btn" data-status="confirmed" type="button">已确认</button>
+                <button class="seg-btn" data-status="attention" type="button">需修改</button>
+              </div>
+            </div>
+
+            <label class="field block">
+              <span>标注备注</span>
+              <textarea id="pairNotes" rows="7" placeholder="记录改动点、审核结论或需要回退的地方…"></textarea>
+            </label>
+
+            <div class="summary-box" id="pairSummary"></div>
+
+            <div class="btn-row">
+              <button class="btn ghost sm" id="btnDeletePair" type="button">删除本组对比</button>
+              <button class="btn subtle sm" id="btnDuplicatePair" type="button">复制本组</button>
+            </div>
+          </section>
+
+          <section class="tab-panel" data-panel="project" hidden>
+            <div class="panel-head">
+              <h3>项目</h3>
+              <span class="badge subtle" id="saveBadge">本机自动保存</span>
+            </div>
+            <p class="panel-note">项目包含所有对比组、对齐参数、忽略笔画与备注。图片本身随项目一起存进浏览器本地库；导出项目文件可迁移到其他设备。</p>
+
+            <dl class="meta-list">
+              <div><dt>项目 ID</dt><dd id="projId">—</dd></div>
+              <div><dt>创建</dt><dd id="projCreated">—</dd></div>
+              <div><dt>更新</dt><dd id="projUpdated">—</dd></div>
+              <div><dt>图片</dt><dd id="projImages">—</dd></div>
+            </dl>
+
+            <div class="btn-row column">
+              <button class="btn primary sm" id="btnExportBundle" type="button">导出差异图与报告 (.zip)</button>
+              <button class="btn subtle sm" id="btnExportProject" type="button">导出项目文件 (.verso.json)</button>
+              <button class="btn subtle sm" id="btnExportReport" type="button">仅导出 HTML 报告</button>
+              <button class="btn subtle sm" id="btnImportSamples" type="button">载入示例项目</button>
+            </div>
+
+            <div class="divider-line"></div>
+            <div class="panel-head"><h3>键盘快捷键</h3></div>
+            <dl class="shortcuts">
+              <div><kbd>V</kbd><span>浏览</span></div>
+              <div><kbd>H</kbd><span>拖拽对齐 B</span></div>
+              <div><kbd>C</kbd><span>标角点</span></div>
+              <div><kbd>I</kbd><span>涂抹忽略</span></div>
+              <div><kbd>1</kbd>–<kbd>4</kbd><span>叠加 / 闪烁 / 并排 / 差异</span></div>
+              <div><kbd>空格</kbd><span>临时切换 A/B</span></div>
+              <div><kbd>⌘S</kbd><span>保存项目</span></div>
+              <div><kbd>N</kbd><span>新建对比</span></div>
+            </dl>
+            <div class="divider-line"></div>
+            <button class="btn ghost sm" id="btnResetWorkspace" type="button">清空本地工作区</button>
+          </section>
+        </div>
+      </aside>
+    </main>
+
+    <div class="toast-stack" id="toastStack" role="status" aria-live="polite"></div>
+    <div class="busy" id="busy" hidden>
+      <div class="busy-card"><span class="spinner" aria-hidden="true"></span><span id="busyText">正在计算差异…</span></div>
+    </div>
+
+    <dialog class="dialog" id="newPairDialog">
+      <form method="dialog" class="dialog-inner" id="newPairForm">
+        <header class="dialog-head">
+          <h2>新建一组对比</h2>
+          <button class="icon-btn" value="cancel" type="submit" aria-label="关闭" formnovalidate>
+            <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M5 5l10 10M15 5 5 15" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </button>
+        </header>
+        <div class="dialog-body">
+          <label class="field block">
+            <span>对比组名称</span>
+            <input type="text" id="newPairName" placeholder="例如：首页 Banner v3 → v4">
+          </label>
+
+          <div class="drop-grid">
+            <div class="drop-card" id="dropA" tabindex="0">
+              <input type="file" id="fileA" accept="image/*" hidden>
+              <div class="drop-preview" id="previewA"><span>A · 基准版本</span></div>
+              <div class="drop-meta" id="metaA">点击或拖入图片</div>
+              <label class="field tiny">
+                <span>版本名称</span>
+                <input type="text" id="versionA" placeholder="如 v3.2 · 03-18" autocomplete="off">
+              </label>
+            </div>
+            <div class="drop-card" id="dropB" tabindex="0">
+              <input type="file" id="fileB" accept="image/*" hidden>
+              <div class="drop-preview" id="previewB"><span>B · 对比版本</span></div>
+              <div class="drop-meta" id="metaB">点击或拖入图片</div>
+              <label class="field tiny">
+                <span>版本名称</span>
+                <input type="text" id="versionB" placeholder="如 v4.0 · 03-21" autocomplete="off">
+              </label>
+            </div>
+          </div>
+
+          <div class="dialog-hint" id="dialogHint">两张图片可以尺寸不同，创建后再配准对齐。</div>
+        </div>
+        <footer class="dialog-foot">
+          <button class="btn ghost" value="cancel" type="submit" formnovalidate>取消</button>
+          <button class="btn primary" id="btnCreatePair" value="create" type="submit">创建并开始比较</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <dialog class="dialog" id="exportDialog">
+      <form method="dialog" class="dialog-inner">
+        <header class="dialog-head">
+          <h2>导出检查结果</h2>
+          <button class="icon-btn" value="cancel" type="submit" aria-label="关闭" formnovalidate>
+            <svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M5 5l10 10M15 5 5 15" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </button>
+        </header>
+        <div class="dialog-body">
+          <p class="dialog-lead">导出内容全部在浏览器本地生成，不会上传任何图片。</p>
+          <div class="export-list">
+            <label class="check-field block">
+              <input type="checkbox" id="exportDiffImages" checked>
+              <span>每组导出差异图 PNG（差异高亮 + 忽略区）</span>
+            </label>
+            <label class="check-field block">
+              <input type="checkbox" id="exportOverlays" checked>
+              <span>每组导出对齐后的叠加预览 PNG</span>
+            </label>
+            <label class="check-field block">
+              <input type="checkbox" id="exportReportHtml" checked>
+              <span>导出 HTML 报告（可直接打印为 PDF，含内嵌缩略图）</span>
+            </label>
+            <label class="check-field block">
+              <input type="checkbox" id="exportReportMarkdown" checked>
+              <span>导出 Markdown 报告</span>
+            </label>
+            <label class="check-field block">
+              <input type="checkbox" id="exportReportJson">
+              <span>导出 JSON 数据（便于二次处理）</span>
+            </label>
+            <label class="check-field block">
+              <input type="checkbox" id="exportProjectFile">
+              <span>附带项目文件 (.verso.json)</span>
+            </label>
+          </div>
+          <label class="field block">
+            <span>导出文件名</span>
+            <input type="text" id="exportName" autocomplete="off">
+          </label>
+        </div>
+        <footer class="dialog-foot">
+          <button class="btn ghost" value="cancel" type="submit" formnovalidate>取消</button>
+          <button class="btn primary" id="btnDoExport" value="export" type="submit">开始导出</button>
+        </footer>
+      </form>
+    </dialog>
+
+    <input type="file" id="projectFileInput" accept=".json,.verso.json,application/json" hidden>
+    <input type="file" id="quickImageInput" accept="image/*" multiple hidden>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
