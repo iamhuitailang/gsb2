@@ -1,0 +1,13 @@
+{
+  "name": "patrol-timing-preview",
+  "version": "1.0.0",
+  "private": true,
+  "description": "游戏关卡巡回物体时序预演页：周期平台 / 定时门 / 等待点 + 路线批量试跑",
+  "type": "module",
+  "scripts": {
+    "test": "node tests/run-tests.js",
+    "test:browser": "node tests/run-browser.js",
+    "tune": "node tools/tune-demo.js",
+    "serve": "node -e \"import('node:http').then(async ({createServer})=>{const {join,extname}=await import('node:path');const {readFile}=await import('node:fs');const root=process.cwd();const mime={'.html':'text/html;charset=utf-8','.js':'text/javascript;charset=utf-8','.css':'text/css;charset=utf-8'};createServer((q,r)=>{let p=q.url.split('?')[0];if(p==='/')p='/index.html';readFile(join(root,p),(e,d)=>{if(e){r.statusCode=404;r.end('not found');return}r.setHeader('content-type',mime[extname(p)]||'application/octet-stream');r.end(d)})}).listen(5175,()=>console.log('http://localhost:5175'))})\""
+  }
+}

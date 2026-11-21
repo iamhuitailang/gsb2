@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>巡回物体时序预演台</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <strong>巡回物体时序预演台</strong>
+      <span class="sub">周期平台 · 定时门 · 等待点 ｜ 路线出发时点批量试跑</span>
+    </div>
+    <div class="top-actions">
+      <button id="btn-reset" class="btn">重置场景</button>
+      <button id="btn-rescue" class="btn primary">一键应用救回相位</button>
+      <button id="btn-consistency" class="btn">确定性自检</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- 左：场景与路线编辑 -->
+    <aside class="panel left">
+      <section class="block">
+        <h2>场景实体</h2>
+        <div class="entity-list" id="entity-list"></div>
+      </section>
+
+      <section class="block" id="editor-block">
+        <h2>参数编辑</h2>
+        <div class="editor" id="editor">
+          <p class="hint">点选左侧实体后在此调时长、起始相位与停靠时间。</p>
+        </div>
+      </section>
+
+      <section class="block" id="route-block">
+        <h2>路线动作 <span class="lock-state" id="lock-state"></span></h2>
+        <ol class="route-list" id="route-list"></ol>
+        <div class="route-actions">
+          <button id="btn-add-walk" class="btn small">+ 走到</button>
+          <button id="btn-add-wait" class="btn small">+ 等待</button>
+          <button id="btn-add-ride" class="btn small">+ 搭乘</button>
+        </div>
+      </section>
+
+      <section class="block lock-block">
+        <h2>锁路线对比</h2>
+        <p class="hint">锁住后路线不可改，只调平台/门参数；保留上次试跑结果做差异对比。</p>
+        <button id="btn-lock" class="btn warn">锁住路线（记录基线）</button>
+      </section>
+    </aside>
+
+    <!-- 中：画布 + 时间轴 -->
+    <section class="panel center">
+      <div class="canvas-wrap">
+        <canvas id="stage" width="960" height="480"></canvas>
+        <div class="overlay-badges" id="badges"></div>
+      </div>
+
+      <div class="timeline">
+        <div class="timeline-head">
+          <div class="transport">
+            <button id="btn-play" class="btn">▶ 播放</button>
+            <button id="btn-step-prev" class="btn">‹ 上一步</button>
+            <button id="btn-step-next" class="btn">下一步 ›</button>
+            <button id="btn-jump-t0" class="btn">回到出发时点</button>
+          </div>
+          <div class="clock">
+            <span>画面时间 <b id="clock-t">0.0s</b></span>
+            <span>出发时点 t0 <b id="clock-t0">0.0s</b></span>
+          </div>
+        </div>
+        <input type="range" id="time-scrub" min="0" max="120" step="0.05" value="0" />
+        <div class="sweep-strip" id="sweep-strip" title="点击色块可把出发时点定位到该样本">
+          <div class="t0-marker" id="t0-marker">▲</div>
+        </div>
+        <div class="sweep-legend">
+          <span><i class="sw ok"></i>可出发</span>
+          <span><i class="sw bad"></i>失败</span>
+          <span><i class="sw gain"></i>救回</span>
+          <span><i class="sw lost"></i>丢失</span>
+          <span class="scrub-mark">▲ 当前 t0</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 右：逐步播放与试跑结果 -->
+    <aside class="panel right">
+      <section class="block">
+        <h2>逐步播放</h2>
+        <div id="step-detail" class="step-detail">
+          <p class="hint">选择出发时点后点「下一步」逐动作查看。</p>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2>当前出发时点</h2>
+        <div class="verdict" id="verdict"></div>
+      </section>
+
+      <section class="block">
+        <h2>批量试跑结果</h2>
+        <div id="sweep-summary" class="sweep-summary"></div>
+        <div class="windows" id="windows"></div>
+        <div class="failures" id="failures"></div>
+      </section>
+
+      <section class="block" id="diff-block" hidden>
+        <h2>基线对比（锁路线）</h2>
+        <div id="diff-summary" class="diff-summary"></div>
+        <div id="diff-segments" class="diff-segments"></div>
+      </section>
+    </aside>
+  </main>
+
+  <div id="toast" class="toast" hidden></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
