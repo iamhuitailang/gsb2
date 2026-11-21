@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>动作状态机本地调试页</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header>
+  <h1>🎮 动作状态机调试</h1>
+  <div class="row" style="margin:0">
+    <button id="btnSave">💾 存档</button>
+    <button id="btnLoad">📂 读档</button>
+    <input type="file" id="fileLoad" accept=".json" hidden>
+    <button id="btnExportCfg">导出配置 JSON</button>
+    <button id="btnExportLog">导出状态/事件日志</button>
+    <button id="btnExportCsv">导出帧 CSV</button>
+  </div>
+  <select id="selPreset" title="载入预置配置到当前槽位">
+    <option value="">载入预置配置…</option>
+    <option value="A">A · 基线（不可打断）</option>
+    <option value="B">B · 快响应（可打断+排队）</option>
+    <option value="C">C · 问题配置（条件遮蔽示例）</option>
+  </select>
+  <select id="selTimeline" title="载入示例输入时间线">
+    <option value="">示例输入…</option>
+    <option value="movingJump">移动中起跳</option>
+    <option value="earlyRelease">过早松键</option>
+    <option value="brakeQueue">刹停混合期再按移动（打断）</option>
+    <option value="walkQueue">落地混合期按移动（排队）</option>
+    <option value="custom">（清空后自定义）</option>
+  </select>
+  <button id="btnClearTimeline">清空时间线</button>
+  <button id="btnSelfTest" title="确定性/静态分析自检">✔ 自检</button>
+  <div class="row" style="margin:0">
+    <button class="cfgswitch" data-cfg="A">编辑配置 A</button>
+    <button class="cfgswitch" data-cfg="B">编辑配置 B</button>
+  </div>
+  <span id="cfgBadge"></span>
+</header>
+
+<main>
+  <div class="row">
+    <button class="tabbtn" data-tab="play">▶ 回放调试</button>
+    <button class="tabbtn" data-tab="config">⚙ 状态/切换配置</button>
+    <button class="tabbtn" data-tab="compare">⇄ A/B 对比</button>
+  </div>
+
+  <div id="lintBar" style="margin-top:8px"></div>
+
+  <!-- ========== 回放页 ========== -->
+  <section class="tabpane" data-tab="play">
+    <div class="grid">
+      <div>
+        <div class="panel">
+          <div id="stageWrap"></div>
+        </div>
+        <div class="panel">
+          <h4>状态一览</h4>
+          <div id="stateTable"></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel">
+          <h4>输入时间线（拖拽编辑：空白拖出区间，拖两端改时长，Shift+点击删除）</h4>
+          <canvas id="timelineCv" height="110"></canvas>
+          <div class="tl-hint">吸附到 1/60s 刻度；点击刻度区定位播放头。循环边界处的松开自动回绕到第 0 帧。</div>
+          <div class="row" style="margin-top:8px">
+            <label style="margin:0">循环长度(秒) <input type="number" id="loopSecVal" step="0.1" min="0.2" style="width:80px"></label>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="transport">
+            <button id="btnPlay">▶ 播放</button>
+            <button id="btnPause">⏸ 暂停</button>
+            <button id="btnStepBack">◀ 单步</button>
+            <button id="btnStep">单步 ▶</button>
+            <button id="btnToStart">⏮ 起点</button>
+            <button id="btnToEnd">终点 ⏭</button>
+            <label class="chk"><input type="checkbox" id="chkLoop" checked> 循环</label>
+            <select id="selSpeed">
+              <option value="0.25">0.25×</option>
+              <option value="0.5">0.5×</option>
+              <option value="1" selected>1×</option>
+              <option value="2">2×</option>
+            </select>
+            <span id="playPos"></span>
+            <span class="dim">（空格播放/暂停，方向键单步）</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="panel">
+          <h4>事件与命中明细</h4>
+          <select id="selEventFilter" style="width:100%; margin-bottom:6px">
+            <option value="">全部事件</option>
+            <option value="condition-eval">条件命中（实际命中的条件/优先级）</option>
+            <option value="no-match">未命中（停在原动作的原因）</option>
+            <option value="transition">状态切换</option>
+            <option value="request-discarded">请求丢弃</option>
+            <option value="queued">请求排队</option>
+            <option value="queue-timeout">排队超时</option>
+            <option value="blend-interrupted">过渡被打断</option>
+            <option value="blend-end">过渡结束</option>
+          </select>
+          <div id="eventLog"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 配置页 ========== -->
+  <section class="tabpane" data-tab="config">
+    <div class="grid-cfg">
+      <div class="panel">
+        <h4>状态（动作时长 / 循环 / 几何关键帧）</h4>
+        <div id="stateList"></div>
+      </div>
+      <div class="panel">
+        <div id="stateEditor"></div>
+        <hr style="border-color:var(--border)">
+        <h4>切换列表（按优先级排序）</h4>
+        <div id="transitionList"></div>
+        <div id="transitionEditor" class="panel" style="background:var(--panel2)"></div>
+      </div>
+      <div class="panel">
+        <h4>条件修改影响分析</h4>
+        <div id="impactBox"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== 对比页 ========== -->
+  <section class="tabpane" data-tab="compare">
+    <div class="panel" id="compareView"></div>
+  </section>
+</main>
+
+<script src="js/engine.js"></script>
+<script src="js/presets.js"></script>
+<script src="js/renderer.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
