@@ -1,0 +1,75 @@
+:root {
+  --bg: #14181f;
+  --panel: #1d232d;
+  --panel2: #252d3a;
+  --line: #343e4d;
+  --text: #dfe5ee;
+  --dim: #8b96a5;
+  --accent: #4ea1ff;
+  --warn: #ff6b6b;
+  --ok: #46d18c;
+  --amber: #f5b945;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg); color: var(--text);
+  font: 13px/1.5 -apple-system, "PingFang SC", "Microsoft YaHei", Segoe UI, sans-serif;
+}
+#app { display: grid; grid-template-rows: auto 1fr; grid-template-columns: 1fr 320px;
+  grid-template-areas: "head head" "main side"; height: 100vh; gap: 10px; padding: 10px; }
+
+header { grid-area: head; display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 14px; }
+header h1 { font-size: 16px; margin: 0; font-weight: 600; letter-spacing: .5px; }
+.toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sep { width: 1px; height: 22px; background: var(--line); }
+
+button { background: var(--panel2); color: var(--text); border: 1px solid var(--line);
+  border-radius: 7px; padding: 6px 11px; cursor: pointer; font-size: 12.5px; }
+button:hover { border-color: var(--accent); color: #fff; }
+button.warn { border-color: #7a3a3a; color: #ffb3b3; }
+button.warn:hover { background: #3a2323; }
+.chk { display: inline-flex; align-items: center; gap: 5px; color: var(--dim); white-space: nowrap; }
+.chk input { accent-color: var(--accent); }
+
+main { grid-area: main; display: grid; grid-template-rows: minmax(0, 42%) minmax(0, 58%); gap: 10px; min-height: 0; }
+#topPane, #view3dPane { background: var(--panel); border: 1px solid var(--line);
+  border-radius: 10px; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.pane-head { display: flex; justify-content: space-between; align-items: baseline;
+  padding: 7px 12px; border-bottom: 1px solid var(--line); }
+.pane-head h2 { font-size: 13px; margin: 0; font-weight: 600; }
+.hint { color: var(--dim); font-size: 11.5px; }
+#topCanvas { flex: 1; width: 100%; display: block; cursor: crosshair; }
+#view3d { flex: 1; position: relative; min-height: 0; }
+#view3d canvas { display: block; }
+
+#side { grid-area: side; display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px; }
+.card.grow { flex: 1; min-height: 180px; display: flex; flex-direction: column; }
+.card h3 { margin: 0 0 9px; font-size: 13px; font-weight: 600; }
+.tag { color: var(--accent); font-weight: 400; font-size: 12px; }
+.small { font-size: 11.5px; } .dim { color: var(--dim); } .mono { font-family: ui-monospace, Menlo, monospace; }
+.fine-row { display: flex; gap: 16px; margin-bottom: 8px; }
+.fine-row label { display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
+.fine-row input { accent-color: var(--accent); }
+#fineStats { color: var(--dim); line-height: 1.7; }
+
+label { display: block; margin: 9px 0; color: var(--dim); }
+input[type=range] { width: calc(100% - 52px); vertical-align: middle; accent-color: var(--accent); }
+input[type=range] + .mono { display: inline-block; width: 48px; text-align: right; color: var(--text); }
+
+.btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.btn-grid button { width: 100%; }
+
+.seam { font-size: 12px; padding: 7px 9px; border-radius: 7px; margin-bottom: 9px; background: var(--panel2); }
+.seam.ok { color: var(--ok); border: 1px solid #2c5b43; }
+.seam.bad { color: var(--warn); border: 1px solid #6b3434; }
+.seam.none { color: var(--dim); }
+.issues { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; }
+.issues li { padding: 7px 9px; border-radius: 7px; margin-bottom: 6px; font-size: 12px; line-height: 1.45; }
+.issues li.error { background: #3a2323; border: 1px solid #6b3434; color: #ffc4c4; }
+.issues li.warning { background: #3a3322; border: 1px solid #6b5c34; color: #f5d9a0; }
+.issues li.info { background: #22303a; border: 1px solid #34506b; color: #b9d6ee; }
+.issues .meta { display: block; color: var(--dim); font-size: 11px; margin-top: 2px; }
+.issues .empty { color: var(--ok); background: var(--panel2); border: 1px solid #2c5b43; }

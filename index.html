@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>赛车导引道路工具 · 路线 → 路面网格</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>赛车导引道路工具</h1>
+    <div class="toolbar">
+      <label class="chk"><input type="checkbox" id="closed" checked> 闭合路线</label>
+      <button id="addPoint" type="button">＋ 控制点</button>
+      <button id="delPoint" type="button" title="删除当前选中点">－ 删除点</button>
+      <span class="sep"></span>
+      <label class="chk"><input type="checkbox" id="showGrid" checked> 网格线</label>
+      <label class="chk"><input type="checkbox" id="showCenter" checked> 道路线</label>
+      <label class="chk"><input type="checkbox" id="showShL" checked> 左路肩</label>
+      <label class="chk"><input type="checkbox" id="showShR" checked> 右路肩</label>
+      <span class="sep"></span>
+      <button id="foldBtn" type="button" class="warn">应用折叠参数</button>
+      <button id="resetBtn" type="button">恢复正常</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="topPane">
+      <div class="pane-head">
+        <h2>顶视图（拖动控制点，滚轮缩放）</h2>
+        <span id="topHint" class="hint"></span>
+      </div>
+      <canvas id="topCanvas"></canvas>
+    </section>
+
+    <section id="view3dPane">
+      <div class="pane-head">
+        <h2>立体路面</h2>
+        <span id="stats3d" class="hint"></span>
+      </div>
+      <div id="view3d"></div>
+    </section>
+  </main>
+
+  <aside id="side">
+    <div class="card">
+      <h3>网格细度对比</h3>
+      <div class="fine-row">
+        <label><input type="radio" name="fineness" value="coarse"> 粗</label>
+        <label><input type="radio" name="fineness" value="fine" checked> 细</label>
+      </div>
+      <div id="fineStats" class="mono small"></div>
+    </div>
+
+    <div class="card">
+      <h3>选中段参数 <span id="selLabel" class="tag"></span></h3>
+      <p class="small dim">段值独立存储；只改当前段，其余段保持原值。相邻段在中点间线性过渡。</p>
+      <label>宽度 width (m)
+        <input type="range" id="pWidth" min="3" max="32" step="0.5"><span id="pWidthV" class="mono"></span>
+      </label>
+      <label>抬高 height (m)
+        <input type="range" id="pHeight" min="-8" max="12" step="0.5"><span id="pHeightV" class="mono"></span>
+      </label>
+      <label>横坡 crossfall (°)
+        <input type="range" id="pCross" min="-12" max="12" step="0.5"><span id="pCrossV" class="mono"></span>
+      </label>
+    </div>
+
+    <div class="card">
+      <h3>工程与导出</h3>
+      <div class="btn-grid">
+        <button id="saveBtn" type="button">保存工程 (.json)</button>
+        <button id="loadBtn" type="button">载入工程</button>
+        <input type="file" id="loadFile" accept=".json,application/json" hidden>
+        <button id="exportObj" type="button">导出网格 (.obj)</button>
+        <button id="exportMeta" type="button">导出里程表 (.json)</button>
+      </div>
+    </div>
+
+    <div class="card grow">
+      <h3>诊断</h3>
+      <div id="seamBox" class="seam"></div>
+      <ul id="issueList" class="issues"></ul>
+    </div>
+  </aside>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script src="vendor/OrbitControls.js"></script>
+<script src="src/vec3.js"></script>
+<script src="src/spline.js"></script>
+<script src="src/road.js"></script>
+<script src="src/demo.js"></script>
+<script src="src/view3d.js"></script>
+<script src="src/topview.js"></script>
+<script src="src/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "racing-road-guide-tool",
+  "version": "1.0.0",
+  "private": true,
+  "description": "本地赛车导引道路工具：可拖动控制点建立路线，按弧长生成带宽度/高度/横坡的路面网格，检测弯道自交与折叠",
+  "scripts": {
+    "test": "node tests/run-tests.js",
+    "test:browser": "node tests/browser-smoke.js",
+    "test:all": "node tests/run-tests.js && node tests/browser-smoke.js"
+  },
+  "license": "MIT"
+}
