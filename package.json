@@ -1,0 +1,22 @@
+{
+  "name": "multi-angle-sprite-viewer",
+  "version": "1.0.0",
+  "private": true,
+  "description": "本地浏览器多角度角色素材预览器：方向选择校验、镜像补齐、锚点对齐、双版本对照与配置导出",
+  "type": "commonjs",
+  "scripts": {
+    "test": "node test/angle.test.mjs",
+    "generate:examples": "node tools/export-examples.mjs",
+    "smoke": "node tools/smoke.mjs",
+    "serve": "node -e \"const http=require('http'),fs=require('fs'),p=require('path');const t={'.html':'text/html','.js':'text/javascript','.json':'application/json'};http.createServer((q,s)=>{let f=p.join(process.cwd(),decodeURIComponent(q.url.split('?')[0]));if(q.url==='/')f=p.join(process.cwd(),'index.html');fs.readFile(f,(e,d)=>{if(e){s.statusCode=404;return s.end('404');}s.setHeader('Content-Type',t[p.extname(f)]||'application/octet-stream');s.end(d);});}).listen(8123,()=>console.log('http://localhost:8123'));\""
+  },
+  "keywords": [
+    "sprite",
+    "2d",
+    "directional",
+    "viewer",
+    "mirror",
+    "anchor"
+  ],
+  "license": "MIT"
+}

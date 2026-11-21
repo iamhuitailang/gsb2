@@ -1,0 +1,962 @@
+{
+  "format": "multi-angle-sprite-config/v1",
+  "exportedAt": "2026-11-21T17:36:33.184Z",
+  "name": "锚点错位版",
+  "id": "anchor-shift",
+  "mirrorFallback": true,
+  "angleConvention": "0=north, clockwise, degrees",
+  "frameWidth": 160,
+  "frameHeight": 180,
+  "directions": [
+    {
+      "id": "N",
+      "name": "北",
+      "angle": 0
+    },
+    {
+      "id": "NE",
+      "name": "东北",
+      "angle": 45
+    },
+    {
+      "id": "E",
+      "name": "东",
+      "angle": 90
+    },
+    {
+      "id": "SE",
+      "name": "东南",
+      "angle": 135
+    },
+    {
+      "id": "S",
+      "name": "南",
+      "angle": 180
+    },
+    {
+      "id": "SW",
+      "name": "西南",
+      "angle": 225
+    },
+    {
+      "id": "W",
+      "name": "西",
+      "angle": 270
+    },
+    {
+      "id": "NW",
+      "name": "西北",
+      "angle": 315
+    }
+  ],
+  "actions": [
+    {
+      "id": "idle",
+      "name": "待机"
+    },
+    {
+      "id": "walk",
+      "name": "行走"
+    }
+  ],
+  "sequences": {
+    "idle:N": {
+      "actionId": "idle",
+      "directionId": "N",
+      "frames": [
+        {
+          "id": "idle-N-0",
+          "source": "proc://idle/N/0.png",
+          "anchor": {
+            "x": 85,
+            "y": 148
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-N-1",
+          "source": "proc://idle/N/1.png",
+          "anchor": {
+            "x": 75,
+            "y": 151
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-N-2",
+          "source": "proc://idle/N/2.png",
+          "anchor": {
+            "x": 85,
+            "y": 154
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-N-3",
+          "source": "proc://idle/N/3.png",
+          "anchor": {
+            "x": 75,
+            "y": 148
+          },
+          "durationMs": 260,
+          "missing": false
+        }
+      ]
+    },
+    "idle:NE": {
+      "actionId": "idle",
+      "directionId": "NE",
+      "frames": [
+        {
+          "id": "idle-NE-0",
+          "source": "proc://idle/NE/0.png",
+          "anchor": {
+            "x": 93,
+            "y": 149
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-NE-1",
+          "source": "proc://idle/NE/1.png",
+          "anchor": {
+            "x": 83,
+            "y": 152
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-NE-2",
+          "source": "proc://idle/NE/2.png",
+          "anchor": {
+            "x": 93,
+            "y": 155
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-NE-3",
+          "source": "proc://idle/NE/3.png",
+          "anchor": {
+            "x": 83,
+            "y": 149
+          },
+          "durationMs": 260,
+          "missing": false
+        }
+      ]
+    },
+    "idle:E": {
+      "actionId": "idle",
+      "directionId": "E",
+      "frames": [
+        {
+          "id": "idle-E-0",
+          "source": "proc://idle/E/0.png",
+          "anchor": {
+            "x": 96,
+            "y": 150
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-E-1",
+          "source": "proc://idle/E/1.png",
+          "anchor": {
+            "x": 86,
+            "y": 153
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-E-2",
+          "source": "proc://idle/E/2.png",
+          "anchor": {
+            "x": 96,
+            "y": 156
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-E-3",
+          "source": "proc://idle/E/3.png",
+          "anchor": {
+            "x": 86,
+            "y": 150
+          },
+          "durationMs": 260,
+          "missing": false
+        }
+      ]
+    },
+    "idle:SE": {
+      "actionId": "idle",
+      "directionId": "SE",
+      "frames": [
+        {
+          "id": "idle-SE-0",
+          "source": "proc://idle/SE/0.png",
+          "anchor": {
+            "x": 93,
+            "y": 151
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-SE-1",
+          "source": "proc://idle/SE/1.png",
+          "anchor": {
+            "x": 83,
+            "y": 154
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-SE-2",
+          "source": "proc://idle/SE/2.png",
+          "anchor": {
+            "x": 93,
+            "y": 148
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-SE-3",
+          "source": "proc://idle/SE/3.png",
+          "anchor": {
+            "x": 83,
+            "y": 151
+          },
+          "durationMs": 260,
+          "missing": false
+        }
+      ]
+    },
+    "idle:S": {
+      "actionId": "idle",
+      "directionId": "S",
+      "frames": [
+        {
+          "id": "idle-S-0",
+          "source": "proc://idle/S/0.png",
+          "anchor": {
+            "x": 85,
+            "y": 152
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-S-1",
+          "source": "proc://idle/S/1.png",
+          "anchor": {
+            "x": 75,
+            "y": 155
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-S-2",
+          "source": "proc://idle/S/2.png",
+          "anchor": {
+            "x": 85,
+            "y": 149
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-S-3",
+          "source": "proc://idle/S/3.png",
+          "anchor": {
+            "x": 75,
+            "y": 152
+          },
+          "durationMs": 260,
+          "missing": false
+        }
+      ]
+    },
+    "idle:SW": {
+      "actionId": "idle",
+      "directionId": "SW",
+      "frames": [
+        {
+          "id": "idle-SW-0",
+          "source": "proc://idle/SW/0.png",
+          "anchor": {
+            "x": 77,
+            "y": 153
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-SW-1",
+          "source": "proc://idle/SW/1.png",
+          "anchor": {
+            "x": 67,
+            "y": 156
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-SW-2",
+          "source": "proc://idle/SW/2.png",
+          "anchor": {
+            "x": 77,
+            "y": 150
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-SW-3",
+          "source": "proc://idle/SW/3.png",
+          "anchor": {
+            "x": 67,
+            "y": 153
+          },
+          "durationMs": 260,
+          "missing": false
+        }
+      ]
+    },
+    "idle:W": {
+      "actionId": "idle",
+      "directionId": "W",
+      "frames": [
+        {
+          "id": "idle-W-0",
+          "source": "proc://idle/W/0.png",
+          "anchor": {
+            "x": 74,
+            "y": 154
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-W-1",
+          "source": "proc://idle/W/1.png",
+          "anchor": {
+            "x": 64,
+            "y": 148
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-W-2",
+          "source": "proc://idle/W/2.png",
+          "anchor": {
+            "x": 74,
+            "y": 151
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-W-3",
+          "source": "proc://idle/W/3.png",
+          "anchor": {
+            "x": 64,
+            "y": 154
+          },
+          "durationMs": 260,
+          "missing": false
+        }
+      ]
+    },
+    "idle:NW": {
+      "actionId": "idle",
+      "directionId": "NW",
+      "frames": [
+        {
+          "id": "idle-NW-0",
+          "source": "proc://idle/NW/0.png",
+          "anchor": {
+            "x": 77,
+            "y": 155
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-NW-1",
+          "source": "proc://idle/NW/1.png",
+          "anchor": {
+            "x": 67,
+            "y": 149
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-NW-2",
+          "source": "proc://idle/NW/2.png",
+          "anchor": {
+            "x": 77,
+            "y": 152
+          },
+          "durationMs": 260,
+          "missing": false
+        },
+        {
+          "id": "idle-NW-3",
+          "source": "proc://idle/NW/3.png",
+          "anchor": {
+            "x": 67,
+            "y": 155
+          },
+          "durationMs": 260,
+          "missing": false
+        }
+      ]
+    },
+    "walk:N": {
+      "actionId": "walk",
+      "directionId": "N",
+      "frames": [
+        {
+          "id": "walk-N-0",
+          "source": "proc://walk/N/0.png",
+          "anchor": {
+            "x": 85,
+            "y": 148
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-N-1",
+          "source": "proc://walk/N/1.png",
+          "anchor": {
+            "x": 75,
+            "y": 151
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-N-2",
+          "source": "proc://walk/N/2.png",
+          "anchor": {
+            "x": 85,
+            "y": 154
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-N-3",
+          "source": "proc://walk/N/3.png",
+          "anchor": {
+            "x": 75,
+            "y": 148
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-N-4",
+          "source": "proc://walk/N/4.png",
+          "anchor": {
+            "x": 85,
+            "y": 151
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-N-5",
+          "source": "proc://walk/N/5.png",
+          "anchor": {
+            "x": 75,
+            "y": 154
+          },
+          "durationMs": 150,
+          "missing": false
+        }
+      ]
+    },
+    "walk:NE": {
+      "actionId": "walk",
+      "directionId": "NE",
+      "frames": [
+        {
+          "id": "walk-NE-0",
+          "source": "proc://walk/NE/0.png",
+          "anchor": {
+            "x": 93,
+            "y": 149
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-NE-1",
+          "source": "proc://walk/NE/1.png",
+          "anchor": {
+            "x": 83,
+            "y": 152
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-NE-2",
+          "source": "proc://walk/NE/2.png",
+          "anchor": {
+            "x": 93,
+            "y": 155
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-NE-3",
+          "source": "proc://walk/NE/3.png",
+          "anchor": {
+            "x": 83,
+            "y": 149
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-NE-4",
+          "source": "proc://walk/NE/4.png",
+          "anchor": {
+            "x": 93,
+            "y": 152
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-NE-5",
+          "source": "proc://walk/NE/5.png",
+          "anchor": {
+            "x": 83,
+            "y": 155
+          },
+          "durationMs": 150,
+          "missing": false
+        }
+      ]
+    },
+    "walk:E": {
+      "actionId": "walk",
+      "directionId": "E",
+      "frames": [
+        {
+          "id": "walk-E-0",
+          "source": "proc://walk/E/0.png",
+          "anchor": {
+            "x": 96,
+            "y": 150
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-E-1",
+          "source": "proc://walk/E/1.png",
+          "anchor": {
+            "x": 86,
+            "y": 153
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-E-2",
+          "source": "proc://walk/E/2.png",
+          "anchor": {
+            "x": 96,
+            "y": 156
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-E-3",
+          "source": "proc://walk/E/3.png",
+          "anchor": {
+            "x": 86,
+            "y": 150
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-E-4",
+          "source": "proc://walk/E/4.png",
+          "anchor": {
+            "x": 96,
+            "y": 153
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-E-5",
+          "source": "proc://walk/E/5.png",
+          "anchor": {
+            "x": 86,
+            "y": 156
+          },
+          "durationMs": 150,
+          "missing": false
+        }
+      ]
+    },
+    "walk:SE": {
+      "actionId": "walk",
+      "directionId": "SE",
+      "frames": [
+        {
+          "id": "walk-SE-0",
+          "source": "proc://walk/SE/0.png",
+          "anchor": {
+            "x": 93,
+            "y": 151
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-SE-1",
+          "source": "proc://walk/SE/1.png",
+          "anchor": {
+            "x": 83,
+            "y": 154
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-SE-2",
+          "source": "proc://walk/SE/2.png",
+          "anchor": {
+            "x": 93,
+            "y": 148
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-SE-3",
+          "source": "proc://walk/SE/3.png",
+          "anchor": {
+            "x": 83,
+            "y": 151
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-SE-4",
+          "source": "proc://walk/SE/4.png",
+          "anchor": {
+            "x": 93,
+            "y": 154
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-SE-5",
+          "source": "proc://walk/SE/5.png",
+          "anchor": {
+            "x": 83,
+            "y": 148
+          },
+          "durationMs": 150,
+          "missing": false
+        }
+      ]
+    },
+    "walk:S": {
+      "actionId": "walk",
+      "directionId": "S",
+      "frames": [
+        {
+          "id": "walk-S-0",
+          "source": "proc://walk/S/0.png",
+          "anchor": {
+            "x": 85,
+            "y": 152
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-S-1",
+          "source": "proc://walk/S/1.png",
+          "anchor": {
+            "x": 75,
+            "y": 155
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-S-2",
+          "source": "proc://walk/S/2.png",
+          "anchor": {
+            "x": 85,
+            "y": 149
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-S-3",
+          "source": "proc://walk/S/3.png",
+          "anchor": {
+            "x": 75,
+            "y": 152
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-S-4",
+          "source": "proc://walk/S/4.png",
+          "anchor": {
+            "x": 85,
+            "y": 155
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-S-5",
+          "source": "proc://walk/S/5.png",
+          "anchor": {
+            "x": 75,
+            "y": 149
+          },
+          "durationMs": 150,
+          "missing": false
+        }
+      ]
+    },
+    "walk:SW": {
+      "actionId": "walk",
+      "directionId": "SW",
+      "frames": [
+        {
+          "id": "walk-SW-0",
+          "source": "proc://walk/SW/0.png",
+          "anchor": {
+            "x": 77,
+            "y": 153
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-SW-1",
+          "source": "proc://walk/SW/1.png",
+          "anchor": {
+            "x": 67,
+            "y": 156
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-SW-2",
+          "source": "proc://walk/SW/2.png",
+          "anchor": {
+            "x": 77,
+            "y": 150
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-SW-3",
+          "source": "proc://walk/SW/3.png",
+          "anchor": {
+            "x": 67,
+            "y": 153
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-SW-4",
+          "source": "proc://walk/SW/4.png",
+          "anchor": {
+            "x": 77,
+            "y": 156
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-SW-5",
+          "source": "proc://walk/SW/5.png",
+          "anchor": {
+            "x": 67,
+            "y": 150
+          },
+          "durationMs": 150,
+          "missing": false
+        }
+      ]
+    },
+    "walk:W": {
+      "actionId": "walk",
+      "directionId": "W",
+      "frames": [
+        {
+          "id": "walk-W-0",
+          "source": "proc://walk/W/0.png",
+          "anchor": {
+            "x": 74,
+            "y": 154
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-W-1",
+          "source": "proc://walk/W/1.png",
+          "anchor": {
+            "x": 64,
+            "y": 148
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-W-2",
+          "source": "proc://walk/W/2.png",
+          "anchor": {
+            "x": 74,
+            "y": 151
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-W-3",
+          "source": "proc://walk/W/3.png",
+          "anchor": {
+            "x": 64,
+            "y": 154
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-W-4",
+          "source": "proc://walk/W/4.png",
+          "anchor": {
+            "x": 74,
+            "y": 148
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-W-5",
+          "source": "proc://walk/W/5.png",
+          "anchor": {
+            "x": 64,
+            "y": 151
+          },
+          "durationMs": 150,
+          "missing": false
+        }
+      ]
+    },
+    "walk:NW": {
+      "actionId": "walk",
+      "directionId": "NW",
+      "frames": [
+        {
+          "id": "walk-NW-0",
+          "source": "proc://walk/NW/0.png",
+          "anchor": {
+            "x": 77,
+            "y": 155
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-NW-1",
+          "source": "proc://walk/NW/1.png",
+          "anchor": {
+            "x": 67,
+            "y": 149
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-NW-2",
+          "source": "proc://walk/NW/2.png",
+          "anchor": {
+            "x": 77,
+            "y": 152
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-NW-3",
+          "source": "proc://walk/NW/3.png",
+          "anchor": {
+            "x": 67,
+            "y": 155
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-NW-4",
+          "source": "proc://walk/NW/4.png",
+          "anchor": {
+            "x": 77,
+            "y": 149
+          },
+          "durationMs": 150,
+          "missing": false
+        },
+        {
+          "id": "walk-NW-5",
+          "source": "proc://walk/NW/5.png",
+          "anchor": {
+            "x": 67,
+            "y": 152
+          },
+          "durationMs": 150,
+          "missing": false
+        }
+      ]
+    }
+  },
+  "substitutions": [],
+  "unresolved": []
+}
