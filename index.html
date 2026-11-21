@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>幽灵路线对照 · 虚构跑道</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="viz-root page">
+  <header class="page-head">
+    <h1>幽灵路线对照</h1>
+    <p class="sub">虚构双纽线练习跑道 · 两趟试跑位置 / 圈内时间 / 分段差距对照（本地数据，无需联网）</p>
+  </header>
+
+  <section class="panel" id="panel-runs">
+    <div class="panel-head">
+      <h2>1 · 选择两趟记录</h2>
+      <div class="head-actions">
+        <label class="btn btn-small file-btn">
+          导入本地 JSON 记录
+          <input type="file" id="import-file" accept=".json,application/json" multiple hidden>
+        </label>
+      </div>
+    </div>
+    <p class="import-message" id="import-message"></p>
+    <div class="run-picker" id="run-picker"></div>
+    <p class="hint hidden" id="hint-empty">请在上方为两个槽位各选一趟记录。</p>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>2 · 播放与位置对照</h2>
+      <div class="head-actions">
+        <button class="btn btn-small" id="baseline-toggle">切换基准趟</button>
+      </div>
+    </div>
+    <p class="hint" id="baseline-label"></p>
+
+    <div class="player-bar">
+      <button class="btn" id="play">播放</button>
+      <button class="btn" id="reset">复位</button>
+      <div class="mode-group" role="group" aria-label="对齐模式">
+        <button class="btn btn-small btn-active" data-mode="race">按比赛时间</button>
+        <button class="btn btn-small" data-mode="progress">按路线进度对齐</button>
+      </div>
+      <div class="mode-group" aria-label="播放速度">
+        <button class="btn btn-small" data-speed="0.5">0.5×</button>
+        <button class="btn btn-small btn-active" data-speed="1">1×</button>
+        <button class="btn btn-small" data-speed="2">2×</button>
+        <button class="btn btn-small" data-speed="4">4×</button>
+      </div>
+    </div>
+
+    <div class="scrub-row">
+      <span id="cursor-label">比赛时间</span>
+      <input type="range" id="scrub" min="0" max="1000" value="0" step="1">
+      <b id="cursor-value" class="tabular">0.00 s</b>
+    </div>
+
+    <div class="replay-bar hidden" id="replay-bar">
+      <b id="replay-title"></b>
+      <span class="hint">分段回放中（按路线进度对齐，只播放该段弧长范围）</span>
+      <button class="btn btn-small" id="replay-exit">退出回放</button>
+    </div>
+
+    <div class="map-grid">
+      <svg id="map" role="img" aria-label="跑道地图"></svg>
+      <div class="readouts">
+        <div class="readout" id="readout-baseline"></div>
+        <div class="readout" id="readout-comparison"></div>
+        <div class="leader-box">
+          <h3>领先路段</h3>
+          <div id="leader-summary"></div>
+          <p class="hint">地图上蓝色描边 = 基准领先，橙色 = 对照领先，灰色 = 该弧长区间任一趟无证据。
+            交叉点（s=1000m / 3000m）空间重合但弧长不同，点击按弧长命中，不会串到另一区段。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>3 · 差距曲线（按路线进度）</h2></div>
+    <div class="chart-wrap">
+      <svg id="delta-chart" role="img" aria-label="累计差距曲线"></svg>
+    </div>
+    <div class="chart-wrap">
+      <svg id="time-chart" role="img" aria-label="圈内时间曲线"></svg>
+    </div>
+    <p class="hint">灰色竖带 = 无证据区间（曲线断开，不补值）；虚线段 = 短缺失线性插值。
+      在"按路线进度"模式下，鼠标悬停图表会联动地图上的车辆位置。</p>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>4 · 检查点累计与分段差距</h2>
+      <div class="head-actions">
+        <button class="btn btn-small" id="export-csv">导出分段差距 CSV</button>
+      </div>
+    </div>
+    <div id="cp-table" class="table-box"></div>
+    <h3 class="sub-head">分段明细（点"回放该段"只播该段弧长范围）</h3>
+    <div id="seg-table" class="table-box"></div>
+  </section>
+
+  <section class="panel hidden" id="audit-panel">
+    <div class="panel-head"><h2>5 · 分段计算复查</h2></div>
+    <div id="audit-body"></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>6 · 数据质量统计</h2></div>
+    <div class="stats-grid" id="stats-body"></div>
+    <p class="hint">所有极值统计（最大速度、最快分段）均排除无证据点与未知分段，不会把未知补成最快时间。</p>
+  </section>
+
+  <footer class="page-foot">
+    数据由 <code>tools/generate_data.py</code> 确定性生成 · 重新生成：<code>python3 tools/generate_data.py</code>
+  </footer>
+</div>
+
+<script src="data/data.js"></script>
+<script src="js/track.js"></script>
+<script src="js/importer.js"></script>
+<script src="js/analysis.js"></script>
+<script src="js/mapview.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

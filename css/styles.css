@@ -1,0 +1,313 @@
+/* 颜色角色集中在此，浅/深双模式；系列色取经验证的蓝/橙分类色板 */
+.viz-root {
+  color-scheme: light;
+  --surface-1: #fcfcfb;
+  --page: #f9f9f7;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --grid: #e1e0d9;
+  --baseline: #2a78d6;
+  --comparison: #eb6834;
+  --delta-line: #6250d6;
+  --good: #0ca30c;
+  --warning: #b97c00;
+  --critical: #d03b3b;
+  --unknown: #898781;
+  --interp: #eda100;
+  --border: rgba(11, 11, 11, 0.10);
+  --fast: #006300;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .viz-root {
+    color-scheme: dark;
+    --surface-1: #1a1a19;
+    --page: #0d0d0d;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --grid: #2c2c2a;
+    --baseline: #3987e5;
+    --comparison: #d95926;
+    --delta-line: #9085e9;
+    --warning: #fab219;
+    --critical: #e66767;
+    --unknown: #898781;
+    --interp: #c98500;
+    --border: rgba(255, 255, 255, 0.10);
+    --fast: #0ca30c;
+  }
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.page { max-width: 1180px; margin: 0 auto; padding: 24px 20px 48px; }
+.page-head h1 { margin: 0 0 4px; font-size: 24px; }
+.sub { color: var(--text-secondary); margin: 0 0 18px; }
+.page-foot { color: var(--text-muted); font-size: 12px; margin-top: 24px; }
+code {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.panel {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+}
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.panel h2 { font-size: 16px; margin: 0 0 10px; }
+.sub-head { font-size: 14px; margin: 18px 0 8px; }
+.head-actions { display: flex; gap: 8px; }
+.hint { color: var(--text-muted); font-size: 12.5px; margin: 8px 0; }
+.hidden { display: none !important; }
+
+/* 按钮 */
+.btn {
+  font: inherit;
+  border: 1px solid var(--border);
+  background: var(--surface-1);
+  color: var(--text-primary);
+  border-radius: 7px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+.btn:hover { border-color: var(--text-muted); }
+.btn-small { padding: 4px 10px; font-size: 12.5px; border-radius: 6px; }
+.btn-active {
+  background: var(--baseline);
+  border-color: var(--baseline);
+  color: #fff;
+}
+.file-btn { display: inline-block; }
+
+/* 运行卡片 */
+.run-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px;
+}
+.run-card {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.run-card.selected-0 { box-shadow: inset 3px 0 0 var(--baseline); }
+.run-card.selected-1 { box-shadow: inset 3px 0 0 var(--comparison); }
+.run-card.is-baseline { border-color: var(--baseline); }
+.run-card-head { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.run-name { font-weight: 600; }
+.run-meta { color: var(--text-secondary); font-size: 12px; }
+.run-notes { color: var(--text-muted); font-size: 12px; }
+.run-card-btns { display: flex; gap: 6px; margin-top: 2px; }
+
+.badge {
+  font-size: 11.5px;
+  border-radius: 999px;
+  padding: 2px 9px;
+  white-space: nowrap;
+  color: #fff;
+}
+.badge-ok { background: var(--good); }
+.badge-warning { background: var(--warning); color: #0b0b0b; }
+.badge-critical { background: var(--critical); }
+
+.import-message { font-size: 12.5px; margin: 6px 0; min-height: 16px; }
+.import-message.ok { color: var(--fast); }
+.import-message.warn { color: var(--critical); }
+
+/* 播放条 */
+.player-bar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 10px 0; }
+.mode-group { display: inline-flex; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+.mode-group .btn { border: none; border-radius: 0; }
+.scrub-row { display: flex; align-items: center; gap: 10px; margin: 8px 0 12px; }
+.scrub-row input[type=range] { flex: 1; accent-color: var(--baseline); }
+.tabular { font-variant-numeric: tabular-nums; }
+
+.replay-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: color-mix(in srgb, var(--interp) 14%, var(--surface-1));
+  border: 1px solid var(--interp);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+}
+
+/* 地图 */
+.map-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr); gap: 16px; }
+@media (max-width: 900px) { .map-grid { grid-template-columns: 1fr; } }
+.map { width: 100%; height: auto; background: var(--surface-1); }
+.track-base {
+  fill: none;
+  stroke: var(--grid);
+  stroke-width: 7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.seg-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 20;
+  cursor: pointer;
+}
+.seg-line {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 8;
+  pointer-events: none;
+}
+.seg-active { stroke: var(--interp); opacity: 0.55; }
+.leader { fill: none; stroke-width: 4; stroke-linecap: round; opacity: 0.9; }
+.leader-baseline { stroke: var(--baseline); }
+.leader-comparison { stroke: var(--comparison); }
+.leader-unknown { stroke: var(--unknown); stroke-dasharray: 3 5; opacity: 0.7; }
+.crossing {
+  fill: var(--surface-1);
+  stroke: var(--text-muted);
+  stroke-width: 1.5;
+}
+.crossing-label, .cp-label {
+  fill: var(--text-secondary);
+  font-size: 10.5px;
+}
+.cp-dot { fill: var(--text-primary); stroke: var(--surface-1); stroke-width: 1.5; }
+.trail { fill: none; stroke-width: 2.5; opacity: 0.55; }
+.trail-baseline { stroke: var(--baseline); }
+.trail-comparison { stroke: var(--comparison); }
+.marker-dot { stroke: #fff; stroke-width: 1.5; }
+.marker-baseline .marker-dot { fill: var(--baseline); }
+.marker-comparison .marker-dot { fill: var(--comparison); }
+.marker-ring { fill: none; stroke: var(--border); }
+.marker-text { fill: var(--text-primary); font-size: 11px; text-anchor: middle; font-weight: 600; }
+.marker-unknown { fill: var(--surface-1); stroke: var(--unknown); }
+.marker-interp { opacity: 0.75; }
+
+/* 读数 */
+.readouts { display: flex; flex-direction: column; gap: 10px; }
+.readout {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 10px 12px;
+}
+.readout-title { font-weight: 600; margin-bottom: 4px; }
+.readout-line { display: flex; gap: 8px; align-items: center; }
+.readout-seg { color: var(--text-muted); font-size: 12px; }
+.readout-kind { font-size: 12px; margin-top: 3px; color: var(--text-secondary); }
+.pos-observed { font-weight: 600; }
+.pos-interpolated { color: var(--interp); font-weight: 600; }
+.pos-unknown { color: var(--unknown); font-weight: 600; }
+.kind-unknown { color: var(--unknown); }
+.kind-interpolated { color: var(--interp); }
+.leader-box h3 { font-size: 13.5px; margin: 4px 0; }
+.leader-item { display: flex; align-items: center; gap: 7px; margin: 4px 0; }
+.leader-swatch { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+.swatch-baseline { background: var(--baseline); }
+.swatch-comparison { background: var(--comparison); }
+.swatch-unknown { background: var(--unknown); }
+
+/* 图表 */
+.chart-wrap {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 8px;
+  margin-bottom: 12px;
+}
+.chart { width: 100%; height: auto; display: block; }
+.grid { stroke: var(--grid); stroke-width: 1; }
+.grid-zero { stroke: var(--text-muted); stroke-width: 1.2; }
+.axis-text { fill: var(--text-muted); font-size: 10.5px; }
+.axis-title { fill: var(--text-secondary); font-size: 11.5px; }
+.series { fill: none; stroke-width: 2; }
+.series-baseline { stroke: var(--baseline); }
+.series-comparison { stroke: var(--comparison); }
+.series-delta { stroke: var(--delta-line); }
+.series-interp { stroke-dasharray: 5 4; }
+.unknown-band { fill: var(--unknown); opacity: 0.14; }
+.cross-line { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; }
+.cross-dot { fill: var(--delta-line); stroke: #fff; stroke-width: 1; }
+.legend-text { fill: var(--text-secondary); font-size: 11.5px; }
+.chart-tip {
+  position: absolute;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 12px;
+  pointer-events: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  max-width: 220px;
+  z-index: 5;
+}
+.tip-kind { color: var(--text-muted); }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+.dot-baseline { background: var(--baseline); }
+.dot-comparison { background: var(--comparison); }
+
+/* 表格 */
+.table-box { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td {
+  text-align: left;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--grid);
+  white-space: nowrap;
+}
+th { color: var(--text-secondary); font-weight: 600; }
+.seg-row { cursor: default; }
+.seg-row:hover { background: color-mix(in srgb, var(--baseline) 7%, var(--surface-1)); }
+.cell-unknown { color: var(--unknown); }
+.delta-slow { color: var(--critical); font-weight: 600; }
+.delta-fast { color: var(--fast); font-weight: 600; }
+.delta-zero { color: var(--text-muted); }
+.ev { font-size: 11.5px; }
+.ev-trigger { color: var(--fast); }
+.ev-interpolated { color: var(--interp); }
+.ev-none { color: var(--unknown); }
+.ev-line { color: var(--text-secondary); }
+
+/* 审计 */
+.audit-title { font-weight: 600; margin-bottom: 6px; }
+.audit-step {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  background: var(--page);
+  border-left: 3px solid var(--baseline);
+  padding: 5px 9px;
+  margin: 5px 0;
+  border-radius: 0 6px 6px 0;
+}
+
+/* 统计卡片 */
+.stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.stat-card {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  padding: 12px 14px;
+}
+.stat-title { font-weight: 600; margin-bottom: 8px; }
+.stat-row { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; }
+.stat-k { color: var(--text-secondary); }
+.stat-v { font-weight: 600; }
+.fatal { color: var(--critical); }
