@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>单片感光颜色重建工作台</title>
+<style>
+  :root{
+    --bg:#14171c; --panel:#1d222b; --panel2:#232a35; --line:#323b48;
+    --fg:#dbe2ec; --dim:#8b96a5; --acc:#4da3ff; --warn:#ff5a5a; --ok:#53d18b;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+       font:13px/1.5 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;}
+  header{padding:10px 16px;border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:baseline;flex-wrap:wrap}
+  header h1{font-size:16px;margin:0}
+  header .sub{color:var(--dim);font-size:12px}
+  #app{display:flex;align-items:flex-start}
+  #controls{width:300px;flex:none;padding:12px;border-right:1px solid var(--line);
+            position:sticky;top:0;max-height:100vh;overflow:auto}
+  #main{flex:1;padding:12px;min-width:0}
+  fieldset{border:1px solid var(--line);border-radius:6px;margin:0 0 12px;padding:8px 10px;background:var(--panel)}
+  legend{color:var(--acc);font-size:12px;padding:0 4px}
+  label.row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:5px 0}
+  label.row>span{flex:none;color:var(--dim)}
+  label.row output{width:46px;text-align:right;font-variant-numeric:tabular-nums;color:var(--fg)}
+  input[type=range]{flex:1;accent-color:var(--acc)}
+  select,button,input[type=number]{background:var(--panel2);color:var(--fg);border:1px solid var(--line);
+        border-radius:4px;padding:3px 6px;font:inherit}
+  button{cursor:pointer}
+  button:hover{border-color:var(--acc)}
+  .btnrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .figures{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px}
+  figure{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px}
+  figcaption{font-size:12px;color:var(--dim);margin-bottom:6px;display:flex;justify-content:space-between;gap:8px}
+  figcaption b{color:var(--fg);font-weight:600}
+  canvas{display:block;image-rendering:pixelated;background:#000;cursor:crosshair;max-width:100%}
+  #inspector{margin-top:12px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px}
+  #inspector h2{font-size:13px;margin:0 0 8px}
+  #inspector table{border-collapse:collapse;font-variant-numeric:tabular-nums}
+  #inspector th,#inspector td{border:1px solid var(--line);padding:3px 10px;text-align:right;min-width:70px}
+  #inspector th{background:var(--panel2);color:var(--dim);font-weight:600}
+  #inspector td.head{text-align:left;color:var(--dim)}
+  .sw{display:inline-block;width:11px;height:11px;border-radius:2px;vertical-align:-1px;margin-right:4px;border:1px solid #0006}
+  .tag{display:inline-block;padding:0 6px;border-radius:3px;font-size:11px;margin-left:6px}
+  .tag.bad{background:#5a1d1d;color:#ffb0b0}
+  .tag.ok{background:#1d4a2e;color:#a9ecc6}
+  .hint{color:var(--dim);font-size:12px;margin-top:6px}
+  .stat{color:var(--ok);font-size:12px}
+  kbd{background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:0 4px;font-size:11px}
+</style>
+</head>
+<body>
+<header>
+  <h1>单片感光颜色重建工作台</h1>
+  <span class="sub">模拟 Bayer 单片感光 → 采样 → 去马赛克重建，对比两种重建方法。点击任意图像查看单格数据。</span>
+</header>
+<div id="app">
+  <div id="controls">
+    <fieldset>
+      <legend>输入图像</legend>
+      <label class="row"><span>内置样例</span>
+        <select id="sample">
+          <option value="scene">综合场景（色块+斜线+渐变）</option>
+          <option value="gray">灰阶渐变</option>
+          <option value="blocks">色块</option>
+          <option value="diag">斜线细条纹</option>
+        </select>
+      </label>
+      <div class="btnrow">
+        <input type="file" id="file" accept="image/*" style="display:none">
+        <button id="loadImg">载入本机图片…</button>
+        <span class="hint" id="imgName"></span>
+      </div>
+      <label class="row"><span>裁剪起点 x₀</span><input type="range" id="ox" min="0" max="64" value="0"><output id="oxv">0</output></label>
+      <label class="row"><span>裁剪起点 y₀</span><input type="range" id="oy" min="0" max="64" value="0"><output id="oyv">0</output></label>
+      <label class="row"><span>区域宽</span><input type="range" id="cw" min="48" max="192" step="2" value="128"><output id="cwv">128</output></label>
+      <label class="row"><span>区域高</span><input type="range" id="ch" min="48" max="144" step="2" value="96"><output id="chv">96</output></label>
+      <div class="hint">裁剪按绝对坐标取图，CFA 相位随起点自动对齐：同一物理格无论从哪里裁剪，测到的颜色不变。</div>
+    </fieldset>
+
+    <fieldset>
+      <legend>感光阵列（CFA）</legend>
+      <label class="row"><span>排列方式</span>
+        <select id="pattern">
+          <option>RGGB</option><option>BGGR</option>
+          <option>GRBG</option><option>GBRG</option>
+        </select>
+      </label>
+      <label class="row"><span>感光网格显示</span>
+        <select id="mosaicMode">
+          <option value="color">彩色叠层（每格染成实测色）</option>
+          <option value="mono">灰度（只看亮度）</option>
+        </select>
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>前端参数</legend>
+      <label class="row"><span>黑位</span><input type="range" id="black" min="0" max="0.2" step="0.005" value="0.02"><output id="blackv">0.020</output></label>
+      <label class="row"><span>R 增益</span><input type="range" id="gainR" min="0.5" max="3" step="0.05" value="1.6"><output id="gainRv">1.60</output></label>
+      <label class="row"><span>G 增益</span><input type="range" id="gainG" min="0.5" max="3" step="0.05" value="1.0"><output id="gainGv">1.00</output></label>
+      <label class="row"><span>B 增益</span><input type="range" id="gainB" min="0.5" max="3" step="0.05" value="1.9"><output id="gainBv">1.90</output></label>
+      <label class="row"><span>输出亮度</span><input type="range" id="expo" min="0.25" max="4" step="0.05" value="1.0"><output id="expov">1.00</output></label>
+      <label class="row"><span>伽马</span><input type="range" id="gamma" min="1" max="3" step="0.1" value="2.2"><output id="gammav">2.2</output></label>
+      <div class="hint">增益/黑位在采样前施加（模拟模拟前端），重建前会自动扣回；输出亮度在重建后施加，过亮处会被裁剪。</div>
+    </fieldset>
+
+    <fieldset>
+      <legend>显示</legend>
+      <label class="row"><span>诊断图内容</span>
+        <select id="diag">
+          <option value="inclip">输入过亮（采样饱和位置）</option>
+          <option value="errA">重建误差 · 方法A</option>
+          <option value="errB">重建误差 · 方法B</option>
+          <option value="outclip">输出裁剪（亮度溢出位置）</option>
+        </select>
+      </label>
+      <label class="row"><span>放大倍数</span>
+        <select id="zoom"><option>2</option><option>3</option><option selected>4</option><option>6</option></select>
+      </label>
+      <div class="stat" id="errStats"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>导出</legend>
+      <label class="row"><span>重建图</span>
+        <select id="expWhich"><option value="A">方法A · 双线性</option><option value="B">方法B · 边缘自适应</option></select>
+      </label>
+      <div class="btnrow">
+        <button id="expPng">导出 PNG</button>
+        <button id="expJson">导出参数 JSON</button>
+      </div>
+    </fieldset>
+  </div>
+
+  <div id="main">
+    <div class="figures">
+      <figure><figcaption><b>① 原始彩色图</b><span>真值（裁剪后区域）</span></figcaption><canvas id="cvTruth"></canvas></figure>
+      <figure><figcaption><b>② 感光网格</b><span>每格只测一种色</span></figcaption><canvas id="cvMosaic"></canvas></figure>
+      <figure><figcaption><b>③ 方法A · 双线性插值</b><span id="statA"></span></figcaption><canvas id="cvA"></canvas></figure>
+      <figure><figcaption><b>④ 方法B · 边缘自适应</b><span id="statB"></span></figcaption><canvas id="cvB"></canvas></figure>
+      <figure><figcaption><b>⑤ 诊断图</b><span id="diagLabel"></span></figcaption><canvas id="cvDiag"></canvas></figure>
+    </div>
+    <div id="inspector">
+      <h2>单格检查器 <span class="hint" id="selPos">（点击任意图像选择一格，方向键可微调）</span></h2>
+      <div id="selInfo"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ================= 基础 ================= */
+const BASE_W = 256, BASE_H = 208;          // 真值平面尺寸（生成样例）
+const $ = id => document.getElementById(id);
+const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
+
+const PATTERNS = {           // 2x2 周期，索引 = (y&1)*2+(x&1)
+  RGGB: ['R','G','G','B'],
+  BGGR: ['B','G','G','R'],
+  GRBG: ['G','R','B','G'],
+  GBRG: ['G','B','R','G'],
+};
+const CH_IDX = {R:0, G:1, B:2};
+
+const S = {                  // 全部可调状态
+  sample:'scene', pattern:'RGGB', mosaicMode:'color',
+  ox:0, oy:0, cw:128, ch:96,
+  black:0.02, gainR:1.6, gainG:1.0, gainB:1.9, expo:1.0, gamma:2.2,
+  diag:'inclip', zoom:4,
+  userImg:null,              // 载入图片时的真值平面
+  sel:{x:10,y:10},
+};
+
+let truth = null;            // 当前裁剪区域的真值 RGB，Float32Array(w*h*3)
+let raw=null, inClip=null;   // 采样值（含黑位/增益，饱和裁剪后）与饱和标记
+let mosN=null;               // 归一化马赛克（扣黑位/除增益后）
+let recA=null, recB=null;    // 两种重建的线性 RGB
+let outA=null, outB=null, outClipA=null, outClipB=null; // 亮度/伽马后的输出与裁剪标记
+
+const cfaAt = (x,y) => PATTERNS[S.pattern][(y&1)*2+(x&1)];   // 绝对坐标 → 该格滤色
+
+/* ================= 样例真值生成（绝对坐标函数） ================= */
+function samplePixel(x, y){
+  switch(S.sample){
+    case 'gray': {
+      let v = x/(BASE_W-1);
+      if (y > BASE_H*0.55) v = Math.floor(v*8)/8;         // 下半：阶梯
+      if (y > BASE_H*0.8)  v = 0.5 + 0.5*Math.sin(x*0.9); // 底部：高频亮度
+      return [v,v,v];
+    }
+    case 'blocks': {
+      const cols=[[0.9,0.1,0.1],[0.1,0.8,0.2],[0.15,0.3,0.95],[0.95,0.85,0.1],
+                  [0.9,0.2,0.8],[0.1,0.85,0.85],[0.95,0.5,0.1],[0.5,0.5,0.5],
+                  [0.6,0.3,0.1],[0.2,0.5,0.2],[0.3,0.3,0.6],[0.05,0.05,0.05]];
+      const cx=Math.min(3,(x/(BASE_W/4))|0), cy=Math.min(2,(y/(BASE_H/3))|0);
+      return cols[cy*4+cx];
+    }
+    case 'diag': {
+      // 左右两种斜向的 2px 细条纹，高饱和交替，最易暴露插值伪色
+      const t = x < BASE_W/2 ? ((x+y)>>1)&1 : ((x-y+BASE_H)>>1)&1;
+      return t ? [1,0,1] : [0,1,0.2];
+    }
+    default: { // scene：渐变底 + 色块带 + 斜线块 + 圆
+      let r=0.15+0.5*x/BASE_W, g=0.15+0.5*y/BASE_H, b=0.35;
+      if (y < 44){ // 顶部色块带
+        const cols=[[0.9,0.1,0.1],[0.1,0.8,0.2],[0.15,0.3,0.95],[0.95,0.85,0.1],[0.9,0.2,0.8],[0.1,0.85,0.85]];
+        [r,g,b]=cols[Math.min(5,(x/(BASE_W/6))|0)];
+      }
+      const sx=x-BASE_W*0.58, sy=y-BASE_H*0.45;
+      if (sx>0 && sx<90 && sy>0 && sy<70){               // 斜线块
+        const t=((sx+sy)>>1)&1; [r,g,b]= t?[1,0.9,0]:[0.1,0.2,1];
+      }
+      const dx=x-BASE_W*0.3, dy=y-BASE_H*0.68;
+      if (dx*dx+dy*dy < 26*26){ [r,g,b]=[0.95,0.35,0.2]; } // 圆
+      return [r,g,b];
+    }
+  }
+}
+
+function buildTruth(){
+  const w=S.cw, h=S.ch;
+  truth = new Float32Array(w*h*3);
+  if (S.userImg){
+    const d=S.userImg; // ImageData，BASE_W×BASE_H
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      const sx=Math.min(BASE_W-1,S.ox+x), sy=Math.min(BASE_H-1,S.oy+y);
+      const si=(sy*BASE_W+sx)*4, di=(y*w+x)*3;
+      truth[di]=d.data[si]/255; truth[di+1]=d.data[si+1]/255; truth[di+2]=d.data[si+2]/255;
+    }
+  } else {
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      const [r,g,b]=samplePixel(S.ox+x, S.oy+y);
+      const i=(y*w+x)*3; truth[i]=r; truth[i+1]=g; truth[i+2]=b;
+    }
+  }
+}
+
+/* ================= 采样：真值 → 单值感光网格 ================= */
+function simulateSensor(){
+  const w=S.cw, h=S.ch, n=w*h;
+  raw=new Float32Array(n); inClip=new Uint8Array(n); mosN=new Float32Array(n);
+  const gain={R:S.gainR,G:S.gainG,B:S.gainB};
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    const c=cfaAt(S.ox+x, S.oy+y);          // 绝对坐标定相位 → 裁剪起点任意都对齐
+    const v=truth[(y*w+x)*3+CH_IDX[c]];
+    let s=S.black + gain[c]*v;              // 模拟前端：增益+黑位
+    if(s>=1){ s=1; inClip[y*w+x]=1; }       // 饱和
+    raw[y*w+x]=s;
+    mosN[y*w+x]=clamp01((s-S.black)/gain[c]); // 重建前归一化
+  }
+}
+
+/* ================= 去马赛克 ================= */
+// 通用：在 (x,y) 估计通道 ch。known(x,y) 判定该格是否有实测值，val(x,y) 取值。
+// 边缘用镜像（reflect）寻址：不会把中心格自己的异色值当邻居，保证边缘结果一致、可重复。
+function makeGetter(w,h){
+  const mir=(v,n)=> v<0 ? -v : v>=n ? 2*n-2-v : v;
+  return {cx:(x)=>mir(x,w), cy:(y)=>mir(y,h)};
+}
+function interpAt(w,h,get,x,y,ch,known){
+  // 先找轴向（上下左右）有该通道实测的邻居，找不到再找对角
+  const {cx,cy}=makeGetter(w,h);
+  let sum=0,n=0;
+  for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+    const nx=cx(x+dx), ny=cy(y+dy);
+    if(nx===x&&ny===y) continue;
+    if(known(nx,ny,ch)){ sum+=get(nx,ny); n++; }
+  }
+  if(n) return sum/n;
+  for(const [dx,dy] of [[1,1],[1,-1],[-1,1],[-1,-1]]){
+    const nx=cx(x+dx), ny=cy(y+dy);
+    if(nx===x&&ny===y) continue;
+    if(known(nx,ny,ch)){ sum+=get(nx,ny); n++; }
+  }
+  return n? sum/n : get(cx(x),cy(y));
+}
+
+function demosaicBilinear(){
+  const w=S.cw,h=S.ch;
+  const get=(x,y)=>mosN[y*w+x];
+  const known=(x,y,ch)=>cfaAt(S.ox+x,S.oy+y)===ch;
+  const out=new Float32Array(w*h*3);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    const i=(y*w+x)*3;
+    for(const ch of ['R','G','B']) out[i+CH_IDX[ch]]=interpAt(w,h,get,x,y,ch,known);
+  }
+  return out;
+}
+
+function demosaicEdgeAware(){
+  const w=S.cw,h=S.ch;
+  const {cx,cy}=makeGetter(w,h);
+  const m=(x,y)=>mosN[cy(y)*w+cx(x)];
+  const cfa=(x,y)=>cfaAt(S.ox+x,S.oy+y);
+  // 1) 绿通道：Hamilton-Adams 沿边缘方向插值，并用同色二阶差分做梯度校正
+  const G=new Float32Array(w*h);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    const i=y*w+x;
+    if(cfa(x,y)==='G'){ G[i]=mosN[i]; continue; }
+    const dh=Math.abs(m(x-1,y)-m(x+1,y)) + Math.abs(2*m(x,y)-m(x-2,y)-m(x+2,y));
+    const dv=Math.abs(m(x,y-1)-m(x,y+1)) + Math.abs(2*m(x,y)-m(x,y-2)-m(x,y+2));
+    G[i]= dh<dv ? (m(x-1,y)+m(x+1,y))/2 + (2*m(x,y)-m(x-2,y)-m(x+2,y))/4
+        : dv<dh ? (m(x,y-1)+m(x,y+1))/2 + (2*m(x,y)-m(x,y-2)-m(x,y+2))/4
+        : (m(x-1,y)+m(x+1,y)+m(x,y-1)+m(x,y+1))/4;
+  }
+  // 2) 红/蓝：在实测格算色差 d=R-G，再对色差做双线性，最后加回 G
+  const out=new Float32Array(w*h*3);
+  for(const ch of ['R','B']){
+    const d=new Float32Array(w*h);
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      const i=y*w+x;
+      if(cfa(x,y)===ch) d[i]=mosN[i]-G[i];
+    }
+    const known=(x,y)=>cfa(x,y)===ch;
+    const getD=(x,y)=>d[y*w+x];
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      const i=y*w+x;
+      const val = cfa(x,y)===ch ? mosN[i] : G[i]+interpAt(w,h,getD,x,y,ch,known);
+      out[i*3+CH_IDX[ch]]=clamp01(val);
+    }
+  }
+  for(let i=0;i<w*h;i++) out[i*3+1]=clamp01(G[i]);
+  return out;
+}
+
+/* ================= 输出级与误差 ================= */
+function postProcess(rec){
+  const n=S.cw*S.ch, out=new Float32Array(n*3), clip=new Uint8Array(n);
+  const inv=1/S.gamma;
+  for(let i=0;i<n;i++){
+    let c=false;
+    for(let k=0;k<3;k++){
+      let v=rec[i*3+k]*S.expo;
+      if(v>1){ v=1; c=true; }
+      out[i*3+k]=Math.pow(clamp01(v),inv);
+    }
+    if(c) clip[i]=1;
+  }
+  return {out,clip};
+}
+function meanErr(rec){
+  const n=S.cw*S.ch; let s=0;
+  for(let i=0;i<n*3;i++) s+=Math.abs(rec[i]-truth[i]);
+  return s/(n*3);
+}
+
+/* ================= 渲染 ================= */
+function fitCanvas(cv){
+  cv.width=S.cw; cv.height=S.ch;
+  cv.style.width=(S.cw*S.zoom)+'px'; cv.style.height=(S.ch*S.zoom)+'px';
+}
+function drawSel(ctx){
+  const {x,y}=S.sel;
+  ctx.strokeStyle='#fff'; ctx.lineWidth=1;
+  ctx.strokeRect(x-0.5,y-0.5,2,2);
+  ctx.strokeStyle='#000';
+  ctx.strokeRect(x-1.5,y-1.5,4,4);
+}
+function putImage(cv, fn){
+  fitCanvas(cv);
+  const ctx=cv.getContext('2d');
+  const img=ctx.createImageData(S.cw,S.ch);
+  for(let i=0;i<S.cw*S.ch;i++){
+    const [r,g,b]=fn(i);
+    img.data[i*4]=r*255; img.data[i*4+1]=g*255; img.data[i*4+2]=b*255; img.data[i*4+3]=255;
+  }
+  ctx.putImageData(img,0,0);
+  drawSel(ctx);
+}
+function heat(v){ // 黑→红→黄→白
+  v=clamp01(v*3);
+  return [clamp01(v*2), clamp01(v*2-0.8), clamp01(v*2-1.6)];
+}
+
+function renderAll(){
+  const w=S.cw,h=S.ch;
+  putImage($('cvTruth'), i=>[truth[i*3],truth[i*3+1],truth[i*3+2]]);
+  putImage($('cvMosaic'), i=>{
+    const x=i%w, y=(i/w)|0, c=cfaAt(S.ox+x,S.oy+y), v=mosN[i];
+    if(S.mosaicMode==='mono') return [v,v,v];
+    // 彩色叠层：每格染成它实际测到的颜色
+    return c==='R'?[v,v*0.12,v*0.12] : c==='G'?[v*0.12,v,v*0.12] : [v*0.12,v*0.12,v];
+  });
+  putImage($('cvA'), i=>[outA[i*3],outA[i*3+1],outA[i*3+2]]);
+  putImage($('cvB'), i=>[outB[i*3],outB[i*3+1],outB[i*3+2]]);
+  const diagFns={
+    inclip:{label:'红 = 采样饱和（信息已丢失）', fn:i=>{const v=mosN[i]*0.4; return inClip[i]?[1,0.1,0.1]:[v,v,v];}},
+    errA:{label:'误差热图（越亮误差越大）', fn:i=>heat((Math.abs(recA[i*3]-truth[i*3])+Math.abs(recA[i*3+1]-truth[i*3+1])+Math.abs(recA[i*3+2]-truth[i*3+2]))/3)},
+    errB:{label:'误差热图（越亮误差越大）', fn:i=>heat((Math.abs(recB[i*3]-truth[i*3])+Math.abs(recB[i*3+1]-truth[i*3+1])+Math.abs(recB[i*3+2]-truth[i*3+2]))/3)},
+    outclip:{label:'红 = 输出被裁剪（亮度过高）', fn:i=> outClipA[i]||outClipB[i]?[1,0.1,0.1]:[outA[i*3]*0.5,outA[i*3+1]*0.5,outA[i*3+2]*0.5]},
+  };
+  const d=diagFns[S.diag];
+  $('diagLabel').textContent=d.label;
+  putImage($('cvDiag'), d.fn);
+
+  $('statA').textContent='平均误差 '+meanErr(recA).toFixed(4);
+  $('statB').textContent='平均误差 '+meanErr(recB).toFixed(4);
+  const nIn=inClip.reduce((a,b)=>a+b,0), nOutA=outClipA.reduce((a,b)=>a+b,0);
+  $('errStats').textContent=`饱和格 ${nIn}/${w*h} · 输出裁剪格(A) ${nOutA}`;
+  renderInspector();
+}
+
+/* ================= 单格检查器 ================= */
+function renderInspector(){
+  const {x,y}=S.sel, w=S.cw, i=y*w+x;
+  const c=cfaAt(S.ox+x,S.oy+y);
+  $('selPos').textContent=`选中格 (${x}, ${y}) · 绝对坐标 (${S.ox+x}, ${S.oy+y})`;
+  const f=v=>v.toFixed(3);
+  const swc=(r,g,b)=>`<span class="sw" style="background:rgb(${r*255|0},${g*255|0},${b*255|0})"></span>`;
+  const row=(name,arr,extra='')=>
+    `<tr><td class="head">${name}</td><td>${f(arr[0])}</td><td>${f(arr[1])}</td><td>${f(arr[2])}</td><td>${swc(arr[0],arr[1],arr[2])}${extra}</td></tr>`;
+  const cName={R:'红',G:'绿',B:'蓝'}[c];
+  $('selInfo').innerHTML=`
+    <p style="margin:4px 0">此格滤色片：<b style="color:${c==='R'?'#ff6b6b':c==='G'?'#6bff8f':'#6b9bff'}">${cName}</b>
+      · 原始采样 raw = <b>${f(raw[i])}</b>${inClip[i]?'<span class="tag bad">已饱和</span>':'<span class="tag ok">未饱和</span>'}
+      · 归一化后 = ${f(mosN[i])}（其余两通道缺失，由重建补齐）</p>
+    <table>
+      <tr><th></th><th>R</th><th>G</th><th>B</th><th>颜色</th></tr>
+      ${row('真值',[truth[i*3],truth[i*3+1],truth[i*3+2]])}
+      ${row('方法A 输出',[outA[i*3],outA[i*3+1],outA[i*3+2]], outClipA[i]?'<span class="tag bad">输出裁剪</span>':'')}
+      ${row('方法B 输出',[outB[i*3],outB[i*3+1],outB[i*3+2]], outClipB[i]?'<span class="tag bad">输出裁剪</span>':'')}
+    </table>`;
+}
+
+/* ================= 流程 ================= */
+function recompute(){
+  buildTruth();
+  simulateSensor();
+  recA=demosaicBilinear();
+  recB=demosaicEdgeAware();
+  ({out:outA,clip:outClipA}=postProcess(recA));
+  ({out:outB,clip:outClipB}=postProcess(recB));
+  if(S.sel.x>=S.cw)S.sel.x=S.cw-1; if(S.sel.y>=S.ch)S.sel.y=S.ch-1;
+  renderAll();
+}
+
+/* ================= 交互 ================= */
+function bindRange(id,key){
+  const el=$(id);
+  el.addEventListener('input',()=>{ S[key]=parseFloat(el.value); $(id+'v').textContent=el.value; recompute(); });
+}
+['black','gainR','gainG','gainB','expo','gamma'].forEach(k=>bindRange(k,k));
+bindRange('ox','ox'); bindRange('oy','oy'); bindRange('cw','cw'); bindRange('ch','ch');
+$('sample').addEventListener('change',e=>{ S.sample=e.target.value; S.userImg=null; $('imgName').textContent=''; recompute(); });
+$('pattern').addEventListener('change',e=>{ S.pattern=e.target.value; recompute(); });
+$('mosaicMode').addEventListener('change',e=>{ S.mosaicMode=e.target.value; renderAll(); });
+$('diag').addEventListener('change',e=>{ S.diag=e.target.value; renderAll(); });
+$('zoom').addEventListener('change',e=>{ S.zoom=parseInt(e.target.value); renderAll(); });
+
+for(const id of ['cvTruth','cvMosaic','cvA','cvB','cvDiag']){
+  $(id).addEventListener('click',e=>{
+    const r=e.target.getBoundingClientRect();
+    S.sel.x=Math.max(0,Math.min(S.cw-1,Math.floor((e.clientX-r.left)/r.width*S.cw)));
+    S.sel.y=Math.max(0,Math.min(S.ch-1,Math.floor((e.clientY-r.top)/r.height*S.ch)));
+    renderAll();
+  });
+}
+window.addEventListener('keydown',e=>{
+  const d={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];
+  if(!d) return;
+  S.sel.x=Math.max(0,Math.min(S.cw-1,S.sel.x+d[0]));
+  S.sel.y=Math.max(0,Math.min(S.ch-1,S.sel.y+d[1]));
+  renderAll(); e.preventDefault();
+});
+
+$('loadImg').addEventListener('click',()=>$('file').click());
+$('file').addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const img=new Image();
+  img.onload=()=>{
+    const cv=document.createElement('canvas'); cv.width=BASE_W; cv.height=BASE_H;
+    const ctx=cv.getContext('2d');
+    // 等比缩放铺满真值平面
+    const s=Math.max(BASE_W/img.width, BASE_H/img.height);
+    ctx.drawImage(img,(BASE_W-img.width*s)/2,(BASE_H-img.height*s)/2,img.width*s,img.height*s);
+    S.userImg=ctx.getImageData(0,0,BASE_W,BASE_H);
+    $('imgName').textContent=f.name;
+    URL.revokeObjectURL(img.src);
+    recompute();
+  };
+  img.src=URL.createObjectURL(f);
+});
+
+/* ================= 导出 ================= */
+function download(name,url){
+  const a=document.createElement('a'); a.href=url; a.download=name; a.click();
+}
+$('expPng').addEventListener('click',()=>{
+  const out=S.expWhich.value==='A'?outA:outB;
+  const cv=document.createElement('canvas'); cv.width=S.cw; cv.height=S.ch;
+  const ctx=cv.getContext('2d'); const img=ctx.createImageData(S.cw,S.ch);
+  for(let i=0;i<S.cw*S.ch;i++)for(let k=0;k<3;k++) img.data[i*4+k]=out[i*3+k]*255;
+  for(let i=0;i<S.cw*S.ch;i++) img.data[i*4+3]=255;
+  ctx.putImageData(img,0,0);
+  download(`reconstruct_${S.expWhich.value}_${S.pattern}.png`, cv.toDataURL('image/png'));
+});
+$('expJson').addEventListener('click',()=>{
+  const p={pattern:S.pattern, crop:{x0:S.ox,y0:S.oy,w:S.cw,h:S.ch},
+    black:S.black, gain:{R:S.gainR,G:S.gainG,B:S.gainB},
+    exposure:S.expo, gamma:S.gamma, sample:S.userImg?'(用户图片)':S.sample,
+    method:S.expWhich.value==='A'?'bilinear':'edge-aware',
+    meanError:{A:+meanErr(recA).toFixed(5), B:+meanErr(recB).toFixed(5)}};
+  const url=URL.createObjectURL(new Blob([JSON.stringify(p,null,2)],{type:'application/json'}));
+  download('reconstruct_params.json',url);
+});
+
+recompute();
+</script>
+</body>
+</html>
