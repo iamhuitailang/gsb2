@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>规则回合试验台</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <h1>规则回合试验台</h1>
+    <div class="topbar">
+      <span id="rulesetName" class="ruleset-name"></span>
+      <button id="btnDemo" class="ghost">载入演示规则集</button>
+      <button id="btnReplayDemo" class="ghost">回放三回合演示</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- 左列：回合、棋盘、资源 -->
+    <section class="col col-left">
+      <div class="card">
+        <h2>回合状态</h2>
+        <div id="turnInfo"></div>
+        <div class="row">
+          <button id="btnEndTurn">结束回合</button>
+          <button id="btnRestart" class="ghost">重新开局</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>资源池</h2>
+        <div id="pools"></div>
+      </div>
+
+      <div class="card">
+        <h2>棋盘</h2>
+        <div id="board"></div>
+      </div>
+    </section>
+
+    <!-- 中列：行动与预览 -->
+    <section class="col col-mid">
+      <div class="card">
+        <h2>行动</h2>
+        <div id="actionList"></div>
+      </div>
+      <div class="card" id="previewCard" hidden>
+        <h2>条件预览</h2>
+        <div id="preview"></div>
+        <div class="row">
+          <button id="btnExecute">执行行动</button>
+          <button id="btnCancelPreview" class="ghost">取消</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 右列：分支、记录、存档 -->
+    <section class="col col-right">
+      <div class="card">
+        <h2>分支</h2>
+        <p class="hint">从当前状态复制新分支，各分支的行动记录与棋盘互不影响。</p>
+        <div class="row">
+          <button id="btnBranch">从此状态新建分支</button>
+        </div>
+        <div id="branchList"></div>
+      </div>
+
+      <div class="card">
+        <h2>结算记录</h2>
+        <div id="log"></div>
+      </div>
+
+      <div class="card">
+        <h2>保存 / 载入</h2>
+        <div class="row">
+          <input id="saveName" type="text" placeholder="存档名" />
+          <button id="btnSave">保存规则与当前局</button>
+        </div>
+        <div class="row">
+          <button id="btnImport" class="ghost">导入存档 JSON</button>
+        </div>
+        <div id="saveList"></div>
+      </div>
+
+      <div class="card">
+        <h2>规则配置</h2>
+        <p class="hint">直接编辑规则集 JSON（行动、条件、规则优先级、cap、回合次数等都在这里）。应用后从新规则重新开局；旧分支保留，其存档重放时会做漂移校验。</p>
+        <textarea id="rulesJson" rows="10" spellcheck="false"></textarea>
+        <div class="row">
+          <button id="btnApplyRules">应用并重新开局</button>
+          <button id="btnShowRules" class="ghost">把当前规则填入编辑框</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="modal" class="modal" hidden>
+    <div class="modal-box">
+      <h3 id="modalTitle"></h3>
+      <pre id="modalBody"></pre>
+      <div class="row right">
+        <button id="btnModalClose" class="ghost">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="src/ui.js"></script>
+</body>
+</html>

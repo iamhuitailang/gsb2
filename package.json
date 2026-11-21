@@ -1,0 +1,14 @@
+{
+  "name": "rule-turn-testbench",
+  "version": "1.0.0",
+  "description": "桌游式规则回合试验台：验证行动先后顺序与连锁效果",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test test/engine.test.js && node test/smoke-ui.js",
+    "demo": "node cli/demo-run.js"
+  },
+  "devDependencies": {
+    "jsdom": "^31.0.1"
+  }
+}
