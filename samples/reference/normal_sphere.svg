@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- 法线参考球（OpenGL +Y 向上）：RGB = (n.xy*0.5+0.5, n.z*0.5+0.5)。 -->
+  <defs>
+    <radialGradient id="sphere" cx="50%" cy="50%" r="50%" fx="38%" fy="32%">
+      <stop offset="0" stop-color="#c8c8ff"/>
+      <stop offset="0.45" stop-color="#a0a0ff"/>
+      <stop offset="0.8" stop-color="#7070e0"/>
+      <stop offset="1" stop-color="#6060c0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="#8080ff"/>
+  <circle cx="256" cy="256" r="236" fill="url(#sphere)"/>
+</svg>

@@ -1,0 +1,17 @@
+{
+  "name": "texture-channel-packer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "游戏材质贴图通道打包工具：把颜色、法线、粗糙度等贴图按规则合并到指定通道，支持批量导出与来源说明。",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "generate:samples": "node scripts/generate-samples.mjs",
+    "export:samples": "node scripts/export.mjs --project samples/raster-project.json --assets samples/raster --out out",
+    "check": "node --check src/app.js && node --check src/lib/constants.js && node --check src/lib/imaging.js && node --check src/lib/project.js && node --check src/lib/batch.js && node --check src/lib/render.js && node --check src/lib/report.js && node --check src/lib/png.js && node --check src/lib/pngDecode.js && node --check src/lib/tga.js && node --check src/lib/zip.js && node --check src/lib/decode.js && node --check src/lib/formats.js && node --check scripts/generate-samples.mjs && node --check scripts/export.mjs && node --check scripts/serve.mjs"
+  }
+}

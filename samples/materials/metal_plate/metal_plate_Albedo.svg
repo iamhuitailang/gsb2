@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- 金属板颜色：拉丝金属 + 铆钉 + 焊缝。 -->
+  <defs>
+    <linearGradient id="brushed" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8b9096"/>
+      <stop offset="0.35" stop-color="#b6bcc2"/>
+      <stop offset="0.5" stop-color="#9aa0a6"/>
+      <stop offset="0.72" stop-color="#c3c9cf"/>
+      <stop offset="1" stop-color="#878d93"/>
+    </linearGradient>
+    <pattern id="brushtex" width="6" height="6" patternUnits="userSpaceOnUse">
+      <rect width="6" height="6" fill="none"/>
+      <rect width="6" height="1" y="1" fill="#ffffff" opacity="0.05"/>
+      <rect width="6" height="1" y="4" fill="#000000" opacity="0.06"/>
+    </pattern>
+    <filter id="rough" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9 0.06" numOctaves="2" seed="13" result="n"/>
+      <feColorMatrix in="n" type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.12"/></feComponentTransfer>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="url(#brushed)"/>
+  <rect width="512" height="512" fill="url(#brushtex)"/>
+  <!-- 四块板，板块间留焊缝 -->
+  <rect x="3" y="3" width="250" height="250" fill="none" stroke="#5b6066" stroke-width="6"/>
+  <rect x="259" y="3" width="250" height="250" fill="none" stroke="#5b6066" stroke-width="6"/>
+  <rect x="3" y="259" width="250" height="250" fill="none" stroke="#5b6066" stroke-width="6"/>
+  <rect x="259" y="259" width="250" height="250" fill="none" stroke="#5b6066" stroke-width="6"/>
+  <!-- 铆钉 -->
+  <g fill="#d7dde3" stroke="#6d737a" stroke-width="2">
+    <circle cx="34" cy="34" r="9"/><circle cx="222" cy="34" r="9"/><circle cx="34" cy="222" r="9"/><circle cx="222" cy="222" r="9"/>
+    <circle cx="290" cy="34" r="9"/><circle cx="478" cy="34" r="9"/><circle cx="290" cy="222" r="9"/><circle cx="478" cy="222" r="9"/>
+    <circle cx="34" cy="290" r="9"/><circle cx="222" cy="290" r="9"/><circle cx="34" cy="478" r="9"/><circle cx="222" cy="478" r="9"/>
+    <circle cx="290" cy="290" r="9"/><circle cx="478" cy="290" r="9"/><circle cx="290" cy="478" r="9"/><circle cx="478" cy="478" r="9"/>
+  </g>
+  <rect width="512" height="512" filter="url(#rough)"/>
+</svg>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- 金属板高度：焊缝低、板面高（灰度）。 -->
+  <rect width="512" height="512" fill="#b4b4b4"/>
+  <g stroke="#303030" stroke-width="12" fill="none">
+    <rect x="3" y="3" width="250" height="250"/>
+    <rect x="259" y="3" width="250" height="250"/>
+    <rect x="3" y="259" width="250" height="250"/>
+    <rect x="259" y="259" width="250" height="250"/>
+  </g>
+  <g fill="#dcdcdc">
+    <circle cx="34" cy="34" r="11"/><circle cx="222" cy="34" r="11"/><circle cx="34" cy="222" r="11"/><circle cx="222" cy="222" r="11"/>
+    <circle cx="290" cy="34" r="11"/><circle cx="478" cy="34" r="11"/><circle cx="290" cy="222" r="11"/><circle cx="478" cy="222" r="11"/>
+    <circle cx="34" cy="290" r="11"/><circle cx="222" cy="290" r="11"/><circle cx="34" cy="478" r="11"/><circle cx="222" cy="478" r="11"/>
+    <circle cx="290" cy="290" r="11"/><circle cx="478" cy="290" r="11"/><circle cx="290" cy="478" r="11"/><circle cx="478" cy="478" r="11"/>
+  </g>
+</svg>

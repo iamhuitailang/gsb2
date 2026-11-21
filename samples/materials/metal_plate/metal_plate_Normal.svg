@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- 金属板法线（OpenGL）。中性 #8080ff；焊缝与铆钉用 R/G 轻微偏移表示起伏。 -->
+  <defs>
+    <linearGradient id="seamY" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8c8cff"/>
+      <stop offset="0.5" stop-color="#8080ff"/>
+      <stop offset="1" stop-color="#7474ff"/>
+    </linearGradient>
+    <linearGradient id="seamX" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8c8cff"/>
+      <stop offset="0.5" stop-color="#8080ff"/>
+      <stop offset="1" stop-color="#7474ff"/>
+    </linearGradient>
+    <radialGradient id="rivet" cx="0.4" cy="0.35" r="0.75">
+      <stop offset="0" stop-color="#9494ff"/>
+      <stop offset="0.6" stop-color="#8585ff"/>
+      <stop offset="1" stop-color="#7474f0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="#8080ff"/>
+  <g stroke-width="10">
+    <line x1="0" y1="128" x2="512" y2="128" stroke="url(#seamY)"/>
+    <line x1="0" y1="384" x2="512" y2="384" stroke="url(#seamY)"/>
+  </g>
+  <g stroke-width="10">
+    <line x1="128" y1="0" x2="128" y2="512" stroke="url(#seamX)"/>
+    <line x1="384" y1="0" x2="384" y2="512" stroke="url(#seamX)"/>
+  </g>
+  <g fill="url(#rivet)">
+    <circle cx="34" cy="34" r="12"/><circle cx="222" cy="34" r="12"/><circle cx="290" cy="34" r="12"/><circle cx="478" cy="34" r="12"/>
+    <circle cx="34" cy="222" r="12"/><circle cx="222" cy="222" r="12"/><circle cx="290" cy="222" r="12"/><circle cx="478" cy="222" r="12"/>
+    <circle cx="34" cy="290" r="12"/><circle cx="222" cy="290" r="12"/><circle cx="290" cy="290" r="12"/><circle cx="478" cy="290" r="12"/>
+    <circle cx="34" cy="478" r="12"/><circle cx="222" cy="478" r="12"/><circle cx="290" cy="478" r="12"/><circle cx="478" cy="478" r="12"/>
+  </g>
+</svg>

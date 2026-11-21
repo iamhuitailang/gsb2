@@ -1,0 +1,2 @@
+CORRUPTED TGA SAMPLE - this file is intentionally not a valid TGA binary.
+头部不是合法 TGA，用来演示"解码失败 -> 用常量补齐 / 批量导出失败项保留原因"。

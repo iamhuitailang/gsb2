@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="512" viewBox="0 0 1024 512">
+  <!-- 木地板法线（OpenGL）。中性 #8080ff；板缝与木纹用轻微 R/G 偏移表示起伏。 -->
+  <defs>
+    <linearGradient id="seam" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8a8aff"/>
+      <stop offset="0.5" stop-color="#8080ff"/>
+      <stop offset="1" stop-color="#7878ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="512" fill="#8080ff"/>
+  <g stroke="url(#seam)" stroke-width="8">
+    <line x1="0" y1="128" x2="1024" y2="128"/>
+    <line x1="0" y1="256" x2="1024" y2="256"/>
+    <line x1="0" y1="384" x2="1024" y2="384"/>
+  </g>
+  <g fill="#8282fe" opacity="0.28">
+    <rect x="90" y="40" width="300" height="4" rx="2"/>
+    <rect x="520" y="86" width="260" height="4" rx="2"/>
+    <rect x="210" y="170" width="340" height="4" rx="2"/>
+    <rect x="640" y="300" width="300" height="4" rx="2"/>
+    <rect x="120" y="430" width="280" height="4" rx="2"/>
+  </g>
+</svg>

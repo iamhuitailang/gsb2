@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!--
+    砖墙法线贴图（OpenGL +Y 向上）。
+    中性法线 = RGB(128,128,255)。砖缝两侧用略偏红/绿表示斜坡，砖面叠加轻微纹理，
+    使法线球预览与打包结果都能看出凹凸方向。
+  -->
+  <defs>
+    <linearGradient id="bevelTop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8a8aff"/>
+      <stop offset="1" stop-color="#8080ff"/>
+    </linearGradient>
+    <linearGradient id="bevelBottom" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8080ff"/>
+      <stop offset="1" stop-color="#7676ff"/>
+    </linearGradient>
+    <linearGradient id="bevelLeft" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8888ff"/>
+      <stop offset="1" stop-color="#8080ff"/>
+    </linearGradient>
+    <linearGradient id="bevelRight" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8080ff"/>
+      <stop offset="1" stop-color="#7878ff"/>
+    </linearGradient>
+    <pattern id="tile" width="256" height="128" patternUnits="userSpaceOnUse">
+      <rect width="256" height="128" fill="#8080ff"/>
+      <!-- 砖块凸起：上沿偏亮绿、下沿偏暗绿，左右用 R 通道表示横向斜坡 -->
+      <rect x="8" y="6" width="240" height="8" fill="url(#bevelTop)"/>
+      <rect x="8" y="110" width="240" height="8" fill="url(#bevelBottom)"/>
+      <rect x="6" y="14" width="8" height="96" fill="url(#bevelLeft)"/>
+      <rect x="242" y="14" width="8" height="96" fill="url(#bevelRight)"/>
+      <!-- 砖面细纹：轻微 R/G 抖动，B 始终接近 255 -->
+      <g fill="#8282fe" opacity="0.35">
+        <rect x="40" y="40" width="52" height="5" rx="2"/>
+        <rect x="120" y="62" width="70" height="5" rx="2"/>
+        <rect x="60" y="86" width="60" height="5" rx="2"/>
+      </g>
+    </pattern>
+  </defs>
+  <rect width="1024" height="1024" fill="#8080ff"/>
+  <rect width="1024" height="1024" fill="url(#tile)"/>
+</svg>

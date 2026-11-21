@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="512" viewBox="0 0 1024 512">
+  <!-- 木地板 AO：板缝略暗。 -->
+  <rect width="1024" height="512" fill="#dedede"/>
+  <g stroke="#8a8a8a" stroke-width="8">
+    <line x1="0" y1="128" x2="1024" y2="128"/>
+    <line x1="0" y1="256" x2="1024" y2="256"/>
+    <line x1="0" y1="384" x2="1024" y2="384"/>
+  </g>
+</svg>

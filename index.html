@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>材质贴图通道打包 · Texture Channel Packer</title>
+    <meta
+      name="description"
+      content="把颜色、法线、粗糙度等贴图按规则打包到指定通道，支持批量处理、尺寸适配、法线方向对比与来源说明导出。"
+    />
+    <link rel="stylesheet" href="./src/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+          <div class="brand-text">
+            <h1>材质贴图通道打包</h1>
+            <p>Texture Channel Packer</p>
+          </div>
+        </div>
+
+        <label class="project-name">
+          <span>工程名</span>
+          <input id="projectName" type="text" spellcheck="false" aria-label="工程名" />
+        </label>
+
+        <div class="topbar-actions">
+          <button id="btnNew" class="btn ghost" type="button">新建</button>
+          <button id="btnOpen" class="btn ghost" type="button">打开工程</button>
+          <button id="btnSave" class="btn ghost" type="button">保存</button>
+          <button id="btnSaveEmbed" class="btn ghost" type="button" title="把来源贴图内嵌进工程文件，重新打开时无需再选图">
+            保存（含贴图）
+          </button>
+          <button id="btnLoadSamples" class="btn ghost accent" type="button">载入样例</button>
+          <button id="btnExport" class="btn primary" type="button">导出全部</button>
+        </div>
+      </header>
+
+      <main class="layout">
+        <aside class="panel left-panel">
+          <section class="block">
+            <div class="block-head">
+              <h2>材质</h2>
+              <div class="block-actions">
+                <button id="btnAddMaterial" class="btn icon" type="button" title="新增材质">＋</button>
+                <button
+                  id="btnImportFolder"
+                  class="btn icon"
+                  type="button"
+                  title="按文件名批量导入素材文件夹，自动分组为多组材质"
+                >
+                  ⇪
+                </button>
+              </div>
+            </div>
+            <ul id="materialList" class="material-list"></ul>
+          </section>
+
+          <section class="block grow">
+            <div class="block-head">
+              <h2>输出贴图</h2>
+              <div class="block-actions">
+                <button id="btnAddOutput" class="btn icon" type="button" title="新增输出贴图">＋</button>
+              </div>
+            </div>
+            <ul id="outputList" class="output-list"></ul>
+            <div id="presetRow" class="preset-row"></div>
+          </section>
+        </aside>
+
+        <section class="panel editor-panel" id="editorPanel" aria-live="polite"></section>
+
+        <aside class="panel preview-panel">
+          <div class="block-head preview-head">
+            <h2>预览</h2>
+            <div id="previewMeta" class="preview-meta"></div>
+          </div>
+
+          <div class="preview-stage" id="previewStage">
+            <canvas id="previewCanvas" width="1" height="1"></canvas>
+            <div class="preview-frame" id="previewFrame" hidden></div>
+            <div id="previewBadge" class="preview-badge"></div>
+          </div>
+
+          <div id="previewModes" class="preview-modes" aria-label="预览通道"></div>
+
+          <div id="normalCompare" class="normal-compare hidden">
+            <div class="compare-title">
+              表面效果对比
+              <span class="muted">同一张法线结果在两种管线中的解读</span>
+            </div>
+            <div class="compare-grid">
+              <figure class="compare-item" data-convention="opengl">
+                <canvas width="150" height="150"></canvas>
+                <figcaption>OpenGL (+Y 向上)</figcaption>
+              </figure>
+              <figure class="compare-item" data-convention="directx">
+                <canvas width="150" height="150"></canvas>
+                <figcaption>DirectX (-Y 向下)</figcaption>
+              </figure>
+            </div>
+            <p class="compare-hint" id="compareHint"></p>
+          </div>
+
+          <div id="previewWarnings" class="warnings"></div>
+          <div id="sourceList" class="source-list"></div>
+          <div id="batchPanel" class="batch-panel hidden"></div>
+        </aside>
+      </main>
+
+      <footer class="statusbar">
+        <span id="statusText">就绪 · 先点「载入样例」或「导入素材文件夹」开始</span>        <span id="statusMeta"></span>
+      </footer>
+    </div>
+
+    <dialog id="recoverDialog" class="dialog compact">
+      <form method="dialog" class="dialog-body">
+        <h3>发现上次未保存的编辑</h3>
+        <p class="muted" id="recoverDesc"></p>
+        <div class="dialog-actions">
+          <button value="discard" class="btn ghost">忽略</button>
+          <button value="restore" class="btn primary">恢复结构</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="exportDialog" class="dialog">
+      <div class="dialog-body">
+        <div class="dialog-head">
+          <h3>批量导出</h3>
+          <button class="btn icon ghost" id="btnCloseExport" type="button" aria-label="关闭">✕</button>
+        </div>
+        <div class="export-progress">
+          <div class="progress-track"><span id="exportProgressBar"></span></div>
+          <span id="exportProgressText">准备中…</span>
+        </div>
+        <div class="export-summary" id="exportSummary"></div>
+        <ul class="export-items" id="exportItems"></ul>
+        <div class="dialog-actions">
+          <button class="btn ghost" id="btnExportAgain" type="button" disabled>重新导出</button>
+          <button class="btn primary" id="btnDownloadZip" type="button" disabled>下载 ZIP</button>
+        </div>
+        <p class="fineprint">
+          导出包内每个材质一个目录，包含 PNG、同名 <code>.source.txt</code> 来源说明，以及顶层
+          <code>manifest.txt</code>。
+        </p>
+      </div>
+    </dialog>
+
+    <dialog id="rebindDialog" class="dialog compact">
+      <div class="dialog-body">
+        <div class="dialog-head">
+          <h3>重新指认来源贴图</h3>
+          <button class="btn icon ghost" id="btnCloseRebind" type="button" aria-label="关闭">✕</button>
+        </div>
+        <p class="muted" id="rebindDesc"></p>
+        <ul class="rebind-list" id="rebindList"></ul>
+        <div class="dialog-actions">
+          <button class="btn ghost" id="btnRebindFolder" type="button">选择素材文件夹自动匹配</button>
+          <button class="btn primary" id="btnRebindClose" type="button">完成</button>
+        </div>
+      </div>
+    </dialog>
+
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+
+    <input id="fileOpenProject" type="file" accept=".json,application/json" hidden />
+    <input id="fileImportFolder" type="file" webkitdirectory multiple hidden />
+    <input id="fileRebind" type="file" multiple hidden />
+    <input id="fileSingleImage" type="file" accept=".png,.jpg,.jpeg,.webp,.bmp,.gif,.tga,.svg" hidden />
+
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>

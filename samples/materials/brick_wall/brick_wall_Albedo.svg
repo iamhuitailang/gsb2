@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <!-- 砖墙颜色贴图（Albedo）。砖缝偏灰，砖面暖红，明暗块便于观察通道打包。 -->
+  <defs>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" seed="7" result="n"/>
+      <feColorMatrix in="n" type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.18"/></feComponentTransfer>
+    </filter>
+    <pattern id="mortar" width="256" height="128" patternUnits="userSpaceOnUse">
+      <rect width="256" height="128" fill="#a89a86"/>
+    </pattern>
+  </defs>
+  <rect width="1024" height="1024" fill="#a89a86"/>
+  <g>
+    <!-- 8 行砖，每行 4 块，奇偶行错缝 -->
+    <g fill="#9c5038">
+      <rect x="8" y="8" width="240" height="112" rx="5"/><rect x="264" y="8" width="240" height="112" rx="5"/><rect x="520" y="8" width="240" height="112" rx="5"/><rect x="776" y="8" width="240" height="112" rx="5"/>
+    </g>
+    <g fill="#b06042">
+      <rect x="-120" y="136" width="240" height="112" rx="5"/><rect x="136" y="136" width="240" height="112" rx="5"/><rect x="392" y="136" width="240" height="112" rx="5"/><rect x="648" y="136" width="240" height="112" rx="5"/><rect x="904" y="136" width="240" height="112" rx="5"/>
+    </g>
+    <g fill="#8f4a35">
+      <rect x="8" y="264" width="240" height="112" rx="5"/><rect x="264" y="264" width="240" height="112" rx="5"/><rect x="520" y="264" width="240" height="112" rx="5"/><rect x="776" y="264" width="240" height="112" rx="5"/>
+    </g>
+    <g fill="#aa5c3e">
+      <rect x="-120" y="392" width="240" height="112" rx="5"/><rect x="136" y="392" width="240" height="112" rx="5"/><rect x="392" y="392" width="240" height="112" rx="5"/><rect x="648" y="392" width="240" height="112" rx="5"/><rect x="904" y="392" width="240" height="112" rx="5"/>
+    </g>
+    <g fill="#96503a">
+      <rect x="8" y="520" width="240" height="112" rx="5"/><rect x="264" y="520" width="240" height="112" rx="5"/><rect x="520" y="520" width="240" height="112" rx="5"/><rect x="776" y="520" width="240" height="112" rx="5"/>
+    </g>
+    <g fill="#b56747">
+      <rect x="-120" y="648" width="240" height="112" rx="5"/><rect x="136" y="648" width="240" height="112" rx="5"/><rect x="392" y="648" width="240" height="112" rx="5"/><rect x="648" y="648" width="240" height="112" rx="5"/><rect x="904" y="648" width="240" height="112" rx="5"/>
+    </g>
+    <g fill="#99523a">
+      <rect x="8" y="776" width="240" height="112" rx="5"/><rect x="264" y="776" width="240" height="112" rx="5"/><rect x="520" y="776" width="240" height="112" rx="5"/><rect x="776" y="776" width="240" height="112" rx="5"/>
+    </g>
+    <g fill="#8a4732">
+      <rect x="-120" y="904" width="240" height="112" rx="5"/><rect x="136" y="904" width="240" height="112" rx="5"/><rect x="392" y="904" width="240" height="112" rx="5"/><rect x="648" y="904" width="240" height="112" rx="5"/><rect x="904" y="904" width="240" height="112" rx="5"/>
+    </g>
+  </g>
+  <rect width="1024" height="1024" filter="url(#grain)" opacity="0.55"/>
+</svg>

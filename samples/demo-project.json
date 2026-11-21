@@ -1,0 +1,303 @@
+{
+  "schema": "texture-channel-packer/1",
+  "appVersion": "1.0.0",
+  "name": "演示工程：四组材质（含尺寸不一致与损坏文件）",
+  "createdAt": "2026-11-21T00:00:00.000Z",
+  "updatedAt": "2026-11-21T00:00:00.000Z",
+  "activeMaterialId": "mat_brick",
+  "selectedOutputId": "out_brick_orm",
+  "materials": [
+    {
+      "id": "mat_brick",
+      "name": "砖墙 Brick Wall",
+      "sourceId": null,
+      "targetWidth": 1024,
+      "targetHeight": 1024,
+      "fitMode": "pad",
+      "notes": "AO 故意使用 768×512，演示尺寸不一致时的留边处理。",
+      "images": {
+        "albedo": { "role": "albedo", "fileName": "brick_wall_Albedo.svg", "url": "samples/materials/brick_wall/brick_wall_Albedo.svg", "width": 1024, "height": 1024, "bytes": null },
+        "normal": { "role": "normal", "fileName": "brick_wall_Normal.svg", "url": "samples/materials/brick_wall/brick_wall_Normal.svg", "width": 1024, "height": 1024, "bytes": null },
+        "roughness": { "role": "roughness", "fileName": "brick_wall_Roughness.svg", "url": "samples/materials/brick_wall/brick_wall_Roughness.svg", "width": 1024, "height": 1024, "bytes": null },
+        "metallic": { "role": "metallic", "fileName": "brick_wall_Metallic.svg", "url": "samples/materials/brick_wall/brick_wall_Metallic.svg", "width": 1024, "height": 1024, "bytes": null },
+        "ao": { "role": "ao", "fileName": "brick_wall_AO.svg", "url": "samples/materials/brick_wall/brick_wall_AO.svg", "width": 768, "height": 512, "bytes": null },
+        "height": { "role": "height", "fileName": "brick_wall_Height.svg", "url": "samples/materials/brick_wall/brick_wall_Height.svg", "width": 1024, "height": 1024, "bytes": null }
+      },
+      "outputs": [
+        {
+          "id": "out_brick_color",
+          "name": "BaseColor",
+          "type": "color",
+          "width": null,
+          "height": null,
+          "fitMode": "inherit",
+          "convention": "opengl",
+          "includeAlpha": false,
+          "enabled": true,
+          "channels": {
+            "r": { "source": { "kind": "role", "role": "albedo" }, "sample": "red", "invert": false, "strength": 1, "constant": 255 },
+            "g": { "source": { "kind": "role", "role": "albedo" }, "sample": "green", "invert": false, "strength": 1, "constant": 255 },
+            "b": { "source": { "kind": "role", "role": "albedo" }, "sample": "blue", "invert": false, "strength": 1, "constant": 255 },
+            "a": { "source": { "kind": "constant" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 255 }
+          }
+        },
+        {
+          "id": "out_brick_normal",
+          "name": "Normal",
+          "type": "normal",
+          "width": null,
+          "height": null,
+          "fitMode": "inherit",
+          "convention": "opengl",
+          "includeAlpha": false,
+          "enabled": true,
+          "channels": {
+            "r": { "source": { "kind": "role", "role": "normal" }, "sample": "red", "invert": false, "strength": 1, "constant": 128 },
+            "g": { "source": { "kind": "role", "role": "normal" }, "sample": "green", "invert": false, "strength": 1, "constant": 128 },
+            "b": { "source": { "kind": "role", "role": "normal" }, "sample": "blue", "invert": false, "strength": 1, "constant": 255 },
+            "a": { "source": { "kind": "constant" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 255 }
+          }
+        },
+        {
+          "id": "out_brick_orm",
+          "name": "ORM",
+          "type": "orm",
+          "width": null,
+          "height": null,
+          "fitMode": "inherit",
+          "convention": "opengl",
+          "includeAlpha": false,
+          "enabled": true,
+          "channels": {
+            "r": { "source": { "kind": "role", "role": "ao" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 255 },
+            "g": { "source": { "kind": "role", "role": "roughness" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 200 },
+            "b": { "source": { "kind": "role", "role": "metallic" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 0 },
+            "a": { "source": { "kind": "constant" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 255 }
+          }
+        },
+        {
+          "id": "out_brick_heightmask",
+          "name": "HeightMask",
+          "type": "custom",
+          "width": null,
+          "height": null,
+          "fitMode": "inherit",
+          "convention": "opengl",
+          "includeAlpha": true,
+          "enabled": true,
+          "channels": {
+            "r": { "source": { "kind": "role", "role": "height" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 0 },
+            "g": { "source": { "kind": "role", "role": "ao" }, "sample": "luminance", "invert": true, "strength": 1, "constant": 255 },
+            "b": { "source": { "kind": "constant" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 64 },
+            "a": { "source": { "kind": "role", "role": "roughness" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 255 }
+          }
+        }
+      ]
+    },
+    {
+      "id": "mat_metal",
+      "name": "金属板 Metal Plate",
+      "sourceId": null,
+      "targetWidth": 512,
+      "targetHeight": 512,
+      "fitMode": "crop",
+      "notes": "法线输出使用 DirectX 方向；演示裁切与球面对比。",
+      "images": {
+        "albedo": { "role": "albedo", "fileName": "metal_plate_Albedo.svg", "url": "samples/materials/metal_plate/metal_plate_Albedo.svg", "width": 512, "height": 512, "bytes": null },
+        "normal": { "role": "normal", "fileName": "metal_plate_Normal.svg", "url": "samples/materials/metal_plate/metal_plate_Normal.svg", "width": 512, "height": 512, "bytes": null },
+        "roughness": { "role": "roughness", "fileName": "metal_plate_Roughness.svg", "url": "samples/materials/metal_plate/metal_plate_Roughness.svg", "width": 512, "height": 512, "bytes": null },
+        "metallic": { "role": "metallic", "fileName": "metal_plate_Metallic.svg", "url": "samples/materials/metal_plate/metal_plate_Metallic.svg", "width": 512, "height": 512, "bytes": null },
+        "ao": { "role": "ao", "fileName": "metal_plate_AO.svg", "url": "samples/materials/metal_plate/metal_plate_AO.svg", "width": 512, "height": 512, "bytes": null },
+        "height": { "role": "height", "fileName": "metal_plate_Height.svg", "url": "samples/materials/metal_plate/metal_plate_Height.svg", "width": 512, "height": 512, "bytes": null }
+      },
+      "outputs": [
+        {
+          "id": "out_metal_color",
+          "name": "BaseColor",
+          "type": "color",
+          "width": null,
+          "height": null,
+          "fitMode": "inherit",
+          "convention": "opengl",
+          "includeAlpha": false,
+          "enabled": true,
+          "channels": {
+            "r": { "source": { "kind": "role", "role": "albedo" }, "sample": "red", "invert": false, "strength": 1, "constant": 255 },
+            "g": { "source": { "kind": "role", "role": "albedo" }, "sample": "green", "invert": false, "strength": 1, "constant": 255 },
+            "b": { "source": { "kind": "role", "role": "albedo" }, "sample": "blue", "invert": false, "strength": 1, "constant": 255 },
+            "a": { "source": { "kind": "constant" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 255 }
+          }
+        },
+        {
+          "id": "out_metal_normal",
+          "name": "Normal",
+          "type": "normal",
+          "width": null,
+          "height": null,
+          "fitMode": "inherit",
+          "convention": "directx",
+          "includeAlpha": false,
+          "enabled": true,
+          "channels": {
+            "r": { "source": { "kind": "role", "role": "normal" }, "sample": "red", "invert": false, "strength": 1, "constant": 128 },
+            "g": { "source": { "kind": "role", "role": "normal" }, "sample": "green", "invert": false, "strength": 1, "constant": 128 },
+            "b": { "source": { "kind": "role", "role": "normal" }, "sample": "blue", "invert": false, "strength": 1, "constant": 255 },
+            "a": { "source": { "kind": "constant" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 255 }
+          }
+        },
+        {
+          "id": "out_metal_orm",
+          "name": "ORM",
+          "type": "orm",
+          "width": null,
+          "height": null,
+          "fitMode": "inherit",
+          "convention": "opengl",
+          "includeAlpha": false,
+          "enabled": true,
+          "channels": {
+            "r": { "source": { "kind": "role", "role": "ao" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 255 },
+            "g": { "source": { "kind": "role", "role": "roughness" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 200 },
+            "b": { "source": { "kind": "role", "role": "metallic" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 0 },
+            "a": { "source": { "kind": "constant" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 255 }
+          }
+        }
+      ]
+    },
+    {
+      "id": "mat_wood",
+      "name": "木地板 Wood Floor",
+      "sourceId": null,
+      "targetWidth": 1024,
+      "targetHeight": 512,
+      "fitMode": "scale",
+      "notes": "输出名与其他材质重复，用于验证批量导出不互相覆盖；同材质内另有一个重名的 ORM。",
+      "images": {
+        "albedo": { "role": "albedo", "fileName": "wood_floor_Albedo.svg", "url": "samples/materials/wood_floor/wood_floor_Albedo.svg", "width": 1024, "height": 512, "bytes": null },
+        "normal": { "role": "normal", "fileName": "wood_floor_Normal.svg", "url": "samples/materials/wood_floor/wood_floor_Normal.svg", "width": 1024, "height": 512, "bytes": null },
+        "roughness": { "role": "roughness", "fileName": "wood_floor_Roughness.svg", "url": "samples/materials/wood_floor/wood_floor_Roughness.svg", "width": 1024, "height": 512, "bytes": null },
+        "metallic": { "role": "metallic", "fileName": "wood_floor_Metallic.svg", "url": "samples/materials/wood_floor/wood_floor_Metallic.svg", "width": 1024, "height": 512, "bytes": null },
+        "ao": { "role": "ao", "fileName": "wood_floor_AO.svg", "url": "samples/materials/wood_floor/wood_floor_AO.svg", "width": 1024, "height": 512, "bytes": null }
+      },
+      "outputs": [
+        {
+          "id": "out_wood_color",
+          "name": "BaseColor",
+          "type": "color",
+          "width": null,
+          "height": null,
+          "fitMode": "inherit",
+          "convention": "opengl",
+          "includeAlpha": false,
+          "enabled": true,
+          "channels": {
+            "r": { "source": { "kind": "role", "role": "albedo" }, "sample": "red", "invert": false, "strength": 1, "constant": 255 },
+            "g": { "source": { "kind": "role", "role": "albedo" }, "sample": "green", "invert": false, "strength": 1, "constant": 255 },
+            "b": { "source": { "kind": "role", "role": "albedo" }, "sample": "blue", "invert": false, "strength": 1, "constant": 255 },
+            "a": { "source": { "kind": "constant" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 255 }
+          }
+        },
+        {
+          "id": "out_wood_normal",
+          "name": "Normal",
+          "type": "normal",
+          "width": null,
+          "height": null,
+          "fitMode": "inherit",
+          "convention": "opengl",
+          "includeAlpha": false,
+          "enabled": true,
+          "channels": {
+            "r": { "source": { "kind": "role", "role": "normal" }, "sample": "red", "invert": false, "strength": 1, "constant": 128 },
+            "g": { "source": { "kind": "role", "role": "normal" }, "sample": "green", "invert": false, "strength": 1, "constant": 128 },
+            "b": { "source": { "kind": "role", "role": "normal" }, "sample": "blue", "invert": false, "strength": 1, "constant": 255 },
+            "a": { "source": { "kind": "constant" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 255 }
+          }
+        },
+        {
+          "id": "out_wood_orm",
+          "name": "ORM",
+          "type": "orm",
+          "width": null,
+          "height": null,
+          "fitMode": "inherit",
+          "convention": "opengl",
+          "includeAlpha": false,
+          "enabled": true,
+          "channels": {
+            "r": { "source": { "kind": "role", "role": "ao" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 255 },
+            "g": { "source": { "kind": "role", "role": "roughness" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 200 },
+            "b": { "source": { "kind": "role", "role": "metallic" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 0 },
+            "a": { "source": { "kind": "constant" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 255 }
+          }
+        },
+        {
+          "id": "out_wood_orm_dup",
+          "name": "ORM",
+          "type": "custom",
+          "width": null,
+          "height": null,
+          "fitMode": "inherit",
+          "convention": "opengl",
+          "includeAlpha": false,
+          "enabled": true,
+          "channels": {
+            "r": { "source": { "kind": "role", "role": "ao" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 255 },
+            "g": { "source": { "kind": "role", "role": "roughness" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 200 },
+            "b": { "source": { "kind": "constant" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 0 },
+            "a": { "source": { "kind": "constant" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 255 }
+          }
+        }
+      ]
+    },
+    {
+      "id": "mat_damaged",
+      "name": "损坏样例 Damaged",
+      "sourceId": null,
+      "targetWidth": 256,
+      "targetHeight": 256,
+      "fitMode": "pad",
+      "notes": "法线来源被截断/损坏：预览时用常量补齐，导出时该输出失败并保留原因。",
+      "images": {
+        "albedo": { "role": "albedo", "fileName": "damaged_panel_Albedo.svg", "url": "samples/materials/damaged_panel/damaged_panel_Albedo.svg", "width": 256, "height": 256, "bytes": null },
+        "normal": { "role": "normal", "fileName": "damaged_panel_Normal.tga", "url": "samples/materials/damaged_panel/damaged_panel_Normal.tga", "width": 256, "height": 256, "bytes": null }
+      },
+      "outputs": [
+        {
+          "id": "out_damaged_color",
+          "name": "BaseColor",
+          "type": "color",
+          "width": null,
+          "height": null,
+          "fitMode": "inherit",
+          "convention": "opengl",
+          "includeAlpha": false,
+          "enabled": true,
+          "channels": {
+            "r": { "source": { "kind": "role", "role": "albedo" }, "sample": "red", "invert": false, "strength": 1, "constant": 255 },
+            "g": { "source": { "kind": "role", "role": "albedo" }, "sample": "green", "invert": false, "strength": 1, "constant": 255 },
+            "b": { "source": { "kind": "role", "role": "albedo" }, "sample": "blue", "invert": false, "strength": 1, "constant": 255 },
+            "a": { "source": { "kind": "constant" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 255 }
+          }
+        },
+        {
+          "id": "out_damaged_normal",
+          "name": "Normal",
+          "type": "normal",
+          "width": null,
+          "height": null,
+          "fitMode": "inherit",
+          "convention": "opengl",
+          "includeAlpha": false,
+          "enabled": true,
+          "channels": {
+            "r": { "source": { "kind": "role", "role": "normal" }, "sample": "red", "invert": false, "strength": 1, "constant": 128 },
+            "g": { "source": { "kind": "role", "role": "normal" }, "sample": "green", "invert": false, "strength": 1, "constant": 128 },
+            "b": { "source": { "kind": "role", "role": "normal" }, "sample": "blue", "invert": false, "strength": 1, "constant": 255 },
+            "a": { "source": { "kind": "constant" }, "sample": "luminance", "invert": false, "strength": 1, "constant": 255 }
+          }
+        }
+      ]
+    }
+  ]
+}

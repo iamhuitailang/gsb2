@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="768" height="512" viewBox="0 0 768 512">
+  <!-- 砖墙 AO —— 故意使用 768×512，与目标 1024×1024 不一致，用于演示尺寸处理。 -->
+  <defs>
+    <filter id="soft" x="0" y="0" width="100%" height="100%">
+      <feGaussianBlur stdDeviation="4"/>
+    </filter>
+    <pattern id="rows" width="192" height="96" patternUnits="userSpaceOnUse">
+      <rect width="192" height="96" fill="#e8e8e8"/>
+      <rect x="3" y="3" width="186" height="90" fill="#666666"/>
+    </pattern>
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.2" numOctaves="2" seed="21" result="n"/>
+      <feColorMatrix in="n" type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.12"/></feComponentTransfer>
+    </filter>
+  </defs>
+  <rect width="768" height="512" fill="#e8e8e8"/>
+  <g filter="url(#soft)"><rect width="768" height="512" fill="url(#rows)"/></g>
+  <rect width="768" height="512" filter="url(#grain)"/>
+</svg>

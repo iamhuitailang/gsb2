@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- 颜色色卡：8 个色块，用于核对取色 / 通道打包。 -->
+  <g>
+    <rect x="0" y="0" width="128" height="256" fill="#d64541"/>
+    <rect x="128" y="0" width="128" height="256" fill="#ef923a"/>
+    <rect x="256" y="0" width="128" height="256" fill="#f4d04a"/>
+    <rect x="384" y="0" width="128" height="256" fill="#60b270"/>
+    <rect x="0" y="256" width="128" height="256" fill="#4ca0c4"/>
+    <rect x="128" y="256" width="128" height="256" fill="#5c6ec8"/>
+    <rect x="256" y="256" width="128" height="256" fill="#9c62be"/>
+    <rect x="384" y="256" width="128" height="256" fill="#e6e6e6"/>
+  </g>
+</svg>

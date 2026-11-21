@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- 金属板 AO：板面高、焊缝暗。 -->
+  <defs>
+    <filter id="soft" x="0" y="0" width="100%" height="100%">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+  </defs>
+  <rect width="512" height="512" fill="#e6e6e6"/>
+  <g filter="url(#soft)" stroke="#5a5a5a" stroke-width="14" fill="none">
+    <rect x="3" y="3" width="250" height="250"/>
+    <rect x="259" y="3" width="250" height="250"/>
+    <rect x="3" y="259" width="250" height="250"/>
+    <rect x="259" y="259" width="250" height="250"/>
+  </g>
+</svg>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <!-- 损坏样例：颜色贴图本身正常。法线贴图在生成器里会被截断成损坏的 TGA。 -->
+  <rect width="256" height="256" fill="#707880"/>
+  <g fill="#8f979f" stroke="#4a5158" stroke-width="3">
+    <rect x="4" y="4" width="118" height="118" rx="4"/>
+    <rect x="134" y="4" width="118" height="118" rx="4"/>
+    <rect x="4" y="134" width="118" height="118" rx="4"/>
+    <rect x="134" y="134" width="118" height="118" rx="4"/>
+  </g>
+</svg>
