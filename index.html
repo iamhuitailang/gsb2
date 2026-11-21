@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Palette Forge · 图片减色与抖动预览</title>
+  <meta name="description" content="为旧设备与像素风素材生成有限色数版本，比较画质损失，支持固定调色板、误差扩散与网格抖动、批量导出与参数预设。">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <h1>Palette Forge</h1>
+        <p class="tagline">图片减色与抖动预览 · 为旧设备与像素风素材准备有限色数版本</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <label class="field inline">
+        <span>工程名</span>
+        <input id="projectName" type="text" value="未命名工程" maxlength="80" autocomplete="off">
+      </label>
+      <button id="newProject" type="button" class="btn ghost">新建</button>
+      <button id="openProject" type="button" class="btn ghost">打开工程</button>
+      <button id="exportProject" type="button" class="btn ghost">保存工程</button>
+      <input id="projectInput" type="file" accept=".json,application/json" hidden>
+    </div>
+  </header>
+
+  <main id="main" class="app-main">
+    <!-- 左栏：素材 -->
+    <aside class="panel panel-images" aria-label="素材">
+      <section class="section">
+        <div class="section-head">
+          <h2>素材</h2>
+          <span id="imageCount" class="badge">0 张</span>
+        </div>
+
+        <div id="dropZone" class="drop-zone" role="button" tabindex="0" aria-label="添加图片：点击选择或拖入文件">
+          <span class="drop-icon" aria-hidden="true">＋</span>
+          <strong>添加图片</strong>
+          <small>点击选择 / 拖入 / 粘贴截图</small>
+          <small class="hint">PNG · GIF · WebP · JPEG · BMP</small>
+        </div>
+        <input id="fileInput" type="file" accept="image/*" multiple hidden>
+
+        <div class="subsection">
+          <h3 class="subhead">示例素材</h3>
+          <div id="sampleRow" class="sample-row" aria-label="示例素材"></div>
+        </div>
+
+        <div class="subsection">
+          <div class="subhead-row">
+            <h3 class="subhead">图片列表</h3>
+            <button id="clearImages" type="button" class="link-btn" disabled>清空</button>
+          </div>
+          <div id="imageList" class="image-list" role="list"></div>
+          <p class="hint">勾选参与「整组调色板」与批量导出；每张图可单独切换 <b>跟随 / 单张</b> 参数。</p>
+        </div>
+      </section>
+    </aside>
+
+    <!-- 中栏：预览 -->
+    <section class="panel panel-preview" aria-label="预览">
+      <div class="preview-toolbar">
+        <div class="seg" role="group" aria-label="预览模式">
+          <button type="button" class="seg-btn" data-mode="original">原图</button>
+          <button type="button" class="seg-btn active" data-mode="split">对比</button>
+          <button type="button" class="seg-btn" data-mode="result">结果</button>
+          <button type="button" class="seg-btn" data-mode="diff">差异</button>
+        </div>
+        <div class="seg" role="group" aria-label="预览背景">
+          <button type="button" class="seg-btn" data-bg="white" title="白色背景">白</button>
+          <button type="button" class="seg-btn active" data-bg="checker" title="透明棋盘格">棋盘</button>
+          <button type="button" class="seg-btn" data-bg="black" title="黑色背景">黑</button>
+          <button type="button" class="seg-btn" data-bg="gray" title="灰色背景">灰</button>
+        </div>
+        <label class="check">
+          <input id="pixelGridToggle" type="checkbox">
+          <span>像素网格</span>
+        </label>
+        <div class="zoom" role="group" aria-label="缩放">
+          <button id="zoomOut" type="button" class="icon-btn" title="缩小">−</button>
+          <span id="zoomValue" class="zoom-value">4×</span>
+          <button id="zoomIn" type="button" class="icon-btn" title="放大">＋</button>
+          <button id="zoomActual" type="button" class="btn tiny" title="按原尺寸（1×）显示">1:1</button>
+          <button id="zoomFit" type="button" class="btn tiny" title="适应当前窗口">适应</button>
+        </div>
+      </div>
+
+      <div id="previewViewport" class="preview-viewport">
+        <div id="previewWrap" class="preview-wrap" data-background="checker" data-mode="split">
+          <canvas id="previewCanvas" aria-label="减色预览画布" hidden></canvas>
+          <div id="gridOverlay" class="grid-overlay" hidden aria-hidden="true"></div>
+          <div id="splitHandle" class="split-handle" hidden role="separator" aria-orientation="vertical" aria-label="拖动比较原图与结果"><span></span></div>
+          <div id="hoverInfo" class="hover-info" hidden>
+            <span id="hoverSwatch" class="swatch mini"></span>
+            <span id="hoverCoords">(0, 0)</span>
+            <span id="hoverValues"></span>
+          </div>
+        </div>
+        <div id="emptyState" class="empty-state">
+          <h3>还没有图片</h3>
+          <p>从左侧添加图片，或点击示例素材开始。<br>所有处理都在本地浏览器内完成，不会上传。</p>
+        </div>
+      </div>
+
+      <div class="preview-foot">
+        <span id="previewImageName">尚未选择图片</span>
+        <span id="previewMeta"></span>
+      </div>
+    </section>
+
+    <!-- 右栏：参数与指标 -->
+    <aside class="panel panel-controls" aria-label="参数与指标">
+      <section class="section">
+        <div class="section-head">
+          <h2>减色参数</h2>
+        </div>
+
+        <div class="seg scope-tabs" role="group" aria-label="参数作用范围">
+          <button type="button" class="seg-btn scope-tab active" data-scope="group">整组参数</button>
+          <button type="button" class="seg-btn scope-tab" data-scope="image" disabled>单张调整</button>
+        </div>
+        <p id="scopeNote" class="scope-note">正在调整整组参数，所有标记为“跟随”的图片都会应用。</p>
+
+        <div class="field">
+          <label for="colorCount">颜色总数 <output id="colorCountValue" for="colorCount">16</output></label>
+          <input id="colorCount" type="range" min="2" max="256" step="1" value="16">
+          <p class="hint">带透明的图片最多 255 色：索引 PNG 需要 1 个索引留给透明。</p>
+        </div>
+
+        <div class="field">
+          <label for="paletteSource">调色板来源</label>
+          <select id="paletteSource"></select>
+        </div>
+        <div class="field">
+          <label for="paletteMethod">自动调色板算法</label>
+          <select id="paletteMethod">
+            <option value="kmeans">中位切分 + K-means 精炼</option>
+            <option value="median">仅中位切分（更快）</option>
+          </select>
+        </div>
+
+        <div id="fixedPaletteSection" class="subsection" hidden>
+          <div class="subhead-row">
+            <h3 class="subhead">固定调色板</h3>
+            <span id="fixedPaletteCount" class="badge">0 色</span>
+          </div>
+          <select id="fixedPalettePreset" aria-label="预设调色板"></select>
+          <textarea id="fixedPaletteText" rows="6" spellcheck="false" aria-label="固定调色板颜色列表"
+            placeholder="#0f380f&#10;#306230&#10;#8bac0f&#10;#9bbc0f"></textarea>
+          <p class="hint">每行一个 HEX（#rgb / #rrggbb / #rrggbbaa），或用逗号/空格分隔；<code>;</code> 与 <code>//</code> 后为注释。也可以粘贴 <code>r,g,b</code>。</p>
+          <div id="fixedPaletteSwatches" class="swatch-grid" aria-label="固定调色板预览"></div>
+          <button id="applyPaletteToAll" type="button" class="btn wide">把这个调色板应用到整组（含单张设置）</button>
+        </div>
+
+        <div id="batchPaletteActions" class="subsection" hidden>
+          <div class="subhead-row">
+            <h3 class="subhead">整组共享调色板</h3>
+            <span id="batchPaletteStatus" class="hint">尚未生成</span>
+          </div>
+          <div class="swatch-grid" id="batchPaletteSwatches" aria-label="整组调色板预览"></div>
+          <div class="button-row">
+            <button id="generateBatch" type="button" class="btn">生成整组调色板</button>
+            <button id="batchPaletteUse" type="button" class="btn tiny">使用这个调色板</button>
+            <button id="batchPaletteExportGpl" type="button" class="btn tiny ghost">导出 GPL</button>
+          </div>
+          <p class="hint">从已勾选的图片联合提取颜色；生成后整组图片可共用它，保证颜色一致。</p>
+        </div>
+
+        <div class="field">
+          <label for="dither">抖动方式</label>
+          <select id="dither"></select>
+          <p id="ditherHelp" class="hint"></p>
+        </div>
+
+        <div class="field">
+          <label for="strength">抖动强度 <output id="strengthValue" for="strength">1</output></label>
+          <input id="strength" type="range" min="0" max="2" step="0.05" value="1">
+        </div>
+
+        <label class="check">
+          <input id="serpentine" type="checkbox" checked>
+          <span>蛇形扫描（仅误差扩散）</span>
+        </label>
+
+        <div class="field">
+          <label for="distance">颜色距离</label>
+          <select id="distance">
+            <option value="redmean">红均值加权 RGB（推荐）</option>
+            <option value="rgb">欧氏 RGB</option>
+            <option value="lab">Lab ΔE76（最慢）</option>
+          </select>
+        </div>
+
+        <label class="check">
+          <input id="perceptual" type="checkbox">
+          <span>同时计算 ΔE2000（较慢，更贴近人眼）</span>
+        </label>
+
+        <div class="field">
+          <label for="alphaCutoff">透明阈值 <output id="alphaCutoffValue" for="alphaCutoff">128</output></label>
+          <input id="alphaCutoff" type="range" min="1" max="255" step="1" value="128">
+          <p class="hint">alpha 小于阈值的像素视为透明：不参与颜色统计，也不会接收抖动误差。</p>
+        </div>
+
+        <div class="field">
+          <label for="alphaMode">Alpha 处理</label>
+          <select id="alphaMode"></select>
+        </div>
+
+        <div class="field">
+          <label for="outputFormat">输出格式</label>
+          <select id="outputFormat"></select>
+        </div>
+
+        <div class="button-row">
+          <button id="exportCurrent" type="button" class="btn primary">导出当前</button>
+          <button id="exportAll" type="button" class="btn">批量导出 ZIP</button>
+        </div>
+        <button id="exportCsv" type="button" class="btn ghost wide">导出指标 CSV</button>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2>参数预设</h2>
+        </div>
+        <div class="field">
+          <label for="presetSelect">选择预设</label>
+          <select id="presetSelect"></select>
+        </div>
+        <div class="button-row">
+          <button id="applyPreset" type="button" class="btn">应用</button>
+          <button id="deletePreset" type="button" class="btn ghost">删除</button>
+        </div>
+        <div class="field">
+          <label for="presetName">保存当前参数为预设</label>
+          <div class="inline-field">
+            <input id="presetName" type="text" maxlength="60" placeholder="例如：Game Boy 手感" autocomplete="off">
+            <button id="savePreset" type="button" class="btn">保存</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2>画质指标</h2>
+          <button id="metricDetailToggle" type="button" class="link-btn" disabled>展开明细</button>
+        </div>
+        <div class="stat-grid">
+          <div class="stat"><span class="stat-label">输出颜色</span><span id="statColors" class="stat-value">—</span></div>
+          <div class="stat"><span class="stat-label">调色板</span><span id="statPaletteColors" class="stat-value">—</span></div>
+          <div class="stat"><span class="stat-label">输出体积</span><span id="statFileSize" class="stat-value">—</span></div>
+          <div class="stat"><span class="stat-label">源文件体积</span><span id="statOriginalSize" class="stat-value">—</span></div>
+          <div class="stat"><span class="stat-label">MAE</span><span id="statMae" class="stat-value">—</span></div>
+          <div class="stat"><span class="stat-label">PSNR</span><span id="statPsnr" class="stat-value">—</span></div>
+          <div class="stat"><span class="stat-label">平均 ΔE76</span><span id="statDeltaE" class="stat-value">—</span></div>
+          <div class="stat"><span class="stat-label">SSIM</span><span id="statSsim" class="stat-value">—</span></div>
+          <div class="stat"><span class="stat-label">透明像素</span><span id="statTransparent" class="stat-value">—</span></div>
+          <div class="stat"><span class="stat-label">耗时</span><span id="statTime" class="stat-value">—</span></div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="metrics-table" aria-label="详细指标">
+            <tbody id="metricsTable"></tbody>
+          </table>
+        </div>
+
+        <div id="metricDetails" class="metric-details" hidden></div>
+
+        <div class="subsection">
+          <div class="subhead-row">
+            <h3 class="subhead">调色板用量</h3>
+          </div>
+          <div id="paletteList" class="palette-list"></div>
+          <div class="inline-field palette-export">
+            <select id="paletteExportFormat" aria-label="调色板导出格式">
+              <option value="gpl">GPL（GIMP / Aseprite）</option>
+              <option value="act">ACT（Photoshop / Aseprite）</option>
+              <option value="hex">HEX 文本</option>
+              <option value="json">JSON</option>
+            </select>
+            <button id="exportPalette" type="button" class="btn">导出调色板</button>
+          </div>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <div id="busy" class="busy" hidden><span class="spinner" aria-hidden="true"></span><span id="busyText">处理中…</span></div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

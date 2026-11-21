@@ -1,0 +1,18 @@
+{
+  "name": "palette-forge",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "图片减色与抖动预览工具：为旧设备与像素风素材生成有限色数版本，并量化画质损失。",
+  "scripts": {
+    "start": "node scripts/server.mjs",
+    "dev": "node scripts/server.mjs",
+    "generate:samples": "node scripts/generate-samples.mjs",
+    "check": "node scripts/check-modules.mjs",
+    "smoke": "node scripts/smoke.mjs",
+    "test": "node --test test/quantize.test.mjs test/palette.test.mjs test/metrics.test.mjs test/png.test.mjs test/state.test.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
