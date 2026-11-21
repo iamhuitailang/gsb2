@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>体素区块更新演示</title>
+  <link rel="stylesheet" href="src/style.css" />
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="app">
+    <aside id="panel">
+      <h1>体素区块更新</h1>
+
+      <section>
+        <h2>工具</h2>
+        <div class="row">
+          <button class="tool active" data-tool="add">➕ 添加 (左键)</button>
+          <button class="tool" data-tool="remove">➖ 删除 (右键)</button>
+        </div>
+        <div class="row">
+          <button id="deleteChunkBtn" class="danger">🗑 删除命中的整个区块</button>
+        </div>
+        <h2>材质</h2>
+        <div id="palette" class="palette"></div>
+      </section>
+
+      <section>
+        <h2>显示</h2>
+        <label class="check"><input type="checkbox" id="toggleBoundary" checked /> 区块边界 (金色=刚更新)</label>
+        <label class="check"><input type="checkbox" id="toggleGrid" checked /> 体素网格/轮廓</label>
+        <label class="check"><input type="checkbox" id="toggleHover" checked /> 拾取高亮框</label>
+      </section>
+
+      <section>
+        <h2>表面统计</h2>
+        <table id="stats">
+          <tr><td>体素数</td><td id="stVoxel">-</td></tr>
+          <tr><td>区块数</td><td id="stChunk">-</td></tr>
+          <tr><td>可见表面(合并前)</td><td id="stRawFace">-</td></tr>
+          <tr><td>合并后四边形</td><td id="stQuad">-</td></tr>
+          <tr><td>三角形数</td><td id="stTri">-</td></tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>工程</h2>
+        <div class="row wrap">
+          <button id="saveBtn">💾 保存工程</button>
+          <button id="loadBtn">📂 读取工程</button>
+        </div>
+        <div class="row wrap">
+          <button id="exportObjBtn">导出 OBJ</button>
+          <button id="exportGlbBtn">导出 GLB</button>
+        </div>
+      </section>
+
+      <section>
+        <h2>样例</h2>
+        <div class="row wrap">
+          <button id="sampleCubeBtn">实心立方体</button>
+          <button id="sampleWallBtn">跨区块彩色墙</button>
+        </div>
+        <div class="row wrap">
+          <button id="hollowBtn">边缘再挖空一格</button>
+          <button id="clearBtn" class="danger">清空</button>
+        </div>
+        <p class="hint">
+          彩色墙跨在 x=7/8 的区块边界上, 门洞也跨边界。<br />
+          挖空后内表面分属两个区块, 编辑只重建受影响区块。
+        </p>
+      </section>
+
+      <section>
+        <h2>更新日志 <span class="sub">(只重建列出的区块)</span></h2>
+        <ul id="log" class="log"></ul>
+      </section>
+    </aside>
+
+    <main id="viewport">
+      <div id="hoverInfo" class="hover-info">未命中</div>
+      <div id="hintBar" class="hint-bar">
+        左键添加 · 右键删除 · 拖拽旋转 · 滚轮缩放 · 1/2 切换工具 · 数字键选材质
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

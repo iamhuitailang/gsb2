@@ -1,0 +1,13 @@
+{
+  "name": "voxel-chunk-preview",
+  "version": "1.0.0",
+  "private": true,
+  "description": "小型体素模型的区块更新与表面网格 3D 预览页",
+  "type": "module",
+  "scripts": {
+    "start": "python3 -m http.server 8123",
+    "test": "node --test tests/*.test.js",
+    "test:e2e": "node tests/e2e.smoke.mjs"
+  },
+  "license": "MIT"
+}
