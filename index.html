@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>游戏空间音效预览器</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header>
+  <h1>🎧 游戏空间音效预览器</h1>
+  <div class="scene-ops">
+    <select id="sampleSelect" title="加载内置示例">
+      <option value="">加载示例场景…</option>
+    </select>
+    <button id="btnNewScene" title="清空场景">新建</button>
+    <button id="btnSaveScene" title="保存到浏览器 localStorage">保存场景</button>
+    <select id="savedSelect" title="加载已保存场景"><option value="">已保存场景…</option></select>
+    <button id="btnExportScene" title="导出场景 JSON（含路线）">导出场景</button>
+    <button id="btnImportScene" title="从 JSON 导入场景">导入场景</button>
+    <button id="btnExportConfig" title="导出当前生效的声源配置 JSON">导出声源配置</button>
+    <button id="btnExportAudio" title="回放整条时间轴并录音，导出试听结果">导出试听音频</button>
+    <input type="file" id="fileImport" accept=".json" hidden>
+  </div>
+</header>
+
+<div id="toolbar">
+  <span class="tb-label">工具：</span>
+  <button data-tool="select" class="tool active" title="选择 / 拖动对象；拖动对象前方手柄可旋转">选择/移动</button>
+  <button data-tool="source" class="tool" title="在场景中点击放置声源">＋声源</button>
+  <button data-tool="listener" class="tool" title="在场景中点击放置听者（全场唯一）">＋听者</button>
+  <button data-tool="wall" class="tool" title="按住拖动绘制一段遮挡墙体">＋墙体</button>
+  <button data-tool="zone" class="tool" title="按住拖动绘制圆形混响区">＋混响区</button>
+  <button id="btnRecord" title="开始回放并录制被拖动对象的移动路线">● 录制路线</button>
+  <button id="btnDelete" title="删除选中对象">删除选中</button>
+  <span class="tb-spacer"></span>
+  <label class="tb-check"><input type="checkbox" id="chkAudio" checked> 开启声音</label>
+  <label class="tb-check"><input type="checkbox" id="chkGrid" checked> 网格</label>
+</div>
+
+<main>
+  <div id="canvasWrap">
+    <canvas id="stage"></canvas>
+    <div id="canvasHint">提示：选择工具下拖动对象移动；拖动对象前方小圆点旋转；滚轮缩放，空白处拖动平移</div>
+  </div>
+  <aside id="panel">
+    <section id="selPanel">
+      <h2>选中对象</h2>
+      <div id="selBody"><p class="muted">未选中任何对象</p></div>
+    </section>
+    <section id="livePanel">
+      <h2>声源实时参数</h2>
+      <div id="liveBody"><p class="muted">场景中没有声源</p></div>
+    </section>
+  </aside>
+</main>
+
+<footer id="timeline">
+  <button id="btnPlay" title="播放/暂停">▶</button>
+  <button id="btnStop" title="停止并回到 0">⏹</button>
+  <span id="timeLabel">0.00 / 10.00 s</span>
+  <input type="range" id="timeSlider" min="0" max="10" step="0.01" value="0">
+  <label>时长(s) <input type="number" id="durationInput" min="1" max="600" step="1" value="10"></label>
+  <span class="muted" id="playState">已停止</span>
+</footer>
+
+<script src="js/util.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/scene.js"></script>
+<script src="js/samples.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
