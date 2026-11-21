@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>游戏界面排版检查器 · 窄屏状态栏约束调试</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect x='3' y='3' width='18' height='18' rx='3' fill='none' stroke='%2360a5fa' stroke-width='2'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">▣ 界面排版检查器 <small>组件树 · 锚点约束 · 窄屏冲突</small></div>
+  <div class="toolbar">
+    <button id="btn-preset-conflict" class="btn btn-primary" title="载入一套在 320px 竖屏+长昵称下必然冲突的状态栏">载入窄屏冲突预设</button>
+    <button id="btn-preset-healthy" class="btn">载入健康预设</button>
+    <button id="btn-demo-cycle" class="btn btn-warn">演示参照循环</button>
+    <button id="btn-demo-dangling" class="btn btn-warn">演示悬空参照</button>
+    <button id="btn-export" class="btn btn-good">导出运行配置</button>
+    <button id="btn-reset" class="btn">重置</button>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- 左：组件树 -->
+  <aside class="panel panel-tree">
+    <h3>组件树 <small>删组件后悬空锚点标“断”，互相参照标“环”</small></h3>
+    <div id="tree" class="tree"></div>
+    <h3 class="log-head">重算日志
+      <button id="btn-clear-log" class="btn btn-mini">清空</button>
+    </h3>
+    <ul id="recompute-log" class="recompute-log"></ul>
+  </aside>
+
+  <!-- 中：两个预览 -->
+  <section class="panel panel-previews">
+    <div class="preview-col" id="preview-a-wrap">
+      <div class="preview-controls" id="ctl-a"></div>
+      <div class="pv" id="preview-a">
+        <div class="pv-toolbar">
+          <span class="pv-title">预览 A</span>
+          <select data-ctl="device" class="pv-select"></select>
+          <button data-ctl="orientation" class="btn btn-mini">⇄ 横竖屏</button>
+          <select data-ctl="safe" class="pv-select"></select>
+          <label class="pv-check"><input type="checkbox" data-ctl="guides" checked> 辅助线</label>
+          <button data-ctl="active" class="btn btn-mini">问题面板看此预览</button>
+        </div>
+        <div class="pv-state-vars" data-vars></div>
+        <div class="pv-stage">
+          <div class="pv-screen">
+            <div class="pv-safe"></div>
+            <div class="pv-guides"></div>
+            <div class="pv-nodes"></div>
+          </div>
+        </div>
+        <div class="pv-footer">
+          <span class="pv-hit" id="hit-a">坐标(0,0) → 空白</span>
+          <span class="pv-stats" id="stats-a"></span>
+          <span class="pv-legend"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-col" id="preview-b-wrap">
+      <div class="pv" id="preview-b">
+        <div class="pv-toolbar">
+          <span class="pv-title">预览 B</span>
+          <select data-ctl="device" class="pv-select"></select>
+          <button data-ctl="orientation" class="btn btn-mini">⇄ 横竖屏</button>
+          <select data-ctl="safe" class="pv-select"></select>
+          <label class="pv-check"><input type="checkbox" data-ctl="guides" checked> 辅助线</label>
+          <button data-ctl="active" class="btn btn-mini">问题面板看此预览</button>
+        </div>
+        <div class="pv-state-vars" data-vars></div>
+        <div class="pv-stage">
+          <div class="pv-screen">
+            <div class="pv-safe"></div>
+            <div class="pv-guides"></div>
+            <div class="pv-nodes"></div>
+          </div>
+        </div>
+        <div class="pv-footer">
+          <span class="pv-hit" id="hit-b">坐标(0,0) → 空白</span>
+          <span class="pv-stats" id="stats-b"></span>
+          <span class="pv-legend"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 右：检查器 + 问题 -->
+  <aside class="panel panel-right">
+    <div class="right-tabs">
+      <h3 class="tab-title">属性检查器</h3>
+    </div>
+    <div id="inspector" class="inspector"></div>
+    <h3 class="issues-head">排版问题
+      <select id="issue-filter" class="pv-select">
+        <option value="all">全部</option>
+        <option value="error">错误</option>
+        <option value="conflict">约束冲突</option>
+        <option value="warning">警告</option>
+      </select>
+    </h3>
+    <div id="issues" class="issues"></div>
+  </aside>
+</main>
+
+<!-- 导出弹窗 -->
+<div class="modal" id="export-modal">
+  <div class="modal-box">
+    <h3>导出配置</h3>
+    <p id="export-summary" class="modal-summary"></p>
+    <div class="modal-tabs">
+      <label>运行配置（给游戏运行时，无辅助线/假数据）
+        <textarea id="export-runtime" readonly></textarea>
+      </label>
+      <label>编辑器工程（完整可编辑，含 previewOnly）
+        <textarea id="export-project" readonly></textarea>
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button id="btn-download-runtime" class="btn btn-good">下载运行配置</button>
+      <button id="btn-download-project" class="btn">下载工程文件</button>
+      <button id="export-close" class="btn">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/model.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/measure.js"></script>
+<script src="js/presets.js"></script>
+<script src="js/store.js"></script>
+<script src="js/export.js"></script>
+<script src="js/tree.js"></script>
+<script src="js/preview.js"></script>
+<script src="js/inspector.js"></script>
+<script src="js/issues.js"></script>
+<script src="js/app.js"></script>
+<script>
+/* 填充设备/保留区/状态变量控件（两个预览各自一份，可分别设置） */
+(function () {
+  var Store = window.ULCStore;
+  document.querySelectorAll('.pv').forEach(function (pv) {
+    var deviceSel = pv.querySelector('[data-ctl="device"]');
+    var safeSel = pv.querySelector('[data-ctl="safe"]');
+    deviceSel.innerHTML = Store.DEVICE_PRESETS.map(function (d) {
+      return '<option value="' + d.id + '">' + d.name + ' (' + d.w + '×' + d.h + ')</option>';
+    }).join('');
+    safeSel.innerHTML = Store.SAFE_PRESETS.map(function (s) {
+      return '<option value="' + s.id + '">' + s.name + '</option>';
+    }).join('');
+    var varsBox = pv.querySelector('[data-vars]');
+    varsBox.innerHTML = Store.VAR_DEFS.map(function (d) {
+      if (d.kind === 'bool') {
+        return '<label class="state-var"><input type="checkbox" data-var="' + d.key + '"' +
+          (Store.DEFAULT_VARS[d.key] ? ' checked' : '') + '> ' + d.label + '</label>';
+      }
+      return '<label class="state-var state-num">' + d.label +
+        '<input type="number" data-var="' + d.key + '" value="' + Store.DEFAULT_VARS[d.key] + '"></label>';
+    }).join('');
+  });
+  // A 默认窄屏竖屏，B 默认横屏
+  document.querySelector('#preview-a [data-ctl="device"]').value = 'iphone-se';
+  document.querySelector('#preview-b [data-ctl="device"]').value = 'iphone-14';
+})();
+</script>
+</body>
+</html>
