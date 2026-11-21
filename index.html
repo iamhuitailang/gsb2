@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>同屏双人 · 分屏镜头实验台</title>
+<style>
+  :root {
+    --p1: #ff8c42;
+    --p2: #3ec6e0;
+    --bg: #14171c;
+    --panel: #1d2129;
+    --line: #2c323d;
+    --text: #d7dce3;
+    --dim: #8a93a1;
+    --accent: #b8e356;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 13px/1.5 "SF Mono", Menlo, Consolas, monospace;
+    display: flex; height: 100vh; overflow: hidden;
+  }
+  #stage { flex: 1; position: relative; min-width: 0; }
+  canvas { display: block; width: 100%; height: 100%; }
+  #hud {
+    position: absolute; top: 10px; left: 10px; pointer-events: none;
+    background: rgba(20,23,28,.82); border: 1px solid var(--line);
+    border-radius: 6px; padding: 8px 12px; white-space: pre;
+  }
+  #hud .state-MERGED { color: var(--accent); font-weight: bold; }
+  #hud .state-SPLIT  { color: #ff5c6c; font-weight: bold; }
+  #panel {
+    width: 340px; flex: none; background: var(--panel);
+    border-left: 1px solid var(--line); overflow-y: auto; padding: 12px;
+  }
+  h2 { font-size: 13px; margin: 14px 0 6px; color: var(--accent);
+       border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+  h2:first-child { margin-top: 0; }
+  .row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+  .row label { flex: 1; color: var(--dim); }
+  .row output { width: 56px; text-align: right; }
+  input[type=range] { flex: 1.4; }
+  button {
+    background: #262c37; color: var(--text); border: 1px solid var(--line);
+    border-radius: 4px; padding: 4px 10px; cursor: pointer; font: inherit;
+  }
+  button:hover { border-color: var(--accent); }
+  button.active { background: var(--accent); color: #14171c; font-weight: bold; }
+  .slot { flex: 1; }
+  #timeline {
+    position: relative; height: 26px; background: #14171c;
+    border: 1px solid var(--line); border-radius: 4px; margin: 6px 0;
+  }
+  #timeline .cursor { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; }
+  #timeline .mark { position: absolute; top: 2px; bottom: 2px; width: 3px; border-radius: 1px; }
+  .mark.to-SPLIT { background: #ff5c6c; }
+  .mark.to-MERGED { background: var(--accent); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 2px 4px; text-align: right; }
+  th { color: var(--dim); font-weight: normal; }
+  td.evt-SPLIT { color: #ff5c6c; }
+  td.evt-MERGED { color: var(--accent); }
+  .logs { display: flex; gap: 8px; }
+  .logs > div { flex: 1; min-width: 0; }
+  .logs h3 { font-size: 12px; margin: 4px 0; color: var(--dim); }
+  .logbox { max-height: 180px; overflow-y: auto; }
+  .kbd { background:#262c37; border:1px solid var(--line); border-radius:3px; padding:0 5px; }
+  .warn { color: #ffb84d; }
+  .p1 { color: var(--p1); } .p2 { color: var(--p2); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="cv"></canvas>
+  <div id="hud"></div>
+</div>
+<div id="panel">
+  <h2>操作</h2>
+  <div class="row"><span class="p1">P1</span><span><span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span> 移动</span></div>
+  <div class="row"><span class="p2">P2</span><span><span class="kbd">←</span><span class="kbd">↑</span><span class="kbd">↓</span><span class="kbd">→</span> 移动</span></div>
+  <div class="row" style="color:var(--dim)">松键 / 切出页面即停止输入</div>
+
+  <h2>镜头配置（A / B 两套对比）</h2>
+  <div class="row">
+    <button class="slot" id="slotA">配置 A</button>
+    <button class="slot" id="slotB">配置 B</button>
+  </div>
+  <div class="row"><label>合并距离（小于则合并）</label>
+    <input type="range" id="mergeDist" min="150" max="900" step="10"><output id="mergeDistV"></output></div>
+  <div class="row"><label>分离距离（大于则分屏）</label>
+    <input type="range" id="splitDist" min="150" max="900" step="10"><output id="splitDistV"></output></div>
+  <div class="row"><label>迟滞带</label><output id="hystV" style="width:auto"></output></div>
+  <div class="row"><label>分屏方向</label>
+    <button id="orientV">左右分</button><button id="orientH">上下分</button></div>
+  <div class="row"><label>镜头平滑（越大越硬）</label>
+    <input type="range" id="camK" min="2" max="14" step="0.5"><output id="camKV"></output></div>
+  <div class="row"><label>过渡时长 ms</label>
+    <input type="range" id="transMs" min="0" max="1000" step="50"><output id="transMsV"></output></div>
+
+  <h2>预设路线回放</h2>
+  <div class="row">
+    <button class="slot" id="demo1">① 短距交错</button>
+    <button class="slot" id="demo2">② 拉开重合并</button>
+    <button class="slot" id="demo3">③ 快速交叉</button>
+  </div>
+  <div class="row">
+    <button id="playBtn">▶ 播放</button>
+    <button id="stopBtn">■ 停止</button>
+    <span id="playInfo" style="color:var(--dim)"></span>
+  </div>
+  <div id="timeline"><div class="cursor" style="left:0"></div></div>
+  <div class="row" style="color:var(--dim)">刻度标记：绿=合并 红=分屏（当前配置本次回放）</div>
+
+  <h2>切换事件日志（A / B 对比）</h2>
+  <div class="row"><button id="clearLogs">清空两套日志</button>
+    <span style="color:var(--dim)">回放与手动操作都会记录</span></div>
+  <div class="logs">
+    <div><h3>配置 A <span id="countA" class="warn"></span></h3><div class="logbox"><table id="logA"></table></div></div>
+    <div><h3>配置 B <span id="countB" class="warn"></span></h3><div class="logbox"><table id="logB"></table></div></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ================= 世界与场景 =================
+const WORLD = { w: 2600, h: 1600 };
+const obstacles = [];
+(function buildScene() {
+  const rng = (() => { let s = 42; return () => (s = s * 16807 % 2147483647) / 2147483647; })();
+  const colors = ['#3a4a5c', '#4c3a5c', '#3a5c48', '#5c4a3a', '#565c3a'];
+  for (let i = 0; i < 26; i++) {
+    obstacles.push({
+      x: 120 + rng() * (WORLD.w - 320), y: 120 + rng() * (WORLD.h - 320),
+      w: 60 + rng() * 160, h: 60 + rng() * 160,
+      c: colors[i % colors.length],
+    });
+  }
+})();
+
+const players = [
+  { x: WORLD.w / 2 - 120, y: WORLD.h / 2, r: 22, c: '#ff8c42', name: 'P1', speed: 340, face: 0 },
+  { x: WORLD.w / 2 + 120, y: WORLD.h / 2, r: 22, c: '#3ec6e0', name: 'P2', speed: 340, face: Math.PI },
+];
+
+// ================= 配置（A/B 两套） =================
+const configs = {
+  A: { mergeDist: 420, splitDist: 560, orient: 'v', camK: 6, transMs: 350 },
+  B: { mergeDist: 480, splitDist: 520, orient: 'h', camK: 6, transMs: 350 },
+};
+let activeSlot = 'A';
+const cfg = () => configs[activeSlot];
+
+// ================= 输入 =================
+const keys = new Set();
+const P1_KEYS = { KeyW: [0, -1], KeyS: [0, 1], KeyA: [-1, 0], KeyD: [1, 0] };
+const P2_KEYS = { ArrowUp: [0, -1], ArrowDown: [0, 1], ArrowLeft: [-1, 0], ArrowRight: [1, 0] };
+addEventListener('keydown', e => {
+  if (P1_KEYS[e.code] || P2_KEYS[e.code]) { keys.add(e.code); e.preventDefault(); }
+});
+addEventListener('keyup', e => keys.delete(e.code));
+// 松键 / 切出页面 / 失焦：清空全部输入，杜绝持续输入残留
+function clearKeys() { keys.clear(); }
+addEventListener('blur', clearKeys);
+document.addEventListener('visibilitychange', () => { if (document.hidden) clearKeys(); });
+
+// ================= 镜头 =================
+// cam: {x, y, zoom} 世界坐标中心 + 像素/世界单位
+const camMerged = { x: WORLD.w / 2, y: WORLD.h / 2, zoom: 1 };
+const camP1 = { x: players[0].x, y: players[0].y, zoom: 1.1 };
+const camP2 = { x: players[1].x, y: players[1].y, zoom: 1.1 };
+let camState = 'MERGED';   // 逻辑状态（迟滞判定）
+let splitAnim = 0;         // 0=完全合并 1=完全分屏（连续过渡）
+
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let VW = 0, VH = 0;
+function resize() {
+  const r = cv.parentElement.getBoundingClientRect();
+  const dpr = devicePixelRatio || 1;
+  VW = r.width; VH = r.height;
+  cv.width = VW * dpr; cv.height = VH * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+addEventListener('resize', resize);
+resize();
+
+function clampCam(cam, vw, vh) {
+  const viewW = vw / cam.zoom, viewH = vh / cam.zoom;
+  cam.x = viewW >= WORLD.w ? WORLD.w / 2 : Math.min(Math.max(cam.x, viewW / 2), WORLD.w - viewW / 2);
+  cam.y = viewH >= WORLD.h ? WORLD.h / 2 : Math.min(Math.max(cam.y, viewH / 2), WORLD.h - viewH / 2);
+}
+function damp(cur, target, k, dt) { return cur + (target - cur) * (1 - Math.exp(-k * dt)); }
+
+function dist() { return Math.hypot(players[0].x - players[1].x, players[0].y - players[1].y); }
+
+function updateCameras(dt) {
+  const c = cfg();
+  // --- 迟滞状态机：分离阈值 > 合并阈值，边界抖动不会引起来回切换 ---
+  const d = dist();
+  if (camState === 'MERGED' && d > c.splitDist) switchState('SPLIT', d);
+  else if (camState === 'SPLIT' && d < c.mergeDist) switchState('MERGED', d);
+
+  // --- 合并镜头：容纳两人，带边距，夹紧世界边缘 ---
+  const mx = (players[0].x + players[1].x) / 2, my = (players[0].y + players[1].y) / 2;
+  const margin = 320;
+  const needW = Math.abs(players[0].x - players[1].x) + margin;
+  const needH = Math.abs(players[0].y - players[1].y) + margin;
+  const minZoom = Math.max(VW / WORLD.w, VH / WORLD.h); // 不允许看到世界外
+  const zTarget = Math.max(minZoom, Math.min(1.6, Math.min(VW / needW, VH / needH)));
+  camMerged.x = damp(camMerged.x, mx, c.camK, dt);
+  camMerged.y = damp(camMerged.y, my, c.camK, dt);
+  camMerged.zoom = damp(camMerged.zoom, zTarget, c.camK, dt);
+  clampCam(camMerged, VW, VH);
+
+  // --- 分屏镜头：各跟各的，固定绑定 P1/P2，绝不交换 ---
+  for (const [cam, p] of [[camP1, players[0]], [camP2, players[1]]]) {
+    cam.x = damp(cam.x, p.x, c.camK, dt);
+    cam.y = damp(cam.y, p.y, c.camK, dt);
+    cam.zoom = damp(cam.zoom, 1.15, c.camK, dt);
+  }
+  // 分屏视口尺寸（用于夹紧）
+  const [r1, r2] = splitRects(1);
+  clampCam(camP1, r1.w, r1.h);
+  clampCam(camP2, r2.w, r2.h);
+
+  // --- 过渡动画 ---
+  const target = camState === 'SPLIT' ? 1 : 0;
+  const dur = c.transMs / 1000;
+  if (dur <= 0) splitAnim = target;
+  else splitAnim = Math.min(1, Math.max(0, splitAnim + Math.sign(target - splitAnim) * dt / dur));
+}
+
+// P1 永远左/上，P2 永远右/下 —— 切方向不交换角色与镜头
+function splitRects(t) {
+  const c = cfg();
+  const full = { x: 0, y: 0, w: VW, h: VH };
+  let t1, t2;
+  if (c.orient === 'v') {
+    t1 = { x: 0, y: 0, w: VW / 2, h: VH };
+    t2 = { x: VW / 2, y: 0, w: VW / 2, h: VH };
+  } else {
+    t1 = { x: 0, y: 0, w: VW, h: VH / 2 };
+    t2 = { x: 0, y: VH / 2, w: VW, h: VH / 2 };
+  }
+  const lerp = (a, b) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t,
+                            w: a.w + (b.w - a.w) * t, h: a.h + (b.h - a.h) * t });
+  return [lerp(full, t1), lerp(full, t2)];
+}
+function lerpCam(a, b, t) {
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, zoom: a.zoom + (b.zoom - a.zoom) * t };
+}
+
+// ================= 事件日志 =================
+const logs = { A: [], B: [] };
+let sessionT0 = performance.now();
+function nowSec() { return (performance.now() - sessionT0) / 1000; }
+function switchState(to, d) {
+  camState = to;
+  const evt = { t: nowSec(), pt: playback ? playback.t : null, dist: d, to };
+  logs[activeSlot].push(evt);
+  if (playback) addMark(evt);
+  renderLogs();
+}
+function renderLogs() {
+  for (const s of ['A', 'B']) {
+    const el = document.getElementById('log' + s);
+    el.innerHTML = '<tr><th>时间s</th><th>路线s</th><th>距离</th><th>切换</th></tr>' +
+      logs[s].map(e =>
+        `<tr><td>${e.t.toFixed(2)}</td><td>${e.pt == null ? '—' : e.pt.toFixed(2)}</td>` +
+        `<td>${e.dist.toFixed(0)}</td><td class="evt-${e.to}">${e.to === 'SPLIT' ? '→分屏' : '→合并'}</td></tr>`
+      ).join('');
+    document.getElementById('count' + s).textContent =
+      logs[s].length ? `${logs[s].length} 次切换` : '';
+  }
+}
+
+// ================= 预设路线 =================
+// 路线 = 每玩家一组 [t, x, y] 关键帧，线性插值
+function lerpRoute(frames, t) {
+  if (t <= frames[0][0]) return [frames[0][1], frames[0][2]];
+  const last = frames[frames.length - 1];
+  if (t >= last[0]) return [last[1], last[2]];
+  for (let i = 1; i < frames.length; i++) {
+    if (t <= frames[i][0]) {
+      const [t0, x0, y0] = frames[i - 1], [t1, x1, y1] = frames[i];
+      const k = (t - t0) / (t1 - t0);
+      return [x0 + (x1 - x0) * k, y0 + (y1 - y0) * k];
+    }
+  }
+}
+const CX = WORLD.w / 2, CY = WORLD.h / 2;
+function circleFrames(cx, cy, r, period, phase, dur) {
+  const f = [];
+  for (let t = 0; t <= dur + 0.01; t += 0.25) {
+    const a = phase + (t / period) * Math.PI * 2;
+    f.push([t, cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
+  }
+  return f;
+}
+const presets = {
+  // ① 短距交错：两人绕同一中心反向小半径缠绕，距离在阈值附近反复穿越
+  demo1: {
+    name: '短距交错', dur: 20,
+    routes: [circleFrames(CX, CY, 250, 5, 0, 20), circleFrames(CX, CY, 250, 5, Math.PI * 0.9, 20)],
+  },
+  // ② 拉开后重新合并：同起点 → 反向拉开到远处 → 折返 → 重新会合
+  demo2: {
+    name: '拉开重合并', dur: 16,
+    routes: [
+      [[0, CX - 100, CY], [4, CX - 1000, CY - 350], [8, CX - 1000, CY - 350], [13, CX - 90, CY], [16, CX - 90, CY]],
+      [[0, CX + 100, CY], [4, CX + 1000, CY + 350], [8, CX + 1000, CY + 350], [13, CX + 90, CY], [16, CX + 90, CY]],
+    ],
+  },
+  // ③ 快速交叉：两人高速互换位置（检查镜头/视口不交换）
+  demo3: {
+    name: '快速交叉', dur: 12,
+    routes: [
+      [[0, CX - 500, CY - 250], [3, CX + 500, CY + 250], [6, CX - 500, CY + 250], [9, CX + 500, CY - 250], [12, CX - 500, CY - 250]],
+      [[0, CX + 500, CY + 250], [3, CX - 500, CY - 250], [6, CX + 500, CY - 250], [9, CX - 500, CY + 250], [12, CX + 500, CY + 250]],
+    ],
+  },
+};
+let playback = null; // {preset, t}
+const timelineEl = document.getElementById('timeline');
+function clearMarks() { timelineEl.querySelectorAll('.mark').forEach(m => m.remove()); }
+function addMark(evt) {
+  if (!playback) return;
+  const m = document.createElement('div');
+  m.className = 'mark to-' + evt.to;
+  m.style.left = (evt.pt / playback.preset.dur * 100) + '%';
+  m.title = `${evt.pt.toFixed(2)}s 距离${evt.dist.toFixed(0)} → ${evt.to}`;
+  timelineEl.appendChild(m);
+}
+function startPlayback(key) {
+  const preset = presets[key];
+  playback = { preset, t: 0 };
+  // 回放前清掉当前槽位旧日志，保证本次数据干净可比
+  logs[activeSlot] = [];
+  clearMarks(); renderLogs();
+  document.getElementById('playInfo').textContent = `${preset.name}（槽位 ${activeSlot}）`;
+  document.getElementById('playBtn').textContent = '⏸ 暂停';
+}
+function stopPlayback() {
+  playback = null;
+  document.getElementById('playInfo').textContent = '';
+  document.getElementById('playBtn').textContent = '▶ 播放';
+  timelineEl.querySelector('.cursor').style.left = '0';
+}
+
+// ================= 主循环 =================
+let lastT = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - lastT) / 1000);
+  lastT = now;
+
+  if (playback) {
+    playback.t += dt;
+    const { preset } = playback;
+    for (let i = 0; i < 2; i++) {
+      const [x, y] = lerpRoute(preset.routes[i], Math.min(playback.t, preset.dur));
+      players[i].face = Math.atan2(y - players[i].y, x - players[i].x);
+      players[i].x = x; players[i].y = y;
+    }
+    timelineEl.querySelector('.cursor').style.left = (Math.min(playback.t, preset.dur) / preset.dur * 100) + '%';
+    if (playback.t >= preset.dur) stopPlayback();
+  } else {
+    // 手动控制：两人键位独立，可同时移动
+    for (const [p, map] of [[players[0], P1_KEYS], [players[1], P2_KEYS]]) {
+      let dx = 0, dy = 0;
+      for (const [code, [vx, vy]] of Object.entries(map))
+        if (keys.has(code)) { dx += vx; dy += vy; }
+      if (dx || dy) {
+        const len = Math.hypot(dx, dy);
+        p.x = Math.min(Math.max(p.x + dx / len * p.speed * dt, p.r), WORLD.w - p.r);
+        p.y = Math.min(Math.max(p.y + dy / len * p.speed * dt, p.r), WORLD.h - p.r);
+        p.face = Math.atan2(dy, dx);
+      }
+    }
+  }
+
+  updateCameras(dt);
+  render();
+  updateHud();
+  requestAnimationFrame(frame);
+}
+
+// ================= 渲染 =================
+function drawWorld(cam, rect) {
+  ctx.save();
+  ctx.beginPath(); ctx.rect(rect.x, rect.y, rect.w, rect.h); ctx.clip();
+  ctx.translate(rect.x + rect.w / 2, rect.y + rect.h / 2);
+  ctx.scale(cam.zoom, cam.zoom);
+  ctx.translate(-cam.x, -cam.y);
+
+  // 地面网格
+  ctx.fillStyle = '#181c22';
+  ctx.fillRect(cam.x - rect.w / cam.zoom, cam.y - rect.h / cam.zoom, rect.w / cam.zoom * 2, rect.h / cam.zoom * 2);
+  ctx.strokeStyle = '#232833'; ctx.lineWidth = 1 / cam.zoom;
+  for (let x = 0; x <= WORLD.w; x += 100) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, WORLD.h); ctx.stroke(); }
+  for (let y = 0; y <= WORLD.h; y += 100) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WORLD.w, y); ctx.stroke(); }
+  // 世界边界
+  ctx.strokeStyle = '#4a5262'; ctx.lineWidth = 4 / cam.zoom;
+  ctx.strokeRect(0, 0, WORLD.w, WORLD.h);
+  // 障碍物色块
+  for (const o of obstacles) { ctx.fillStyle = o.c; ctx.fillRect(o.x, o.y, o.w, o.h); }
+  // 两人连线（仅合并视图有意义，但画着无妨）
+  ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 2 / cam.zoom;
+  ctx.setLineDash([8 / cam.zoom, 8 / cam.zoom]);
+  ctx.beginPath(); ctx.moveTo(players[0].x, players[0].y); ctx.lineTo(players[1].x, players[1].y); ctx.stroke();
+  ctx.setLineDash([]);
+  // 角色
+  for (const p of players) {
+    ctx.fillStyle = p.c;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3 / cam.zoom;
+    ctx.beginPath(); ctx.moveTo(p.x, p.y);
+    ctx.lineTo(p.x + Math.cos(p.face) * p.r, p.y + Math.sin(p.face) * p.r); ctx.stroke();
+    ctx.fillStyle = '#fff'; ctx.font = `${14 / cam.zoom}px monospace`;
+    ctx.textAlign = 'center';
+    ctx.fillText(p.name, p.x, p.y - p.r - 8 / cam.zoom);
+  }
+  ctx.restore();
+}
+function render() {
+  ctx.clearRect(0, 0, VW, VH);
+  const [r1, r2] = splitRects(splitAnim);
+  // 过渡中两视口各自从合并镜头插值到分屏镜头，画面连续、可操作
+  const c1 = lerpCam(camMerged, camP1, splitAnim);
+  const c2 = lerpCam(camMerged, camP2, splitAnim);
+  drawWorld(c1, r1);
+  if (splitAnim > 0.001) {
+    drawWorld(c2, r2);
+    // 分界线
+    ctx.fillStyle = '#0c0e11';
+    if (cfg().orient === 'v') ctx.fillRect(VW / 2 - 2, 0, 4, VH);
+    else ctx.fillRect(0, VH / 2 - 2, VW, 4);
+    // 视口标签：P1 恒左/上，P2 恒右/下
+    ctx.font = 'bold 13px monospace';
+    ctx.fillStyle = players[0].c; ctx.fillText('P1 视口', r1.x + 10, r1.y + 20);
+    ctx.fillStyle = players[1].c; ctx.fillText('P2 视口', r2.x + 10, r2.y + 20);
+  }
+}
+
+const hud = document.getElementById('hud');
+function updateHud() {
+  const c = cfg();
+  const d = dist();
+  const inBand = d >= c.mergeDist && d <= c.splitDist;
+  hud.innerHTML =
+    `状态 <span class="state-${camState}">${camState === 'MERGED' ? '合并镜头' : '分屏'}</span>` +
+    `  过渡 ${(splitAnim * 100).toFixed(0)}%\n` +
+    `距离 ${d.toFixed(0)}  合并&lt;${c.mergeDist} 分离&gt;${c.splitDist}` +
+    (inBand ? '  <span class="warn">◆ 迟滞带内</span>' : '') +
+    `\n配置槽 ${activeSlot}  方向 ${c.orient === 'v' ? '左右分' : '上下分'}` +
+    (playback ? `\n回放 ${playback.preset.name} ${playback.t.toFixed(1)}s` : '');
+}
+
+// ================= 面板绑定 =================
+function bindSlider(id, get, set) {
+  const el = document.getElementById(id), out = document.getElementById(id + 'V');
+  const sync = () => { el.value = get(); out.textContent = get(); };
+  el.addEventListener('input', () => { set(+el.value); sync(); });
+  sync();
+  return sync;
+}
+// 滑杆只绑定一次；bindPanel 仅负责刷新显示，不重复注册监听
+const syncers = [
+  bindSlider('mergeDist', () => cfg().mergeDist, v => {
+    cfg().mergeDist = Math.min(v, cfg().splitDist - 20); // 强制保持迟滞带
+  }),
+  bindSlider('splitDist', () => cfg().splitDist, v => {
+    cfg().splitDist = Math.max(v, cfg().mergeDist + 20);
+  }),
+  bindSlider('camK', () => cfg().camK, v => cfg().camK = v),
+  bindSlider('transMs', () => cfg().transMs, v => cfg().transMs = v),
+];
+function bindPanel() {
+  syncers.forEach(fn => fn());
+  document.getElementById('hystV').textContent = cfg().splitDist - cfg().mergeDist;
+  document.getElementById('orientV').classList.toggle('active', cfg().orient === 'v');
+  document.getElementById('orientH').classList.toggle('active', cfg().orient === 'h');
+  document.getElementById('slotA').classList.toggle('active', activeSlot === 'A');
+  document.getElementById('slotB').classList.toggle('active', activeSlot === 'B');
+}
+for (const id of ['mergeDist', 'splitDist', 'camK', 'transMs'])
+  document.getElementById(id).addEventListener('input', bindPanel);
+document.getElementById('orientV').onclick = () => { cfg().orient = 'v'; bindPanel(); };
+document.getElementById('orientH').onclick = () => { cfg().orient = 'h'; bindPanel(); };
+document.getElementById('slotA').onclick = () => { activeSlot = 'A'; bindPanel(); };
+document.getElementById('slotB').onclick = () => { activeSlot = 'B'; bindPanel(); };
+document.getElementById('demo1').onclick = () => startPlayback('demo1');
+document.getElementById('demo2').onclick = () => startPlayback('demo2');
+document.getElementById('demo3').onclick = () => startPlayback('demo3');
+document.getElementById('playBtn').onclick = () => {
+  if (playback) stopPlayback();
+  else startPlayback('demo1');
+};
+document.getElementById('stopBtn').onclick = stopPlayback;
+document.getElementById('clearLogs').onclick = () => {
+  logs.A = []; logs.B = []; clearMarks(); renderLogs();
+};
+
+bindPanel();
+renderLogs();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
