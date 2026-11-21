@@ -1,0 +1,224 @@
+{
+  "format_version": 1,
+  "name": "王座之影 (演示工程)",
+  "description": "包含可选支线、互斥阵营分支、多结局与变量条件的完整样例。骑士团路线需要声望 >= 25; 盗贼公会路线需要潜行心得; 隐藏结局需要收集古代遗物。",
+  "initial_flags": {},
+  "initial_variables": {
+    "reputation": 0
+  },
+  "quests": [
+    {
+      "id": "q_intro",
+      "title": "初到村庄",
+      "description": "与村长对话, 了解这片土地的局势。",
+      "prerequisites": [],
+      "condition": "",
+      "exclusive_with": [],
+      "is_ending": false,
+      "optional": false,
+      "rewards": [
+        {"type": "flag", "flag": "village_known", "value": true},
+        {"type": "variable", "variable": "reputation", "op": "+=", "value": 10},
+        {"type": "currency", "currency_id": "gold", "amount": 20}
+      ],
+      "position": {"x": 600, "y": 40}
+    },
+    {
+      "id": "q_herb_gathering",
+      "title": "采集草药 (可选支线)",
+      "description": "帮药师采集三份草药。完成后获得炼药心得, 是加入盗贼公会的条件之一。",
+      "prerequisites": ["q_intro"],
+      "condition": "",
+      "exclusive_with": [],
+      "is_ending": false,
+      "optional": true,
+      "rewards": [
+        {"type": "item", "item_id": "herb", "amount": 3},
+        {"type": "flag", "flag": "knows_alchemy", "value": true},
+        {"type": "variable", "variable": "reputation", "op": "+=", "value": 5}
+      ],
+      "position": {"x": 240, "y": 170}
+    },
+    {
+      "id": "q_training",
+      "title": "基础训练",
+      "description": "在训练场完成基础战斗训练。",
+      "prerequisites": ["q_intro"],
+      "condition": "flag(\"village_known\")",
+      "exclusive_with": [],
+      "is_ending": false,
+      "optional": false,
+      "rewards": [
+        {"type": "variable", "variable": "reputation", "op": "+=", "value": 10},
+        {"type": "item", "item_id": "wooden_sword", "amount": 1}
+      ],
+      "position": {"x": 600, "y": 170}
+    },
+    {
+      "id": "q_goblin_camp",
+      "title": "清剿哥布林营地",
+      "description": "哥布林在村外扎营, 击退它们。需要至少 20 声望才有人愿意带路。",
+      "prerequisites": ["q_training"],
+      "condition": "var(\"reputation\") >= 20",
+      "exclusive_with": [],
+      "is_ending": false,
+      "optional": false,
+      "rewards": [
+        {"type": "variable", "variable": "reputation", "op": "+=", "value": 10},
+        {"type": "currency", "currency_id": "gold", "amount": 50}
+      ],
+      "position": {"x": 600, "y": 300}
+    },
+    {
+      "id": "q_hidden_cave",
+      "title": "神秘洞穴 (可选支线)",
+      "description": "清剿营地后, 由懂草药的冒险者发现的神秘洞穴, 里面似乎藏着古代遗物。",
+      "prerequisites": ["q_goblin_camp", "q_herb_gathering"],
+      "condition": "",
+      "exclusive_with": [],
+      "is_ending": false,
+      "optional": true,
+      "rewards": [
+        {"type": "flag", "flag": "found_cave", "value": true}
+      ],
+      "position": {"x": 960, "y": 300}
+    },
+    {
+      "id": "q_relic_hunt",
+      "title": "古代遗物 (可选支线)",
+      "description": "在洞穴深处找到古代遗物, 它会开启隐藏结局。",
+      "prerequisites": ["q_hidden_cave"],
+      "condition": "flag(\"found_cave\")",
+      "exclusive_with": [],
+      "is_ending": false,
+      "optional": true,
+      "rewards": [
+        {"type": "item", "item_id": "ancient_relic", "amount": 1},
+        {"type": "flag", "flag": "has_relic", "value": true}
+      ],
+      "position": {"x": 1140, "y": 300}
+    },
+    {
+      "id": "q_join_knights",
+      "title": "加入骑士团",
+      "description": "凭借 >= 25 的声望加入骑士团。与加入盗贼公会互斥。",
+      "prerequisites": ["q_goblin_camp"],
+      "condition": "var(\"reputation\") >= 25",
+      "exclusive_with": ["q_join_thieves"],
+      "is_ending": false,
+      "optional": false,
+      "rewards": [
+        {"type": "flag", "flag": "faction", "value": "knights"}
+      ],
+      "position": {"x": 420, "y": 430}
+    },
+    {
+      "id": "q_join_thieves",
+      "title": "加入盗贼公会",
+      "description": "懂得炼药之道者才被公会接纳。与加入骑士团互斥。",
+      "prerequisites": ["q_goblin_camp"],
+      "condition": "flag(\"knows_alchemy\")",
+      "exclusive_with": ["q_join_knights"],
+      "is_ending": false,
+      "optional": false,
+      "rewards": [
+        {"type": "flag", "flag": "faction", "value": "thieves"}
+      ],
+      "position": {"x": 780, "y": 430}
+    },
+    {
+      "id": "q_escort_mission",
+      "title": "护送商队",
+      "description": "骑士团任务: 护送商队穿越黑森林。",
+      "prerequisites": ["q_join_knights"],
+      "condition": "",
+      "exclusive_with": [],
+      "is_ending": false,
+      "optional": false,
+      "rewards": [
+        {"type": "variable", "variable": "reputation", "op": "+=", "value": 15},
+        {"type": "currency", "currency_id": "gold", "amount": 80}
+      ],
+      "position": {"x": 420, "y": 560}
+    },
+    {
+      "id": "q_burglary",
+      "title": "夜盗宅邸",
+      "description": "盗贼公会任务: 趁夜潜入税务官宅邸。会降低声望。",
+      "prerequisites": ["q_join_thieves"],
+      "condition": "",
+      "exclusive_with": [],
+      "is_ending": false,
+      "optional": false,
+      "rewards": [
+        {"type": "variable", "variable": "reputation", "op": "-=", "value": 15},
+        {"type": "currency", "currency_id": "gold", "amount": 120}
+      ],
+      "position": {"x": 780, "y": 560}
+    },
+    {
+      "id": "q_castle_siege",
+      "title": "城堡攻坚战",
+      "description": "骑士团主线终章: 率军攻打叛军城堡。",
+      "prerequisites": ["q_escort_mission"],
+      "condition": "",
+      "exclusive_with": [],
+      "is_ending": false,
+      "optional": false,
+      "rewards": [
+        {"type": "variable", "variable": "reputation", "op": "+=", "value": 20}
+      ],
+      "position": {"x": 420, "y": 690}
+    },
+    {
+      "id": "q_blackmail",
+      "title": "抓住把柄",
+      "description": "盗贼公会主线终章: 拿到城主的把柄, 成为幕后掌控者。",
+      "prerequisites": ["q_burglary"],
+      "condition": "",
+      "exclusive_with": [],
+      "is_ending": false,
+      "optional": false,
+      "rewards": [
+        {"type": "variable", "variable": "reputation", "op": "-=", "value": 10}
+      ],
+      "position": {"x": 780, "y": 690}
+    },
+    {
+      "id": "q_ending_good",
+      "title": "结局: 王国英雄",
+      "description": "以崇高声望终结叛乱, 名字被刻在英雄碑上。",
+      "prerequisites": ["q_castle_siege"],
+      "condition": "var(\"reputation\") >= 50",
+      "exclusive_with": ["q_ending_shadow", "q_ending_relic"],
+      "is_ending": true,
+      "optional": false,
+      "rewards": [],
+      "position": {"x": 240, "y": 820}
+    },
+    {
+      "id": "q_ending_shadow",
+      "title": "结局: 暗影掌权者",
+      "description": "通过把柄在幕后掌控整座城市。",
+      "prerequisites": ["q_blackmail"],
+      "condition": "var(\"reputation\") < 20",
+      "exclusive_with": ["q_ending_good", "q_ending_relic"],
+      "is_ending": true,
+      "optional": false,
+      "rewards": [],
+      "position": {"x": 600, "y": 820}
+    },
+    {
+      "id": "q_ending_relic",
+      "title": "结局: 遗物的低语 (隐藏结局)",
+      "description": "古代遗物发出低语, 你循着它离开了王国。",
+      "prerequisites": ["q_relic_hunt"],
+      "condition": "flag(\"has_relic\")",
+      "exclusive_with": ["q_ending_good", "q_ending_shadow"],
+      "is_ending": true,
+      "optional": true,
+      "rewards": [],
+      "position": {"x": 960, "y": 820}
+    }
+  ]
+}

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>任务链编辑器与试玩工具</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">🗺️ 任务链编辑器</div>
+  <div class="toolbar">
+    <button id="btn-new" class="btn">新建</button>
+    <button id="btn-load-sample" class="btn">载入样例 ▾</button>
+    <div id="sample-menu" class="dropdown hidden"></div>
+    <button id="btn-open" class="btn">导入工程</button>
+    <input type="file" id="file-input" accept=".json,application/json" class="hidden" />
+    <button id="btn-save" class="btn">保存工程</button>
+    <button id="btn-export" class="btn">导出运行时</button>
+    <button id="btn-import-rt" class="btn">导入并校验</button>
+    <span class="divider"></span>
+    <button id="btn-validate" class="btn primary">诊断</button>
+    <button id="btn-impact" class="btn">影响分析</button>
+    <button id="btn-diff" class="btn">版本对比</button>
+    <input type="file" id="diff-input" accept=".json" class="hidden" />
+  </div>
+</header>
+
+<main class="layout">
+  <!-- 左侧: 问题 / 模拟 / 影响 -->
+  <aside class="side left">
+    <div class="tabs">
+      <button class="tab active" data-tab="issues">诊断</button>
+      <button class="tab" data-tab="simulator">试玩</button>
+      <button class="tab" data-tab="impact">影响</button>
+    </div>
+
+    <section class="tab-panel active" id="panel-issues">
+      <div id="issues-list" class="issues-list">
+        <p class="hint">点击「诊断」检查循环依赖、入口、结局可达性与互斥死路。</p>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="panel-simulator">
+      <div class="sim-controls">
+        <button id="btn-sim-create" class="btn primary small">开始模拟</button>
+        <button id="btn-sim-reset" class="btn small">重置</button>
+        <button id="btn-sim-undo" class="btn small">撤销</button>
+        <button id="btn-sim-save" class="btn small">保存进度</button>
+        <button id="btn-sim-load" class="btn small">载入进度</button>
+        <input type="file" id="progress-input" accept=".json" class="hidden" />
+      </div>
+      <div id="sim-legend" class="legend"></div>
+      <div id="sim-summary" class="sim-summary"></div>
+      <div id="sim-diff" class="sim-diff"></div>
+      <div class="log-wrap">
+        <div class="log-title">事件日志</div>
+        <ol id="sim-log" class="log"></ol>
+      </div>
+    </section>
+
+    <section class="tab-panel" id="panel-impact">
+      <div class="impact-bar">
+        <select id="impact-quest"><option value="">选择任务…</option></select>
+        <button id="btn-impact-run" class="btn small">计算影响面</button>
+      </div>
+      <div id="impact-result"></div>
+      <div id="diff-result"></div>
+    </section>
+  </aside>
+
+  <!-- 中间: 画布 -->
+  <section class="canvas-wrap">
+    <svg id="graph" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3"
+                orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L9,3 L0,6 Z" fill="#8a94a6" />
+        </marker>
+        <marker id="arrow-mutex" markerWidth="10" markerHeight="10" refX="9" refY="3"
+                orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L9,3 L0,6 Z" fill="#e06c75" />
+        </marker>
+      </defs>
+      <g id="viewport">
+        <g id="edges-layer"></g>
+        <g id="nodes-layer"></g>
+      </g>
+    </svg>
+    <div class="canvas-hint">
+      双击空白新建任务 · 拖动节点调整布局 · 实线箭头=前置依赖 · 红色虚线=互斥
+    </div>
+  </section>
+
+  <!-- 右侧: 属性编辑 -->
+  <aside class="side right">
+    <div id="editor">
+      <p class="hint">选中一个任务节点进行编辑, 或双击画布新建任务。</p>
+    </div>
+    <div class="proj-meta" id="proj-meta"></div>
+  </aside>
+</main>
+
+<div id="toast" class="toast hidden"></div>
+<script src="app.js"></script>
+</body>
+</html>

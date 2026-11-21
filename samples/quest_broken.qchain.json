@@ -1,0 +1,154 @@
+{
+  "format_version": 1,
+  "name": "故障任务图 (诊断样例)",
+  "description": "故意制造了循环依赖、缺失引用、互斥死路、条件表达式错误和无法到达结局的死路, 用于演示 validate / import-check 的诊断输出。",
+  "initial_flags": {},
+  "initial_variables": {"x": 0},
+  "quests": [
+    {
+      "id": "q_start",
+      "title": "起点",
+      "prerequisites": [],
+      "condition": "",
+      "exclusive_with": [],
+      "is_ending": false,
+      "optional": false,
+      "rewards": [],
+      "position": {"x": 600, "y": 40}
+    },
+    {
+      "id": "q_a",
+      "title": "循环节点A",
+      "prerequisites": ["q_c"],
+      "condition": "",
+      "exclusive_with": [],
+      "is_ending": false,
+      "optional": false,
+      "rewards": [],
+      "position": {"x": 300, "y": 200}
+    },
+    {
+      "id": "q_b",
+      "title": "循环节点B",
+      "prerequisites": ["q_a", "q_start"],
+      "condition": "",
+      "exclusive_with": [],
+      "is_ending": false,
+      "optional": false,
+      "rewards": [],
+      "position": {"x": 500, "y": 200}
+    },
+    {
+      "id": "q_c",
+      "title": "循环节点C",
+      "prerequisites": ["q_b"],
+      "condition": "",
+      "exclusive_with": [],
+      "is_ending": false,
+      "optional": false,
+      "rewards": [],
+      "position": {"x": 700, "y": 200}
+    },
+    {
+      "id": "q_m1",
+      "title": "互斥分支一",
+      "prerequisites": ["q_start"],
+      "condition": "",
+      "exclusive_with": ["q_m2"],
+      "is_ending": false,
+      "optional": false,
+      "rewards": [],
+      "position": {"x": 300, "y": 380}
+    },
+    {
+      "id": "q_m2",
+      "title": "互斥分支二",
+      "prerequisites": ["q_start"],
+      "condition": "",
+      "exclusive_with": ["q_m1"],
+      "is_ending": false,
+      "optional": false,
+      "rewards": [],
+      "position": {"x": 500, "y": 380}
+    },
+    {
+      "id": "q_needs_both",
+      "title": "贪心的任务",
+      "prerequisites": ["q_m1", "q_m2"],
+      "condition": "",
+      "exclusive_with": [],
+      "is_ending": false,
+      "optional": false,
+      "rewards": [],
+      "position": {"x": 400, "y": 510}
+    },
+    {
+      "id": "q_bad_ref",
+      "title": "引用了不存在的任务",
+      "prerequisites": ["q_start"],
+      "condition": "q_meet(\"q_missing_ref\")",
+      "exclusive_with": [],
+      "is_ending": false,
+      "optional": false,
+      "rewards": [],
+      "position": {"x": 750, "y": 380}
+    },
+    {
+      "id": "q_syntax_err",
+      "title": "条件语法错误",
+      "prerequisites": ["q_start"],
+      "condition": "var(\"x\") >",
+      "exclusive_with": [],
+      "is_ending": false,
+      "optional": false,
+      "rewards": [
+        {"type": "quest", "quest_id": "q_ghost", "state": "completed"}
+      ],
+      "position": {"x": 950, "y": 380}
+    },
+    {
+      "id": "q_dead",
+      "title": "走不到结局的死路",
+      "prerequisites": ["q_start"],
+      "condition": "",
+      "exclusive_with": [],
+      "is_ending": false,
+      "optional": false,
+      "rewards": [],
+      "position": {"x": 300, "y": 660}
+    },
+    {
+      "id": "q_dead_child",
+      "title": "死路的延续",
+      "prerequisites": ["q_dead"],
+      "condition": "",
+      "exclusive_with": [],
+      "is_ending": false,
+      "optional": false,
+      "rewards": [],
+      "position": {"x": 300, "y": 790}
+    },
+    {
+      "id": "q_orphan",
+      "title": "孤儿任务",
+      "prerequisites": ["q_ghost"],
+      "condition": "",
+      "exclusive_with": ["q_nobody"],
+      "is_ending": false,
+      "optional": false,
+      "rewards": [],
+      "position": {"x": 950, "y": 510}
+    },
+    {
+      "id": "q_ending_1",
+      "title": "结局: 勉强通关",
+      "prerequisites": ["q_start"],
+      "condition": "",
+      "exclusive_with": [],
+      "is_ending": true,
+      "optional": false,
+      "rewards": [],
+      "position": {"x": 600, "y": 820}
+    }
+  ]
+}
