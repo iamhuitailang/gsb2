@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>小队编队预演工具</title>
+<style>
+  :root{
+    --bg:#1e2126; --panel:#262a31; --panel2:#2d323b; --line:#3a404b;
+    --fg:#e6e8eb; --dim:#9aa3ad; --accent:#4da3ff; --warn:#ffb84d; --bad:#ff6b6b; --ok:#5fd68a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);
+    font:13px/1.5 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  #app{display:flex;flex-direction:column;height:100%}
+  header{display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+  header .group{display:flex;gap:4px;align-items:center;padding-right:10px;border-right:1px solid var(--line);margin-right:4px}
+  header .group:last-child{border-right:none}
+  button,select,input[type=number]{background:var(--panel2);color:var(--fg);border:1px solid var(--line);
+    border-radius:5px;padding:4px 9px;font-size:12px;cursor:pointer}
+  button:hover{border-color:var(--accent)}
+  button.active{background:var(--accent);color:#10233a;border-color:var(--accent);font-weight:600}
+  button.danger:hover{border-color:var(--bad);color:var(--bad)}
+  button:disabled{opacity:.45;cursor:default}
+  #main{flex:1;display:flex;min-height:0}
+  #cvwrap{flex:1;position:relative;min-width:0;background:#191c20}
+  canvas{display:block;width:100%;height:100%;cursor:crosshair}
+  #hint{position:absolute;left:10px;bottom:8px;color:var(--dim);font-size:12px;pointer-events:none;
+    background:rgba(20,22,26,.75);padding:3px 8px;border-radius:4px}
+  #hud{position:absolute;left:10px;top:8px;background:rgba(20,22,26,.8);padding:6px 10px;border-radius:6px;
+    font-size:12px;pointer-events:none;white-space:pre;line-height:1.6}
+  aside{width:330px;background:var(--panel);border-left:1px solid var(--line);overflow-y:auto;padding:8px}
+  aside h3{margin:10px 0 6px;font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;
+    border-bottom:1px solid var(--line);padding-bottom:4px}
+  aside h3:first-child{margin-top:0}
+  .row{display:flex;align-items:center;gap:6px;margin:4px 0}
+  .row label{flex:0 0 96px;color:var(--dim)}
+  .row input[type=number]{width:64px}
+  .row select{flex:1}
+  .member{display:flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid var(--line);
+    border-radius:6px;padding:4px 6px;margin:4px 0}
+  .member .dot{width:12px;height:12px;border-radius:50%;flex:none}
+  .member .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .member .st{font-size:11px;color:var(--dim);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .member.waiting .st{color:var(--warn)}
+  .member.inactive{opacity:.5}
+  .member input{width:44px;padding:2px 4px}
+  .member button{padding:2px 6px;font-size:11px}
+  table.cmp{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+  table.cmp th,table.cmp td{border:1px solid var(--line);padding:4px 6px;text-align:left}
+  table.cmp th{background:var(--panel2);color:var(--dim);font-weight:normal}
+  .tag{display:inline-block;padding:0 6px;border-radius:3px;font-size:11px;background:var(--panel2);border:1px solid var(--line)}
+  .tag.warn{color:var(--warn);border-color:var(--warn)}
+  footer{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--panel);border-top:1px solid var(--line)}
+  footer .sp{flex:1}
+  #tlabel{font-variant-numeric:tabular-nums;color:var(--dim)}
+  kbd{background:var(--panel2);border:1px solid var(--line);border-radius:3px;padding:0 4px;font-size:11px}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="group" id="editModes">
+      <button data-mode="pan" class="active" title="拖动平移，滚轮缩放">平移</button>
+      <button data-mode="obstacle" title="拖拽画出矩形障碍">画障碍</button>
+      <button data-mode="path" title="单击加点，双击或回车结束">画路线</button>
+      <button data-mode="delete" class="danger" title="点击障碍或路线点删除">删除</button>
+    </div>
+    <div class="group">
+      <button id="btnClearPath" class="danger">清空路线</button>
+      <button id="btnClearObs" class="danger">清空障碍</button>
+    </div>
+    <div class="group">
+      <button id="btnDemo1">演示1·狭道+开阔区</button>
+      <button id="btnDemo2">演示2·中途掉队</button>
+    </div>
+    <div class="group">
+      <button id="btnSave">保存工程</button>
+      <button id="btnLoad">打开工程</button>
+      <input type="file" id="fileInput" accept=".json" style="display:none">
+    </div>
+  </header>
+
+  <div id="main">
+    <div id="cvwrap">
+      <canvas id="cv"></canvas>
+      <div id="hud"></div>
+      <div id="hint"></div>
+    </div>
+    <aside id="panel"></aside>
+  </div>
+
+  <footer>
+    <button id="btnPlay" title="空格">▶ 播放</button>
+    <button id="btnStep" title="N">步进 0.1s</button>
+    <button id="btnReset" title="R">清空重跑</button>
+    <span class="row" style="margin:0"><label style="flex:none">速度</label>
+      <select id="speedSel"><option>0.5</option><option selected>1</option><option>2</option><option>4</option></select>×</span>
+    <span id="tlabel">t = 0.0 s</span>
+    <span class="sp"></span>
+    <span style="color:var(--dim)">快捷键：<kbd>空格</kbd>播放/暂停 <kbd>N</kbd>步进 <kbd>R</kbd>重跑 <kbd>Esc</kbd>取消画线</span>
+  </footer>
+</div>
+
+<script>
+'use strict';
+/* =====================================================================
+ * 小队编队预演工具
+ * 模型：领队沿折线路径匀速前进；队员在路径弧长坐标系中占据编队槽位
+ * （槽位 = 领队后方 back 米 + 横向偏移 lat 米），并朝槽位机动，
+ * 同时与障碍、其他队员做碰撞分离。走廊宽度由领队处横向射线测量，
+ * 低于阈值且持续确认后自动切单列，恢复开阔需更高宽度+滞留时间，
+ * 避免领队折返或短暂贴近窄区时编队来回切换。
+ * ===================================================================== */
+
+// ---------------- 基本工具 ----------------
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const hyp=(x,y)=>Math.hypot(x,y);
+const dist=(a,b)=>hyp(a.x-b.x,a.y-b.y);
+const sub=(a,b)=>({x:a.x-b.x,y:a.y-b.y});
+const add=(a,b)=>({x:a.x+b.x,y:a.y+b.y});
+const mul=(a,k)=>({x:a.x*k,y:a.y*k});
+const len=a=>hyp(a.x,a.y);
+const norm=a=>{const l=len(a)||1;return{x:a.x/l,y:a.y/l};};
+const perp=a=>({x:-a.y,y:a.x});           // 左法线
+const dot=(a,b)=>a.x*b.x+a.y*b.y;
+
+const FORMATIONS={line:'横排',wedge:'楔形',column:'单列'};
+const POLICIES={auto:'自动（按宽度阈值）',line:'固定·横排',wedge:'固定·楔形',column:'固定·单列'};
+
+// ---------------- 工程数据 ----------------
+function defaultSettings(){
+  return {policy:'auto', baseFormation:'wedge',
+    threshold:3.0,      // 走廊宽度低于此值考虑切单列（米）
+    hysteresis:1.2,     // 恢复开阔需超过 阈值+回差
+    confirmTime:0.8,    // 条件需持续满足的确认时间（秒）
+    dwellTime:2.0,      // 切换后最短保持时间（秒）
+    leaderSpeed:2.0, memberSpeed:2.8, catchup:1.5};
+}
+function defaultProject(){
+  return {version:1, name:'未命名工程',
+    obstacles:[],            // {x,y,w,h}
+    path:[],                 // 领队路线途经点 [{x,y}...]
+    members:[],              // {name,r}
+    events:[],               // {t,action:'drop'|'rejoin',member}
+    settings:defaultSettings()};
+}
+function buildDemo1(){
+  const p=defaultProject(); p.name='演示1·狭道后接开阔区';
+  // 一条 2.2m 宽走廊（x:10~30），两端开阔
+  p.obstacles=[
+    {x:10,y:1.1,w:20,h:0.5},{x:10,y:-1.6,w:20,h:0.5},
+    {x:14,y:-6,w:0.5,h:4.4},   // 入口前零散障碍，制造轻微拥挤
+  ];
+  p.path=[{x:0,y:0},{x:38,y:0}];
+  p.members=[0,1,2,3,4].map(i=>({name:'队员'+(i+1),r:0.45}));
+  return p;
+}
+function buildDemo2(){
+  const p=buildDemo1(); p.name='演示2·中途掉队';
+  p.obstacles.push({x:33,y:-3.5,w:3,h:2});   // 出口附近障碍
+  p.events=[{t:6,action:'drop',member:2},{t:16,action:'rejoin',member:2}];
+  return p;
+}
+
+// ---------------- 路径（弧长参数化） ----------------
+function buildPath(pts){
+  const cum=[0];
+  for(let i=1;i<pts.length;i++) cum[i]=cum[i-1]+dist(pts[i],pts[i-1]);
+  const total=cum[cum.length-1]||0;
+  function locate(s){
+    s=clamp(s,0,total);
+    let i=1; while(i<cum.length-1 && cum[i]<s) i++;
+    const a=pts[i-1],b=pts[i],seg=(cum[i]-cum[i-1])||1e-9;
+    const t=(s-cum[i-1])/seg;
+    return {pos:{x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t},
+            dir:norm({x:b.x-a.x,y:b.y-a.y})};
+  }
+  // 点在路径上的弧长坐标（逐段投影取最近，可超出端点）
+  function sOf(p){
+    let best=-1e9,bestD=1/0;
+    for(let i=1;i<pts.length;i++){
+      const a=pts[i-1],b=pts[i];
+      const ab={x:b.x-a.x,y:b.y-a.y},L2=ab.x*ab.x+ab.y*ab.y||1e-9;
+      const t=clamp(((p.x-a.x)*ab.x+(p.y-a.y)*ab.y)/L2,0,1);
+      const q={x:a.x+ab.x*t,y:a.y+ab.y*t},d=dist(p,q);
+      if(d<bestD){bestD=d;best=cum[i-1]+t*Math.sqrt(L2);}
+    }
+    return best;
+  }
+  return {pts,cum,total,pointAt:s=>locate(s).pos,dirAt:s=>locate(s).dir,sOf};
+}
+
+// ---------------- 走廊宽度测量 ----------------
+// 从 pos 沿 ±法线步进，撞到障碍（外扩 expand）或超出 maxD 为止
+function corridorWidth(project,pos,dir,expand,maxD=15){
+  const n=perp(dir); const step=0.1;
+  function ray(sign){
+    let d=0;
+    while(d<maxD){
+      d+=step;
+      const p={x:pos.x+n.x*d*sign,y:pos.y+n.y*d*sign};
+      for(const o of project.obstacles){
+        if(p.x>o.x-expand&&p.x<o.x+o.w+expand&&p.y>o.y-expand&&p.y<o.y+o.h+expand) return d-step;
+      }
+    }
+    return maxD;
+  }
+  return ray(1)+ray(-1);
+}
+
+// ---------------- 编队槽位 ----------------
+// 返回 n 个槽位 [{back,lat}]，槽位 0 最靠前
+function formationSlots(type,n,spacing){
+  const s=[];
+  if(type==='line'){                       // 横排：同一排横向展开
+    for(let i=0;i<n;i++) s.push({back:1.4,lat:(i-(n-1)/2)*spacing});
+  }else if(type==='wedge'){                // 楔形：V 字后排展开
+    s.push({back:1.2,lat:0});
+    for(let i=1;i<n;i++){const row=Math.ceil(i/2),side=i%2?1:-1;
+      s.push({back:1.2+row*spacing*0.9,lat:side*row*spacing});}
+  }else{                                   // 单列：依次跟进
+    for(let i=0;i<n;i++) s.push({back:1.2+i*spacing,lat:0});
+  }
+  return s;
+}
+
+// ---------------- 仿真 ----------------
+function createSim(project,opts={}){
+  const S=project.settings;
+  const path=project.path.length>=2?buildPath(project.path):null;
+  const maxR=project.members.reduce((m,x)=>Math.max(m,x.r),0.3);
+  const spacing=maxR*2+0.7;
+  const policy=opts.policy||S.policy;
+  const baseOf=()=>policy==='auto'?S.baseFormation:policy;
+  const sim={
+    project,S,path,spacing,policy,
+    time:0,finished:false,timeout:false,finishTime:null,
+    leaderS:0,leaderPos:path?path.pointAt(0):{x:0,y:0},
+    leaderDir:path?path.dirAt(0):{x:1,y:0},
+    width:99,formation:baseOf(),
+    narrowT:0,openT:0,dwell:0,switchCount:0,
+    members:project.members.map((m,i)=>({
+      i,name:m.name,r:m.r,active:true,
+      pos:{x:0,y:0},prev:{x:0,y:0},slot:{x:0,y:0},slotDist:0,
+      waiting:false,reason:'',waitTime:0,stuckT:0})),
+    events:(project.events||[]).map(e=>({...e,done:false})),
+    congestion:new Map(),   // "gx,gy" -> 权重（秒）
+    totalWait:0,
+  };
+  // 初始：直接摆在起始编队槽位上
+  placeSlots(sim);
+  for(const m of sim.members){m.pos={...m.slot};m.prev={...m.slot};}
+  return sim;
+}
+
+function activeMembers(sim){return sim.members.filter(m=>m.active);}
+
+// 计算当前编队下每个在场成员的槽位世界坐标。
+// 槽位按成员在路径上的实际先后动态分配（最靠前者拿最前槽位）：
+// 窄道里队员无法互相穿越也不会死锁，掉队/归队时空位自动压缩重排。
+function placeSlots(sim){
+  if(!sim.path)return;
+  const act=activeMembers(sim);
+  for(const m of act)m.pathS=sim.path.sOf(m.pos);
+  act.sort((a,b)=>b.pathS-a.pathS);
+  const slots=formationSlots(sim.formation,act.length,sim.spacing);
+  act.forEach((m,k)=>{
+    const sl=slots[k];
+    const s=Math.max(0,sim.leaderS-sl.back);
+    const p=sim.path.pointAt(s),d=sim.path.dirAt(s),n=perp(d);
+    m.slot={x:p.x+n.x*sl.lat,y:p.y+n.y*sl.lat};
+    m.slotRank=k;
+  });
+}
+
+function circleRectPush(c,r,o){
+  // 圆与矩形分离，返回修正量或 null
+  const qx=clamp(c.x,o.x,o.x+o.w),qy=clamp(c.y,o.y,o.y+o.h);
+  let dx=c.x-qx,dy=c.y-qy,d=hyp(dx,dy);
+  if(d>=r)return null;
+  if(d>1e-6)return{x:dx/d*(r-d),y:dy/d*(r-d)};
+  // 圆心在矩形内：沿最浅轴推出
+  const l=c.x-o.x,rr=o.x+o.w-c.x,t=c.y-o.y,bb=o.y+o.h-c.y;
+  const m=Math.min(l,rr,t,bb);
+  if(m===l)return{x:-(l+r),y:0}; if(m===rr)return{x:rr+r,y:0};
+  if(m===t)return{x:0,y:-(t+r)}; return{x:0,y:bb+r};
+}
+
+function simStep(sim,dt){
+  if(sim.finished)return;
+  const S=sim.S;
+  sim.time+=dt;
+
+  // 1. 计划事件（掉队/归队）
+  for(const e of sim.events){
+    if(!e.done&&sim.time>=e.t){e.done=true;
+      const m=sim.members[e.member];
+      if(m){m.active=(e.action==='rejoin');m.waiting=false;m.stuckT=0;}}
+  }
+
+  // 2. 领队前进
+  if(sim.path&&sim.leaderS<sim.path.total){
+    sim.leaderS=Math.min(sim.path.total,sim.leaderS+S.leaderSpeed*dt);
+    sim.leaderPos=sim.path.pointAt(sim.leaderS);
+    sim.leaderDir=sim.path.dirAt(sim.leaderS);
+  }
+
+  // 3. 走廊宽度 & 编队切换（确认时间 + 回差 + 最短保持，防抖）
+  if(sim.path){
+    const maxR=sim.members.reduce((a,m)=>Math.max(a,m.r),0.3);
+    sim.width=corridorWidth(sim.project,sim.leaderPos,sim.leaderDir,maxR+0.2);
+  }
+  if(sim.policy==='auto'){
+    sim.dwell=Math.max(0,sim.dwell-dt);
+    const narrow=sim.width<S.threshold, open=sim.width>S.threshold+S.hysteresis;
+    if(sim.formation!=='column'){
+      sim.narrowT=narrow?sim.narrowT+dt:0; sim.openT=0;
+      if(narrow&&sim.narrowT>=S.confirmTime&&sim.dwell<=0){
+        sim.formation='column';sim.dwell=S.dwellTime;sim.narrowT=0;sim.switchCount++;}
+    }else{
+      sim.openT=open?sim.openT+dt:0; sim.narrowT=0;
+      if(open&&sim.openT>=S.confirmTime&&sim.dwell<=0){
+        sim.formation=sim.S.baseFormation;sim.dwell=S.dwellTime;sim.openT=0;sim.switchCount++;}
+    }
+  }
+
+  // 4. 槽位
+  placeSlots(sim);
+
+  // 5. 队员朝槽位机动
+  for(const m of sim.members){
+    m.prev={...m.pos};
+    if(!m.active)continue;
+    const to=sub(m.slot,m.pos),d=len(to);
+    m.slotDist=d;
+    if(d>0.03){
+      const sp=Math.min(S.memberSpeed*(d>3?S.catchup:1),d/dt);
+      m.pos=add(m.pos,mul(norm(to),sp*dt));
+    }
+  }
+  // 6. 碰撞分离（障碍 + 队员间），松弛迭代
+  for(let it=0;it<3;it++){
+    for(const m of sim.members){
+      if(!m.active)continue;
+      for(const o of sim.project.obstacles){
+        const p=circleRectPush(m.pos,m.r,o);
+        if(p){m.pos.x+=p.x;m.pos.y+=p.y;}
+      }
+    }
+    const act=activeMembers(sim);
+    for(let i=0;i<act.length;i++)for(let j=i+1;j<act.length;j++){
+      const a=act[i],b=act[j],rr=a.r+b.r+0.05;
+      const d=sub(b.pos,a.pos),l=len(d);
+      if(l<rr&&l>1e-6){const push=mul(norm(d),(rr-l)/2);
+        a.pos=sub(a.pos,push);b.pos=add(b.pos,push);}
+    }
+  }
+
+  // 7. 卡住/等待判定：离槽位尚远但几乎动不了
+  for(const m of sim.members){
+    if(!m.active){m.waiting=false;continue;}
+    const moved=dist(m.pos,m.prev)/dt;
+    const want=len(sub(m.slot,m.pos));
+    if(want>1.0&&moved<sim.S.memberSpeed*0.15){
+      m.stuckT+=dt;
+      if(m.stuckT>0.5&&!m.waiting){m.waiting=true;m.reason=waitReason(sim,m);}
+    }else{m.stuckT=0;m.waiting=false;m.reason='';}
+    if(m.waiting){m.waitTime+=dt;sim.totalWait+=dt;}
+  }
+
+  // 8. 拥挤记录（等待中或与他人过近的位置）
+  for(const m of sim.members){
+    if(!m.active)continue;
+    let crowded=m.waiting;
+    if(!crowded)for(const o of sim.members){
+      if(o!==m&&o.active&&dist(o.pos,m.pos)<(o.r+m.r)*0.9){crowded=true;break;}
+    }
+    if(crowded){
+      const k=Math.round(m.pos.x)+','+Math.round(m.pos.y);
+      sim.congestion.set(k,(sim.congestion.get(k)||0)+dt);
+    }
+  }
+
+  // 9. 结束判定：领队到终点且所有在场成员归位
+  if(sim.path&&sim.leaderS>=sim.path.total){
+    const allIn=activeMembers(sim).every(m=>dist(m.pos,m.slot)<1.5);
+    if(allIn){sim.finished=true;sim.finishTime=sim.time;}
+  }
+  if(sim.time>600){sim.finished=true;sim.timeout=true;}
+}
+
+function waitReason(sim,m){
+  const dir=norm(sub(m.slot,m.pos));
+  for(const o of sim.members){
+    if(o===m||!o.active)continue;
+    const to=sub(o.pos,m.pos);
+    if(len(to)<m.r+o.r+0.6&&dot(norm(to),dir)>0.2)
+      return '被 '+o.name+' 阻挡';
+  }
+  for(const o of sim.project.obstacles){
+    const qx=clamp(m.pos.x,o.x,o.x+o.w),qy=clamp(m.pos.y,o.y,o.y+o.h);
+    if(hyp(m.pos.x-qx,m.pos.y-qy)<m.r+0.15)return '受障碍阻挡';
+  }
+  return '通道拥挤，等待空位';
+}
+
+// 无界面快速跑完一遍（用于方案对比）
+function runHeadless(project,policy){
+  const sim=createSim(project,{policy});
+  const dt=0.05;let guard=0;
+  while(!sim.finished&&guard++<20000)simStep(sim,dt);
+  const cells=[...sim.congestion.entries()]
+    .map(([k,w])=>{const[x,y]=k.split(',').map(Number);return{x,y,w};})
+    .sort((a,b)=>b.w-a.w);
+  return {policy,time:sim.finishTime,timeout:sim.timeout,
+    totalWait:sim.totalWait,switches:sim.switchCount,
+    hot:cells.slice(0,6),grid:sim.congestion,
+    maxWait:Math.max(0,...sim.members.map(m=>m.waitTime))};
+}
+
+// ================= 以下为界面部分 =================
+let project=loadLocal()||buildDemo1();
+let sim=createSim(project);
+let playing=false,speedMul=1,editMode='pan';
+let view={ox:0,oy:0,scale:22};       // 世界(米) -> 屏幕
+let dragInfo=null,pathDraft=null;    // 编辑暂态
+let heatOverlay=null;                // 对比热力 {gridA,gridB,showA,showB}
+let cmpResults=null,cmpA='wedge',cmpB='column';
+
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const hud=document.getElementById('hud'),hint=document.getElementById('hint');
+const panel=document.getElementById('panel');
+
+function resize(){const r=cv.parentElement.getBoundingClientRect();
+  cv.width=r.width*devicePixelRatio;cv.height=r.height*devicePixelRatio;
+  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);}
+addEventListener('resize',resize);resize();
+
+function w2s(p){return{x:(p.x-view.ox)*view.scale,y:(p.y-view.oy)*view.scale};}
+function s2w(p){return{x:p.x/view.scale+view.ox,y:p.y/view.scale+view.oy};}
+
+// ---------------- 绘制 ----------------
+const MEMBER_COLORS=['#4da3ff','#5fd68a','#ffb84d','#c792ea','#ff8fa3','#6be3e3','#e3d26b','#a3e635'];
+function draw(){
+  const r=cv.parentElement.getBoundingClientRect();
+  ctx.clearRect(0,0,r.width,r.height);
+  // 网格
+  ctx.strokeStyle='#23272e';ctx.lineWidth=1;
+  const tl=s2w({x:0,y:0}),br=s2w({x:r.width,y:r.height});
+  for(let x=Math.floor(tl.x);x<=br.x;x++){const a=w2s({x,y:0});
+    ctx.beginPath();ctx.moveTo(a.x,0);ctx.lineTo(a.x,r.height);ctx.stroke();}
+  for(let y=Math.floor(tl.y);y<=br.y;y++){const a=w2s({x:0,y});
+    ctx.beginPath();ctx.moveTo(0,a.y);ctx.lineTo(r.width,a.y);ctx.stroke();}
+
+  // 对比热力
+  if(heatOverlay){
+    const drawGrid=(grid,color)=>{
+      if(!grid)return;
+      const max=Math.max(1e-9,...[...grid.values()]);
+      for(const [k,w] of grid){const[x,y]=k.split(',').map(Number);
+        const a=w2s({x:x-0.5,y:y-0.5});
+        ctx.fillStyle=color.replace('A',String(0.12+0.5*w/max));
+        ctx.fillRect(a.x,a.y,view.scale,view.scale);}};
+    if(heatOverlay.showA)drawGrid(heatOverlay.gridA,'rgba(77,163,255,A)');
+    if(heatOverlay.showB)drawGrid(heatOverlay.gridB,'rgba(255,107,107,A)');
+  }
+
+  // 障碍
+  for(const o of project.obstacles){
+    const a=w2s({x:o.x,y:o.y});
+    ctx.fillStyle='#4a5160';ctx.fillRect(a.x,a.y,o.w*view.scale,o.h*view.scale);
+    ctx.strokeStyle='#5c6575';ctx.strokeRect(a.x,a.y,o.w*view.scale,o.h*view.scale);
+  }
+  // 画障碍拖拽预览
+  if(dragInfo&&dragInfo.mode==='obstacle'){
+    const a=w2s(dragInfo.start),b=w2s(dragInfo.cur);
+    ctx.strokeStyle='#4da3ff';ctx.setLineDash([4,3]);
+    ctx.strokeRect(Math.min(a.x,b.x),Math.min(a.y,b.y),Math.abs(b.x-a.x),Math.abs(b.y-a.y));
+    ctx.setLineDash([]);
+  }
+
+  // 路线
+  const pts=pathDraft||project.path;
+  if(pts.length){
+    ctx.strokeStyle=pathDraft?'#8ab8e8':'#4da3ff';ctx.lineWidth=2;ctx.beginPath();
+    pts.forEach((p,i)=>{const s=w2s(p);i?ctx.lineTo(s.x,s.y):ctx.moveTo(s.x,s.y);});
+    ctx.stroke();ctx.lineWidth=1;
+    pts.forEach((p,i)=>{const s=w2s(p);
+      ctx.fillStyle=i===0?'#5fd68a':'#4da3ff';
+      ctx.beginPath();ctx.arc(s.x,s.y,4,0,7);ctx.fill();});
+  }
+
+  if(sim.path){
+    // 走廊宽度指示（领队处）
+    const n=perp(sim.leaderDir),half=sim.width/2;
+    const a=w2s(add(sim.leaderPos,mul(n,half))),b=w2s(add(sim.leaderPos,mul(n,-half)));
+    ctx.strokeStyle=sim.width<project.settings.threshold?'rgba(255,107,107,.9)':'rgba(95,214,138,.7)';
+    ctx.setLineDash([5,4]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=ctx.strokeStyle;ctx.font='11px sans-serif';
+    ctx.fillText(sim.width>=30?'开阔':sim.width.toFixed(1)+'m',(a.x+b.x)/2+6,(a.y+b.y)/2);
+  }
+
+  // 槽位（每人尝试占的位置）
+  for(const m of sim.members){
+    if(!m.active)continue;
+    const s=w2s(m.slot);
+    ctx.strokeStyle=MEMBER_COLORS[m.i%8];ctx.setLineDash([3,3]);
+    ctx.beginPath();ctx.arc(s.x,s.y,m.r*view.scale,0,7);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=MEMBER_COLORS[m.i%8];ctx.font='9px sans-serif';
+    ctx.fillText(m.i+1,s.x+5,s.y-5);
+    // 连线：成员 -> 目标槽位
+    const mp=w2s(m.pos);
+    ctx.strokeStyle='rgba(255,255,255,.15)';
+    ctx.beginPath();ctx.moveTo(mp.x,mp.y);ctx.lineTo(s.x,s.y);ctx.stroke();
+  }
+
+  // 领队
+  if(sim.path){
+    const p=w2s(sim.leaderPos),d=sim.leaderDir;
+    ctx.fillStyle='#ffd166';ctx.beginPath();
+    ctx.moveTo(p.x+d.x*12,p.y+d.y*12);
+    ctx.lineTo(p.x-d.y*7-d.x*6,p.y+d.x*7-d.y*6);
+    ctx.lineTo(p.x+d.y*7-d.x*6,p.y-d.x*7-d.y*6);
+    ctx.closePath();ctx.fill();
+    ctx.fillStyle='#10233a';ctx.font='9px sans-serif';ctx.fillText('领',p.x-4,p.y+3);
+  }
+
+  // 队员
+  sim.members.forEach(m=>{
+    const p=w2s(m.pos),c=MEMBER_COLORS[m.i%8];
+    ctx.globalAlpha=m.active?1:0.35;
+    ctx.fillStyle=m.waiting?'#ffb84d':c;
+    ctx.beginPath();ctx.arc(p.x,p.y,m.r*view.scale,0,7);ctx.fill();
+    ctx.strokeStyle=m.waiting?'#ff6b6b':'rgba(0,0,0,.4)';ctx.stroke();
+    ctx.fillStyle='#10233a';ctx.font='bold 10px sans-serif';
+    ctx.textAlign='center';ctx.fillText(m.i+1,p.x,p.y+3.5);ctx.textAlign='left';
+    if(m.waiting){ctx.fillStyle='#ffb84d';ctx.font='10px sans-serif';
+      ctx.fillText('⏳ '+m.reason,p.x+m.r*view.scale+4,p.y-6);}
+    if(!m.active){ctx.fillStyle='#9aa3ad';ctx.font='10px sans-serif';
+      ctx.fillText('已移出',p.x+8,p.y+12);}
+    ctx.globalAlpha=1;
+  });
+}
+
+// ---------------- HUD / 面板 ----------------
+const fmt=t=>t==null?'—':t.toFixed(1)+'s';
+function refreshHUD(){
+  const waiters=sim.members.filter(m=>m.active&&m.waiting);
+  hud.textContent=
+    `时间 ${sim.time.toFixed(1)}s   编队：${FORMATIONS[sim.formation]}`+
+    `${sim.policy==='auto'?`（自动·基准 ${FORMATIONS[project.settings.baseFormation]}）`:''}\n`+
+    `走廊宽度 ${sim.width>=30?'开阔':sim.width.toFixed(2)+'m'}   阈值 ${project.settings.threshold}m`+
+    `${sim.dwell>0?`   切换锁定 ${sim.dwell.toFixed(1)}s`:''}`+
+    `${sim.narrowT>0?`   狭窄确认中 ${sim.narrowT.toFixed(1)}s`:''}`+
+    `${sim.openT>0?`   开阔确认中 ${sim.openT.toFixed(1)}s`:''}\n`+
+    (waiters.length?`等待中：${waiters.map(m=>m.name+'（'+m.reason+'）').join('、')}`:'无人等待')+
+    (sim.finished?`\n✔ 已通过，用时 ${fmt(sim.finishTime)}${sim.timeout?'（超时）':''}`:'');
+  document.getElementById('tlabel').textContent='t = '+sim.time.toFixed(1)+' s';
+}
+
+function refreshPanel(){
+  const S=project.settings;
+  const opt=(obj,cur)=>Object.entries(obj).map(([k,v])=>
+    `<option value="${k}"${k===cur?' selected':''}>${v}</option>`).join('');
+  let h=`
+  <h3>编队策略</h3>
+  <div class="row"><label>策略</label><select id="selPolicy">${opt(POLICIES,S.policy)}</select></div>
+  <div class="row"><label>开阔区队形</label><select id="selBase">${opt(FORMATIONS,S.baseFormation)}</select></div>
+  <div class="row"><label>收窄阈值 (m)</label><input type="number" id="inThr" step="0.1" min="0.5" value="${S.threshold}"></div>
+  <div class="row"><label>恢复回差 (m)</label><input type="number" id="inHys" step="0.1" min="0" value="${S.hysteresis}"></div>
+  <div class="row"><label>确认时间 (s)</label><input type="number" id="inConfirm" step="0.1" min="0" value="${S.confirmTime}"></div>
+  <div class="row"><label>切换锁定 (s)</label><input type="number" id="inDwell" step="0.1" min="0" value="${S.dwellTime}"></div>
+  <div class="row"><label>领队速度 m/s</label><input type="number" id="inLeadV" step="0.1" min="0.2" value="${S.leaderSpeed}"></div>
+  <div class="row"><label>队员速度 m/s</label><input type="number" id="inMemV" step="0.1" min="0.5" value="${S.memberSpeed}"></div>
+
+  <h3>队员（${activeMembers(sim).length}/${sim.members.length} 在场）</h3>
+  <div class="row"><button id="btnAddMem">+ 添加队员</button>
+    <span style="color:var(--dim);font-size:11px">半径可改，改动后重跑生效</span></div>`;
+  sim.members.forEach(m=>{
+    h+=`<div class="member ${m.waiting?'waiting':''} ${m.active?'':'inactive'}" data-i="${m.i}">
+      <span class="dot" style="background:${MEMBER_COLORS[m.i%8]}"></span>
+      <span class="nm">${m.i+1}. ${m.name}</span>
+      <input type="number" step="0.05" min="0.2" max="1.5" value="${m.r}" data-act="r" title="半径(米)">
+      <span class="st">${m.active?(m.waiting?'⏳'+m.reason:(m.slotDist>1?'机动中':'到位')):'已移出'}</span>
+      <button data-act="toggle">${m.active?'移出':'归队'}</button>
+      <button data-act="del" class="danger">✕</button></div>`;
+  });
+  h+=`<h3>方案对比（同一路线跑两遍）</h3>
+  <div class="row"><label>方案 A</label><select id="selCmpA">${opt(POLICIES,cmpA)}</select></div>
+  <div class="row"><label>方案 B</label><select id="selCmpB">${opt(POLICIES,cmpB)}</select></div>
+  <div class="row"><button id="btnCmp">开始对比</button>
+    <button id="btnHeatA" ${cmpResults?'':'disabled'}>A 热力</button>
+    <button id="btnHeatB" ${cmpResults?'':'disabled'}>B 热力</button>
+    <button id="btnHeatOff" ${cmpResults?'':'disabled'}>关热力</button></div>
+  <div id="cmpOut">${cmpHtml()}</div>
+  <h3>说明</h3>
+  <div style="color:var(--dim);font-size:12px">
+    虚线圆 = 各队员尝试占据的槽位；黄三角 = 领队；红/绿虚线 = 领队处实测走廊宽度。<br>
+    宽度低于阈值并持续「确认时间」才切单列；需高于阈值+回差才恢复，且切换后锁定一段时间，领队折返不会引发来回换队。<br>
+    移出队员后槽位自动压缩重排，归队或回到开阔区后恢复队形。
+  </div>`;
+  panel.innerHTML=h;
+  bindPanel();
+}
+function cmpHtml(){
+  if(!cmpResults)return '<span style="color:var(--dim)">尚未运行对比</span>';
+  const {A,B}=cmpResults;
+  const row=(l,a,b)=>`<tr><td>${l}</td><td>${a}</td><td>${b}</td></tr>`;
+  const hot=r=>r.hot.length?r.hot.slice(0,3).map(c=>`(${c.x},${c.y}) ${c.w.toFixed(1)}s`).join('<br>'):'—';
+  return `<table class="cmp"><tr><th></th><th>A·${POLICIES[A.policy]}</th><th>B·${POLICIES[B.policy]}</th></tr>
+    ${row('通过时间',A.timeout?'超时':fmt(A.time),B.timeout?'超时':fmt(B.time))}
+    ${row('总等待时长',fmt(A.totalWait),fmt(B.totalWait))}
+    ${row('单人最长等待',fmt(A.maxWait),fmt(B.maxWait))}
+    ${row('编队切换次数',A.switches,B.switches)}
+    ${row('最拥挤位置',hot(A),hot(B))}</table>`;
+}
+function bindPanel(){
+  const $=id=>document.getElementById(id);
+  const upd=(id,fn)=>{const e=$(id);if(e)e.onchange=()=>{fn(e);saveLocal();resetSim();};};
+  upd('selPolicy',e=>project.settings.policy=e.value);
+  upd('selBase',e=>project.settings.baseFormation=e.value);
+  upd('inThr',e=>project.settings.threshold=+e.value||3);
+  upd('inHys',e=>project.settings.hysteresis=+e.value||0);
+  upd('inConfirm',e=>project.settings.confirmTime=+e.value||0);
+  upd('inDwell',e=>project.settings.dwellTime=+e.value||0);
+  upd('inLeadV',e=>project.settings.leaderSpeed=+e.value||2);
+  upd('inMemV',e=>project.settings.memberSpeed=+e.value||2.8);
+  $('btnAddMem').onclick=()=>{
+    project.members.push({name:'队员'+(project.members.length+1),r:0.45});
+    saveLocal();resetSim();};
+  panel.querySelectorAll('.member').forEach(el=>{
+    const i=+el.dataset.i,m=sim.members[i];
+    el.querySelector('[data-act=toggle]').onclick=()=>{
+      m.active=!m.active;m.waiting=false;m.stuckT=0;refreshPanel();};
+    el.querySelector('[data-act=del]').onclick=()=>{
+      project.members.splice(i,1);saveLocal();resetSim();};
+    el.querySelector('[data-act=r]').onchange=e=>{
+      project.members[i].r=clamp(+e.target.value||0.45,0.2,1.5);saveLocal();resetSim();};
+  });
+  $('btnCmp').onclick=()=>{
+    cmpA=$('selCmpA').value;cmpB=$('selCmpB').value;
+    const A=runHeadless(project,cmpA),B=runHeadless(project,cmpB);
+    cmpResults={A,B};
+    heatOverlay={gridA:A.grid,gridB:B.grid,showA:true,showB:false};
+    refreshPanel();
+    document.getElementById('btnHeatA').classList.toggle('active',true);
+  };
+  const heat=(which)=>{
+    if(!heatOverlay)return;
+    heatOverlay.showA=which==='A';heatOverlay.showB=which==='B';
+    if(which==='off'){heatOverlay.showA=heatOverlay.showB=false;}
+    document.getElementById('btnHeatA').classList.toggle('active',which==='A');
+    document.getElementById('btnHeatB').classList.toggle('active',which==='B');
+  };
+  $('btnHeatA').onclick=()=>heat('A');
+  $('btnHeatB').onclick=()=>heat('B');
+  $('btnHeatOff').onclick=()=>heat('off');
+}
+
+// ---------------- 编辑交互 ----------------
+const HINTS={pan:'拖动平移，滚轮缩放',obstacle:'拖拽画出矩形障碍',
+  path:'单击添加途经点，双击或回车结束，Esc 取消',delete:'点击障碍或路线点删除'};
+function setMode(m){editMode=m;
+  document.querySelectorAll('#editModes button').forEach(b=>
+    b.classList.toggle('active',b.dataset.mode===m));
+  hint.textContent=HINTS[m];}
+document.querySelectorAll('#editModes button').forEach(b=>b.onclick=()=>setMode(b.dataset.mode));
+hint.textContent=HINTS.pan;
+
+function evPos(e){const r=cv.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top};}
+
+cv.addEventListener('mousedown',e=>{
+  const p=evPos(e),w=s2w(p);
+  if(editMode==='pan'||e.button===1||e.button===2){
+    dragInfo={mode:'pan',start:p,view:{...view}};return;}
+  if(editMode==='obstacle'){dragInfo={mode:'obstacle',start:w,cur:w};return;}
+  if(editMode==='path'){
+    if(!pathDraft)pathDraft=[];
+    pathDraft.push(w);return;}
+  if(editMode==='delete'){
+    // 优先删路线点，其次障碍
+    for(let i=0;i<project.path.length;i++)
+      if(dist(project.path[i],w)<0.6){project.path.splice(i,1);saveLocal();resetSim();return;}
+    for(let i=project.obstacles.length-1;i>=0;i--){const o=project.obstacles[i];
+      if(w.x>o.x&&w.x<o.x+o.w&&w.y>o.y&&w.y<o.y+o.h){
+        project.obstacles.splice(i,1);saveLocal();resetSim();return;}}
+  }
+});
+cv.addEventListener('mousemove',e=>{
+  if(!dragInfo)return;const p=evPos(e);
+  if(dragInfo.mode==='pan'){
+    view.ox=dragInfo.view.ox-(p.x-dragInfo.start.x)/view.scale;
+    view.oy=dragInfo.view.oy-(p.y-dragInfo.start.y)/view.scale;
+  }else if(dragInfo.mode==='obstacle'){dragInfo.cur=s2w(p);}
+});
+addEventListener('mouseup',()=>{
+  if(dragInfo&&dragInfo.mode==='obstacle'){
+    const a=dragInfo.start,b=dragInfo.cur;
+    const o={x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),
+             w:Math.abs(b.x-a.x),h:Math.abs(b.y-a.y)};
+    if(o.w>0.2&&o.h>0.2){project.obstacles.push(o);saveLocal();resetSim();}
+  }
+  dragInfo=null;
+});
+cv.addEventListener('dblclick',()=>finishPath());
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const p=evPos(e),before=s2w(p);
+  view.scale=clamp(view.scale*(e.deltaY<0?1.12:0.89),5,120);
+  const after=s2w(p);
+  view.ox+=before.x-after.x;view.oy+=before.y-after.y;
+},{passive:false});
+
+function finishPath(){
+  if(pathDraft&&pathDraft.length>=2){project.path=pathDraft;saveLocal();resetSim();}
+  pathDraft=null;
+}
+addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;
+  if(e.key==='Enter')finishPath();
+  if(e.key==='Escape')pathDraft=null;
+  if(e.key===' '){e.preventDefault();togglePlay();}
+  if(e.key==='n'||e.key==='N'){simStep(sim,0.1);refreshHUD();refreshPanel();}
+  if(e.key==='r'||e.key==='R')resetSim();
+});
+
+// ---------------- 顶部按钮 ----------------
+document.getElementById('btnClearPath').onclick=()=>{project.path=[];saveLocal();resetSim();};
+document.getElementById('btnClearObs').onclick=()=>{project.obstacles=[];saveLocal();resetSim();};
+document.getElementById('btnDemo1').onclick=()=>{project=buildDemo1();saveLocal();resetSim();};
+document.getElementById('btnDemo2').onclick=()=>{project=buildDemo2();saveLocal();resetSim();};
+document.getElementById('btnSave').onclick=()=>{
+  const blob=new Blob([JSON.stringify(project,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=(project.name||'squad')+'.json';a.click();URL.revokeObjectURL(a.href);};
+document.getElementById('btnLoad').onclick=()=>document.getElementById('fileInput').click();
+document.getElementById('fileInput').onchange=e=>{
+  const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=()=>{try{
+    const p=JSON.parse(rd.result);
+    if(!p.obstacles||!p.path||!p.members)throw 0;
+    p.settings={...defaultSettings(),...(p.settings||{})};
+    p.events=p.events||[];project=p;saveLocal();resetSim();
+  }catch(_){alert('文件格式不正确');}};
+  rd.readAsText(f);e.target.value='';};
+
+// ---------------- 播放控制 ----------------
+const btnPlay=document.getElementById('btnPlay');
+function togglePlay(){playing=!playing;btnPlay.textContent=playing?'⏸ 暂停':'▶ 播放';}
+btnPlay.onclick=togglePlay;
+document.getElementById('btnStep').onclick=()=>{simStep(sim,0.1);refreshHUD();refreshPanel();};
+document.getElementById('btnReset').onclick=resetSim;
+document.getElementById('speedSel').onchange=e=>speedMul=+e.target.value;
+function resetSim(){
+  playing=false;btnPlay.textContent='▶ 播放';
+  heatOverlay=null;cmpResults=null;
+  sim=createSim(project);
+  refreshHUD();refreshPanel();
+}
+
+// ---------------- 本地持久化 ----------------
+function saveLocal(){try{localStorage.setItem('squad-rehearsal',JSON.stringify(project));}catch(_){}}
+function loadLocal(){try{
+  const p=JSON.parse(localStorage.getItem('squad-rehearsal'));
+  if(p&&p.obstacles&&p.path&&p.members){
+    p.settings={...defaultSettings(),...(p.settings||{})};p.events=p.events||[];return p;}
+}catch(_){}return null;}
+
+// ---------------- 主循环 ----------------
+let last=performance.now(),panelTick=0;
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000);last=now;
+  if(playing&&!sim.finished){
+    let acc=dt*speedMul;
+    while(acc>0){const s=Math.min(acc,0.05);simStep(sim,s);acc-=s;}
+    refreshHUD();
+    // 面板定时刷新时若用户正在编辑其中控件则跳过，避免打断输入
+    if((panelTick+=dt)>0.3){panelTick=0;
+      if(!panel.contains(document.activeElement))refreshPanel();}
+    if(sim.finished){playing=false;btnPlay.textContent='▶ 播放';refreshPanel();}
+  }
+  draw();
+  requestAnimationFrame(loop);
+}
+refreshHUD();refreshPanel();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
