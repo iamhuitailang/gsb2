@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>二维跳跃可达性检查器</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header>
+  <h1>二维跳跃可达性检查器</h1>
+  <div class="header-actions">
+    <button id="btn-demo" class="ghost">重置为演示小图</button>
+    <button id="btn-analyze" class="primary">计算可达性</button>
+    <button id="btn-play" class="play">▶ 开始试玩</button>
+  </div>
+</header>
+
+<main>
+  <section class="stage-wrap">
+    <canvas id="stage" width="960" height="480"></canvas>
+    <div id="play-bar">
+      <span>← →/A D 移动 · Space/W/↑ 跳跃（按住更高）· S/↓ 下穿薄平台 · R 重置</span>
+      <button id="btn-reset-play" class="mini">重置位置</button>
+      <button id="btn-stop-play-2" class="mini">退出</button>
+    </div>
+    <div class="legend">
+      <span><i class="sw sw-platform"></i>实心平台</span>
+      <span><i class="sw sw-overhead"></i>上方障碍</span>
+      <span><i class="sw sw-start"></i>起跳区域</span>
+      <span><i class="sw sw-ok"></i>可落脚</span>
+      <span><i class="sw sw-bonk"></i>撞头阻挡</span>
+      <span><i class="sw sw-edge"></i>贴边滑落</span>
+      <span><i class="sw sw-thin"></i>薄平台（可下穿）</span>
+    </div>
+  </section>
+
+  <aside class="side">
+    <div class="panel">
+      <h2>编辑工具</h2>
+      <div class="tool-grid">
+        <button class="tool-btn active" data-tool="select">选择/拖拽</button>
+        <button class="tool-btn" data-tool="platform">水平平台</button>
+        <button class="tool-btn" data-tool="overhead">上方障碍</button>
+        <button class="tool-btn" data-tool="start">起跳区域</button>
+      </div>
+      <div id="inspector"></div>
+    </div>
+
+    <div class="panel">
+      <h2>落脚结果（点击行查看轨迹）</h2>
+      <div id="landing-list"><p class="hint">点击「计算可达性」后在此列出每个平台的落脚结果。</p></div>
+      <div id="target-verdict" class="verdict">在检查器中标记一个目标平台。</div>
+    </div>
+
+    <div class="panel">
+      <h2>逐步轨迹</h2>
+      <div id="step-info" class="hint">选择一条可行跳法后在此逐步回放。</div>
+      <div id="step-frame-num" class="dim"></div>
+      <div class="step-controls">
+        <button class="mini" id="step-first">⏮</button>
+        <button class="mini" id="step-prev">◀ 上一帧</button>
+        <button class="mini" id="step-play">自动播放</button>
+        <button class="mini" id="step-next">下一帧 ▶</button>
+        <button class="mini" id="step-last">⏭</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>角色运动参数（预演与试玩共用）</h2>
+      <div class="param-tabs">
+        <button class="param-tab active" data-set="A">参数集 A</button>
+        <button class="param-tab" data-set="B">参数集 B</button>
+      </div>
+      <div id="params-a" class="param-panel active">
+        <label class="name-row">名称 <input id="name-a" type="text"></label>
+      </div>
+      <div id="params-b" class="param-panel">
+        <label class="name-row">名称 <input id="name-b" type="text"></label>
+      </div>    </div>
+
+    <div class="panel">
+      <h2>两套参数连通性对比</h2>
+      <div id="compare-list"><p class="hint">计算后显示两套参数的连通性差异。</p></div>
+    </div>
+
+    <div class="panel">
+      <h2>关卡存档</h2>
+      <div class="save-actions">
+        <button class="mini" id="btn-save">保存到浏览器</button>
+        <button class="mini" id="btn-export">导出 JSON</button>
+        <button class="mini" id="btn-import">导入 JSON</button>
+        <input type="file" id="import-file" accept=".json" hidden>
+      </div>
+      <div id="save-list"></div>
+    </div>
+
+    <div class="panel rules">
+      <h2>碰撞规则（分析与试玩同一套）</h2>
+      <ul>
+        <li>固定 60Hz 子步、分轴 swept AABB；同一 <code>physics.step</code> 驱动分析枚举与键盘试玩。</li>
+        <li>实心方块四面阻挡；向上碰底面＝撞头（上升速度清零），向下碰顶面＝着陆。</li>
+        <li>薄平台仅在角色上一帧脚底不低于顶面、且本帧向下穿过时接住，侧向/向上均穿过；S/↓ 可主动下穿。</li>
+        <li>贴边容差 <b>4px</b>：水平重叠不足 4px 不站住，记为贴边滑落。</li>
+        <li>跳跃：按住窗口内减弱重力形成可变跳高，松键按截断系数收速；支持 0.08s 土狼时间。</li>
+      </ul>
+    </div>
+  </aside>
+</main>
+<script src="js/constants.js"></script>
+<script src="js/geometry.js"></script>
+<script src="js/physics.js"></script>
+<script src="js/analyzer.js"></script>
+<script src="js/level.js"></script>
+<script src="js/render.js"></script>
+<script src="js/editor.js"></script>
+<script src="js/play.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

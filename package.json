@@ -1,0 +1,11 @@
+{
+  "name": "jump-reachability-checker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "二维跳跃可达性检查页：方块平台 + 与试玩共用的角色运动参数",
+  "scripts": {
+    "test": "node tests/engine.test.mjs",
+    "test:e2e": "node tests/e2e.mjs",
+    "start": "npx --yes serve ."
+  }
+}
