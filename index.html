@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>2D 碰撞形状编辑器</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header id="toolbar">
+  <button id="btnMode" class="primary">▶ 预览</button>
+  <span class="sep"></span>
+  <button id="btnAddObj">+对象</button>
+  <button id="btnAddCircle">+圆</button>
+  <button id="btnAddRect">+矩形</button>
+  <button id="btnAddPoly">+多边形</button>
+  <span class="sep"></span>
+  <button id="btnUndo">↩ 撤销</button>
+  <button id="btnRedo">↪ 重做</button>
+  <span class="sep"></span>
+  <button id="btnSave">保存</button>
+  <button id="btnLoad">打开…</button>
+  <button id="btnExportObj">导出角色</button>
+  <button id="btnExportScene">导出场景</button>
+  <span class="sep"></span>
+  <select id="sceneSelect"><option value="">加载测试场景…</option></select>
+  <span id="saveState" class="dim"></span>
+</header>
+<div id="modeHint" class="hint">编辑中：拖动顶点/形状，点击边插入顶点，Delete 删除，空格预览</div>
+<div id="main">
+  <aside id="left">
+    <h3>对象层级</h3>
+    <div id="tree"></div>
+    <h3>属性</h3>
+    <div id="props"></div>
+  </aside>
+  <div id="canvasWrap"><canvas id="cv" width="960" height="600"></canvas></div>
+  <aside id="right">
+    <h3>形状校验</h3>
+    <div id="issues"></div>
+    <h3>接触对（预览）</h3>
+    <div id="contacts"></div>
+    <h3>类别检测规则</h3>
+    <div id="rules"></div>
+    <h3>场景设置</h3>
+    <div id="settings"></div>
+  </aside>
+</div>
+<script src="js/geometry.js"></script>
+<script src="js/model.js"></script>
+<script src="js/physics.js"></script>
+<script src="js/scenes.js"></script>
+<script src="js/editor.js"></script>
+</body>
+</html>
