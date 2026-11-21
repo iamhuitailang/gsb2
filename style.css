@@ -1,0 +1,52 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #14171c;
+  color: #d8dee6;
+}
+header { padding: 16px 24px 0; }
+header h1 { margin: 0 0 4px; font-size: 20px; }
+header p { margin: 0 0 8px; color: #8b95a3; font-size: 13px; }
+main { padding: 8px 24px 32px; display: flex; flex-direction: column; gap: 16px; }
+.panel {
+  background: #1c2129;
+  border: 1px solid #2a313c;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.panel h2 { margin: 0 0 12px; font-size: 15px; color: #9ecbff; }
+.row { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+canvas {
+  background: #10131a;
+  border: 1px solid #2a313c;
+  border-radius: 6px;
+  image-rendering: pixelated;
+}
+.compare-box canvas { width: 360px; height: 270px; }
+.side { display: flex; flex-direction: column; gap: 8px; min-width: 300px; flex: 1; max-width: 420px; }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #aab4c0; }
+select, input[type="number"], input[type="range"] {
+  background: #10131a; color: #d8dee6;
+  border: 1px solid #2a313c; border-radius: 5px; padding: 5px 8px; font-size: 13px;
+}
+.kv { font-size: 13px; color: #8b95a3; }
+.kv code { color: #ffd479; font-family: ui-monospace, Menlo, monospace; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+button {
+  background: #2b6cb0; color: #fff; border: none; border-radius: 5px;
+  padding: 6px 12px; font-size: 13px; cursor: pointer;
+}
+button:hover { background: #3182ce; }
+button:disabled { background: #3a4350; color: #7a8494; cursor: default; }
+button.danger { background: #9b2c2c; }
+button.danger:hover { background: #c53030; }
+.hint { font-size: 12px; color: #6b7684; line-height: 1.5; }
+.banner {
+  border-radius: 6px; padding: 8px 10px; font-size: 13px; line-height: 1.6;
+  background: #3d2f10; border: 1px solid #8a6d1f; color: #ffd479;
+}
+.banner.ok { background: #10351c; border-color: #2f7a44; color: #7fe0a0; }
+.banner.bad { background: #3d1414; border-color: #8a2f2f; color: #ff9a9a; }
+.hidden { display: none; }
+.compare-box { display: flex; flex-direction: column; gap: 6px; }

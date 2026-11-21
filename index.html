@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>角色移动回放校验工具</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>角色移动回放校验工具</h1>
+  <p>逻辑固定 120Hz 步进、与渲染解耦：同一串方向键操作，无论机器画得快慢，移动结果一致。</p>
+</header>
+
+<main>
+  <!-- ============ 实时演示 ============ -->
+  <section class="panel" id="live-panel">
+    <h2>1 · 实时演示</h2>
+    <div class="row">
+      <canvas id="live-canvas" width="480" height="360" tabindex="0"></canvas>
+      <div class="side">
+        <label>关卡
+          <select id="level-select"></select>
+        </label>
+        <label>移动速度 <span id="speed-value"></span>
+          <input type="range" id="speed-slider" min="60" max="300" step="10">
+        </label>
+        <div class="kv">关卡指纹 <code id="level-hash"></code></div>
+        <label>显示帧率（可随时切换，不影响移动结果）
+          <select id="fps-cap">
+            <option value="0">跟随屏幕（requestAnimationFrame）</option>
+            <option value="60">60 fps</option>
+            <option value="30">30 fps</option>
+            <option value="24">24 fps</option>
+            <option value="15">15 fps</option>
+          </select>
+        </label>
+        <div class="kv">模拟进度 <code id="live-tick">0</code> 帧 · <code id="live-time">0.00</code> s</div>
+        <div class="kv">实际渲染 <code id="live-fps">—</code> fps</div>
+        <div class="kv">当前按键 <code id="live-keys">无</code></div>
+        <div class="btn-row">
+          <button id="record-start">● 开始录制</button>
+          <button id="record-stop" disabled>■ 停止并保存</button>
+        </div>
+        <div class="hint" id="record-status">方向键 / WASD 移动；录制从关卡起点开始。窗口失去焦点会自动松开全部按键。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 回放 ============ -->
+  <section class="panel" id="replay-panel">
+    <h2>2 · 回放</h2>
+    <div class="row">
+      <canvas id="replay-canvas" width="480" height="360"></canvas>
+      <div class="side">
+        <label>录制
+          <select id="rec-select"></select>
+        </label>
+        <div class="btn-row">
+          <button id="rec-import">导入</button>
+          <button id="rec-export">导出</button>
+          <button id="rec-sample">生成撞墙转向示例</button>
+          <button id="rec-delete" class="danger">删除</button>
+        </div>
+        <input type="file" id="rec-file" accept=".json,application/json" hidden>
+        <div id="compat-banner" class="banner hidden"></div>
+        <div class="kv">关卡指纹 <code id="rec-hash"></code></div>
+        <div class="kv">时长 <code id="rec-duration">—</code> · 事件 <code id="rec-events">—</code> 个</div>
+        <div class="btn-row">
+          <button id="replay-play">▶ 播放</button>
+          <button id="replay-step">单步 +1 帧</button>
+        </div>
+        <label>进度 <span id="replay-tick-label">0 / 0</span>
+          <input type="range" id="replay-seek" min="0" max="0" value="0">
+        </label>
+        <div class="btn-row">
+          <input type="number" id="replay-goto" min="0" placeholder="帧号" style="width:90px">
+          <button id="replay-goto-btn">跳到指定帧</button>
+        </div>
+        <div class="hint">暂停 / 单步 / 跳转后再继续播放，位置与一路连续播放完全一致（确定性重放）。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 双帧率并排校验 ============ -->
+  <section class="panel" id="compare-panel">
+    <h2>3 · 双帧率并排校验</h2>
+    <div class="btn-row">
+      <button id="compare-start">开始并排校验</button>
+      <button id="compare-fault">注入误差演示</button>
+      <span class="hint">同一段录制，两侧用不同渲染调度驱动；逐逻辑帧比对位置。</span>
+    </div>
+    <div class="row">
+      <div class="compare-box">
+        <div class="kv">A · requestAnimationFrame（跟随屏幕）</div>
+        <canvas id="cmp-a" width="480" height="360"></canvas>
+        <div class="kv">渲染 <code id="cmp-a-fps">—</code> fps · 进度 <code id="cmp-a-tick">0</code></div>
+      </div>
+      <div class="compare-box">
+        <div class="kv">B · 24fps 定时器 + 随机抖动</div>
+        <canvas id="cmp-b" width="480" height="360"></canvas>
+        <div class="kv">渲染 <code id="cmp-b-fps">—</code> fps · 进度 <code id="cmp-b-tick">0</code></div>
+      </div>
+    </div>
+    <div id="compare-result" class="banner hidden"></div>
+  </section>
+</main>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
