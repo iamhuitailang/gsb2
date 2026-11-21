@@ -1,0 +1,14 @@
+{
+  "name": "wall-碰墙偏差",
+  "seed": 21,
+  "params": { "upLat": 120, "upJit": 40, "upLoss": 0.1, "downLat": 140, "downJit": 40, "downLoss": 0.05, "snapEvery": 3 },
+  "start": [60, 300],
+  "duration": 460,
+  "inputs": [
+    { "t": 10, "mask": 8 },
+    { "t": 130, "mask": 9 },
+    { "t": 260, "mask": 1 },
+    { "t": 330, "mask": 0 }
+  ],
+  "paramEvents": []
+}

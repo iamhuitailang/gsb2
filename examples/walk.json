@@ -1,0 +1,14 @@
+{
+  "name": "walk-正常走动",
+  "seed": 7,
+  "params": { "upLat": 70, "upJit": 15, "upLoss": 0.01, "downLat": 90, "downJit": 25, "downLoss": 0.01, "snapEvery": 3 },
+  "start": [40, 360],
+  "duration": 420,
+  "inputs": [
+    { "t": 15, "mask": 8 },
+    { "t": 130, "mask": 9 },
+    { "t": 210, "mask": 1 },
+    { "t": 280, "mask": 0 }
+  ],
+  "paramEvents": []
+}

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>移动同步演示：本地预测 / 主机确认 / 远端观察</title>
+<style>
+  body { background:#0d1017; color:#cfd6e4; font:13px/1.5 -apple-system,"PingFang SC",sans-serif;
+         margin:0; padding:16px; display:flex; gap:16px; justify-content:center; }
+  canvas { background:#161a22; border-radius:6px; }
+  #side { width:400px; display:flex; flex-direction:column; gap:10px; }
+  .card { background:#161a22; border:1px solid #262c3a; border-radius:6px; padding:10px 12px; }
+  .card h3 { margin:0 0 6px; font-size:13px; color:#8fa0c0; font-weight:600; }
+  table { border-collapse:collapse; width:100%; }
+  td { padding:1px 4px; } td.v { color:#ffd479; font-family:monospace; }
+  td.k { color:#5b6478; font-family:monospace; text-align:right; }
+  #status { font-family:monospace; color:#9fe8b1; }
+  #corrList { margin:0; padding:0 0 0 4px; list-style:none; max-height:130px; overflow-y:auto; }
+  #corrList li { font-family:monospace; font-size:12px; padding:1px 4px; cursor:pointer; border-radius:3px; }
+  #corrList li:hover { background:#222839; }
+  #corrList li.sel { background:#3a2a2a; color:#ff9a9a; }
+  #corrList li.dim { color:#5b6478; cursor:default; }
+  #corrDetail { white-space:pre-wrap; font-family:monospace; font-size:12px; color:#e8b7b7; min-height:64px; }
+  .keys { color:#8b94a8; font-size:12px; }
+  .keys b { color:#cfd6e4; font-family:monospace; }
+  button { background:#232a3a; color:#cfd6e4; border:1px solid #37405a; border-radius:4px;
+           padding:4px 10px; cursor:pointer; font-size:12px; }
+  button:hover { background:#2c3550; }
+  .legend span { display:inline-block; margin-right:10px; }
+  .sw { display:inline-block; width:10px; height:10px; border:2px solid; vertical-align:-1px; margin-right:4px; }
+</style>
+</head>
+<body>
+  <canvas id="cv" width="640" height="440"></canvas>
+  <div id="side">
+    <div class="card">
+      <div id="status">…</div>
+      <div class="legend" style="margin-top:6px">
+        <span><i class="sw" style="border-color:#2ecc71"></i>本地预测</span>
+        <span><i class="sw" style="border-color:#e67e22"></i>主机确认</span>
+        <span><i class="sw" style="border-color:#3498db"></i>远端(平滑)</span>
+        <span><i class="sw" style="border-color:#7f8c9b"></i>远端(直跳对照)</span>
+      </div>
+    </div>
+    <div class="card">
+      <h3>网络参数（按键调节，实时生效并记入场景）</h3>
+      <table id="params"></table>
+    </div>
+    <div class="card">
+      <h3>修正记录（点击跳转查看来源）</h3>
+      <ul id="corrList"></ul>
+      <div id="corrDetail"></div>
+    </div>
+    <div class="card">
+      <h3>场景复查</h3>
+      <button id="btnWalk">示例1 正常走动 [1]</button>
+      <button id="btnWall">示例2 碰墙偏差 [2]</button>
+      <button id="btnReset">重置实时 [0]</button>
+      <button id="btnExport">导出场景 [P]</button>
+      <label style="cursor:pointer"><input type="file" id="fileInput" accept=".json" style="display:none">
+      <button onclick="this.previousElementSibling.click()">导入场景JSON</button></label>
+    </div>
+    <div class="card keys">
+      <b>方向键</b> 移动　<b>空格</b> 暂停/继续　<b>.</b> 单步前进　<b>,</b> 单步后退<br>
+      <b>[</b> <b>]</b> 选择修正　<b>C</b> 跳到该修正帧　<b>X</b> 直跳对照开关<br>
+      延迟下本地先动、主机确认回来后往回修正：把上行丢包调到 10%+ 再撞墙试试。
+    </div>
+  </div>
+  <script src="sim.js"></script>
+</body>
+</html>
