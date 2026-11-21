@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>本地投影画面校正工具</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="app-header">
+  <div class="title-block">
+    <h1>本地投影画面校正</h1>
+    <p class="subtitle">纯本地运行 · 无需连接投影仪 · 透视单应 + 双幕边缘融合预演</p>
+  </div>
+  <div class="header-actions">
+    <button id="preset-front" class="btn">载入正投示例</button>
+    <button id="preset-tilted" class="btn btn-accent">载入倾斜双幕示例（重叠偏亮）</button>
+  </div>
+</header>
+
+<div id="status-message" class="status-banner"></div>
+
+<main class="layout">
+  <!-- 左侧：三视图 -->
+  <section class="views-column">
+    <div class="view-card">
+      <canvas id="view-source"></canvas>
+    </div>
+    <div class="view-card">
+      <canvas id="view-warped"></canvas>
+    </div>
+    <div class="view-card">
+      <canvas id="view-output"></canvas>
+    </div>
+
+    <div class="view-card info-card">
+      <h3>映射来回一致性检查（两个固定标记）</h3>
+      <div id="marker-info"></div>
+      <p class="hint">在输出视图点击幕面可放置探针，反查该像素对应的源素材规范坐标；
+        标记走「源 → 单应 → 逆单应」完整往返，回程误差低于 0.0001（归一化）判定为一致。</p>
+    </div>
+  </section>
+
+  <!-- 右侧：控制面板 -->
+  <aside class="control-column">
+    <div class="panel">
+      <h2>1 · 测试图</h2>
+      <div class="radio-grid">
+        <label><input type="radio" name="pattern" value="grid"> 网格</label>
+        <label><input type="radio" name="pattern" value="circles"> 圆形</label>
+        <label><input type="radio" name="pattern" value="text"> 文字</label>
+        <label><input type="radio" name="pattern" value="combo"> 组合图</label>
+        <label><input type="radio" name="pattern" value="custom"> 自定义图片</label>
+      </div>
+      <input type="file" id="file-custom" accept="image/*" class="file-input">
+    </div>
+
+    <div class="panel">
+      <h2>2 · 输出尺寸</h2>
+      <select id="output-preset"></select>
+      <div id="custom-size-row" class="inline-fields">
+        <label>宽 <input type="number" id="custom-w" min="64" max="7680"></label>
+        <label>高 <input type="number" id="custom-h" min="64" max="4320"></label>
+      </div>
+      <p class="hint">角点与遮罩按规范坐标 (0..1) 保存，切换尺寸自动按新宽高换算。</p>
+    </div>
+
+    <div class="panel">
+      <h2>3 · 幕面与四角</h2>
+      <div class="radio-grid">
+        <label><input type="radio" name="screencount" value="1"> 单幕</label>
+        <label><input type="radio" name="screencount" value="2"> 双幕拼接</label>
+      </div>
+      <label class="block-label">当前编辑幕面
+        <select id="active-screen"></select>
+      </label>
+      <label class="switch-row"><input type="checkbox" id="screen-enabled"> 启用该幕面（关闭后仅显示虚线轮廓，便于单独核对另一块的实际输出）</label>
+      <div id="corner-readout" class="chip-row"></div>
+      <p class="hint">在「③ 最终输出范围」视图直接拖动编号角点；方向键微调（Shift 加速）。
+        反向、自交、退化的四边形会被拒绝并说明原因，画面保留上一次有效状态。</p>
+    </div>
+
+    <div class="panel">
+      <h2>4 · 重叠带与亮度过渡</h2>
+      <div class="inline-fields">
+        <label>带起点 a <input type="number" id="ov-a" min="0" max="1" step="0.01"></label>
+        <label>带终点 b <input type="number" id="ov-b" min="0" max="1" step="0.01"></label>
+      </div>
+      <label class="block-label">权重衰减方向
+        <select id="ov-side">
+          <option value="right">right（左幕：带内 1→0）</option>
+          <option value="left">left（右幕：带内 0→1）</option>
+        </select>
+      </label>
+      <label class="slider-row">融合曲线 gamma
+        <input type="range" id="blend-gamma" min="0.1" max="3" step="0.01">
+        <span id="blend-gamma-val" class="val"></span>
+      </label>
+      <label class="slider-row">单幕增益 gain
+        <input type="range" id="screen-gain" min="0.2" max="1.2" step="0.01">
+        <span id="screen-gain-val" class="val"></span>
+      </label>
+      <canvas id="blend-curve" width="320" height="180" class="blend-canvas"></canvas>
+      <div class="legend">
+        <span class="dot dot-blue"></span>幕1权重
+        <span class="dot dot-orange"></span>幕2权重
+        <span class="dot dot-white"></span>权重和
+        <span class="dot dot-green"></span>目标 1.0
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>5 · 显示与检查标记</h2>
+      <label class="switch-row"><input type="checkbox" id="toggle-overflow"> 高亮重叠过曝区（权重和 &gt; 1.02 泛红）</label>
+      <label class="switch-row"><input type="checkbox" id="toggle-band"> 显示重叠带范围</label>
+      <div class="inline-fields">
+        <label>标记A u/v <input type="number" id="mk0-u" min="0" max="1" step="0.01"><input type="number" id="mk0-v" min="0" max="1" step="0.01"></label>
+        <label>标记B u/v <input type="number" id="mk1-u" min="0" max="1" step="0.01"><input type="number" id="mk1-v" min="0" max="1" step="0.01"></label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>6 · 保存与截图</h2>
+      <div class="btn-grid">
+        <button id="btn-save" class="btn">保存配置</button>
+        <button id="btn-export" class="btn">导出 JSON</button>
+        <button id="btn-import" class="btn">导入 JSON</button>
+        <input type="file" id="file-config" accept="application/json,.json" hidden>
+        <button id="btn-reset" class="btn btn-warn">恢复默认</button>
+        <button id="btn-shot-output" class="btn btn-accent">截图：最终输出（真实尺寸）</button>
+        <button id="btn-shot-all" class="btn btn-accent">截图：三视图对照</button>
+      </div>
+      <p class="hint">配置自动保存到浏览器 localStorage；重开页面自动恢复，用同一张测试图即可对照。
+        截图按所选输出规范的真实像素离屏渲染（4K 分块渲染，不卡界面）。</p>
+    </div>
+  </aside>
+</main>
+
+<div id="action-flash" class="action-flash"></div>
+
+<script src="js/math.js"></script>
+<script src="js/geometry.js"></script>
+<script src="js/pattern.js"></script>
+<script src="js/render.js"></script>
+<script src="js/state.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "projection-calibration",
+  "version": "1.0.0",
+  "private": true,
+  "description": "本地投影画面校正工具：透视单应四角校正 + 双幕边缘融合预演，零依赖纯静态页面",
+  "scripts": {
+    "test": "node tests/smoke.js",
+    "test:browser": "node tests/browser-smoke.js && node tests/browser-scenes.js && node tests/browser-export.js"
+  },
+  "license": "MIT"
+}
