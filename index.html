@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>战斗数值试算器</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主内容</a>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">⚔</span>
+      <div>
+        <h1>战斗数值试算器</h1>
+        <p class="brand-sub">本地模拟 · 无网络请求 · 固定时间步 · 可复现</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <label class="inline-field">
+        <span>本地样例</span>
+        <select id="sample-select"></select>
+      </label>
+      <button id="load-sample" class="btn">载入样例</button>
+      <button id="export-config" class="btn btn-ghost">导出配置</button>
+      <label class="btn btn-ghost file-btn">
+        导入配置
+        <input id="import-config" type="file" accept="application/json" hidden />
+      </label>
+      <button id="theme-toggle" class="btn btn-ghost" aria-label="切换深浅色">深浅色</button>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="sample-note" id="sample-note" hidden>
+      <h2 id="sample-note-title"></h2>
+      <p id="sample-note-desc"></p>
+    </section>
+
+    <section class="configs" aria-label="两套配置">
+      <div id="config-A"></div>
+      <div id="config-B"></div>
+    </section>
+
+    <section class="run-bar" aria-label="模拟控制">
+      <div class="run-actions">
+        <button id="run-both" class="btn btn-primary">模拟并对比</button>
+        <button id="run-A" class="btn">只模拟 A</button>
+        <button id="run-B" class="btn">只模拟 B</button>
+        <span id="stale-note" class="stale-note" hidden>配置已修改，结果可能已过期</span>
+      </div>
+      <div id="validation" class="validation" hidden></div>
+    </section>
+
+    <section id="comparison" class="comparison" aria-label="单次模拟结果" hidden></section>
+
+    <section id="batch-section" class="batch" aria-label="批量模拟" hidden></section>
+  </main>
+
+  <div id="tooltip" class="tooltip" role="status" aria-live="polite" hidden></div>
+
+  <script src="js/engine.js"></script>
+  <script src="js/samples.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

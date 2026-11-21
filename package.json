@@ -1,0 +1,15 @@
+{
+  "name": "combat-simulator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "本地战斗数值试算器：可摆敌我单位、技能与状态效果，并排比较两套配置",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node tests/run.js",
+    "test:smoke": "node tests/smoke.js",
+    "check": "sh tests/check.sh"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
