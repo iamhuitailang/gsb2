@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>游戏对话文字排版试验台</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+<div class="app">
+  <!-- 顶栏 -->
+  <header class="topbar panel" style="grid-area: header; flex-direction: row; padding: 10px 16px;">
+    <h1>🎮 游戏对话排版试验台</h1>
+    <div class="sample-pills" id="samplePills"></div>
+    <div class="spacer"></div>
+    <button class="ghost" id="btnHelp">标记语法帮助</button>
+  </header>
+
+  <!-- 左：文本录入 + 配置 -->
+  <section class="panel editor-panel">
+    <div class="panel-head">
+      文本录入
+      <span class="muted" id="charCountReadout" style="font-weight:400;font-size:12px;"></span>
+    </div>
+    <div class="panel-body" style="display:flex;flex-direction:column;gap:10px;">
+      <textarea id="editor" spellcheck="false" placeholder="在此输入对话文本，支持 [b]加粗[/b]、[color=red]颜色[/color]、[wait=300] 停顿、[br] 换行、[page] 分页等标记"></textarea>
+
+      <div class="field">
+        <label>字号 <b><span id="vFontSize">18</span>px</b></label>
+        <input type="range" id="cfgFontSize" min="10" max="48" step="1" value="18" />
+      </div>
+      <div class="field">
+        <label>行宽 <b><span id="vLineWidth">420</span>px</b></label>
+        <input type="range" id="cfgLineWidth" min="160" max="760" step="10" value="420" />
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>字间距 <b><span id="vLetterSpacing">1</span>px</b></label>
+          <input type="range" id="cfgLetterSpacing" min="0" max="12" step="0.5" value="1" />
+        </div>
+        <div class="field">
+          <label>行高 <b><span id="vLineHeight">1.6</span></b></label>
+          <input type="range" id="cfgLineHeight" min="1" max="2.6" step="0.1" value="1.6" />
+        </div>
+      </div>
+      <div class="field">
+        <label>字体族</label>
+        <select id="cfgFontFamily">
+          <option value='"PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif'>系统黑体（默认）</option>
+          <option value='"Songti SC", "SimSun", serif'>宋体 / 衬线</option>
+          <option value='"SF Mono", Menlo, Consolas, monospace'>等宽字体</option>
+        </select>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>逐字速度 <b><span id="vSpeed">55</span>ms/字</b></label>
+          <input type="range" id="cfgSpeed" min="8" max="300" step="1" value="55" />
+        </div>
+        <div class="field">
+          <label>默认停顿 <b><span id="vDefaultWait">400</span>ms</b></label>
+          <input type="range" id="cfgDefaultWait" min="50" max="2000" step="50" value="400" />
+        </div>
+      </div>
+      <div class="checkbox-row">
+        <input type="checkbox" id="cfgShowMarkers" checked />
+        <label for="cfgShowMarkers" style="margin:0;">显示停顿/分页标记</label>
+      </div>
+    </div>
+  </section>
+
+  <!-- 中：预览与播放 -->
+  <section class="panel preview-panel">
+    <div class="panel-head">
+      <div class="tabs">
+        <button class="tab active" data-tab="play">逐字播放</button>
+        <button class="tab" data-tab="final">最终版面</button>
+        <button class="tab" data-tab="compare">多配置对照</button>
+      </div>
+      <span class="muted" id="layoutReadout" style="font-weight:400;font-size:12px;margin-left:auto;"></span>
+    </div>
+    <div class="panel-body" style="display:flex;flex-direction:column;gap:8px;">
+      <div class="stage-scroll" id="stageScroll">
+        <div class="stage-host" id="stageHost"></div>
+      </div>
+      <div class="player-bar" id="playerBar">
+        <button id="btnPlay" class="primary">▶ 播放</button>
+        <button id="btnPause">⏸ 暂停</button>
+        <button id="btnShowAll">⏭ 全文</button>
+        <button id="btnReset" class="ghost">↺ 重置</button>
+        <div class="progress-wrap">
+          <input type="range" id="seek" min="0" max="0" value="0" step="1" />
+          <span class="readout" id="seekReadout">0 / 0</span>
+        </div>
+        <span class="state" id="stateBadge">空闲</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 右：问题列表 -->
+  <section class="panel side-panel">
+    <div class="panel-head">问题与定位 <span class="muted" style="font-weight:400;font-size:12px;" id="issueCount"></span></div>
+    <div class="panel-body">
+      <div id="errorList" class="issue-list"></div>
+    </div>
+  </section>
+
+  <!-- 底部：预设 + 导出 -->
+  <section class="panel footer-panel">
+    <div class="panel-body" style="padding:12px 16px;">
+      <div class="footer-grid">
+        <div>
+          <h4>配置预设（保存在本地浏览器）</h4>
+          <div class="preset-row">
+            <input type="text" id="presetName" placeholder="预设名称，如：对话-窄屏" style="max-width:200px;" />
+            <button id="btnSavePreset">保存当前配置</button>
+            <button id="btnRefreshPresets" class="ghost">刷新</button>
+          </div>
+          <div id="presetList" class="preset-row"></div>
+        </div>
+        <div>
+          <h4>导出（供游戏读取）</h4>
+          <div class="preset-row">
+            <button id="btnCopyJson">复制 JSON</button>
+            <button id="btnDownloadJson">下载 .json</button>
+            <span class="muted" style="align-self:center;font-size:11px;">含每页文字、字形坐标、行位置、停顿与分页</span>
+          </div>
+        </div>
+        <div>
+          <h4>导出预览</h4>
+          <pre class="json-out" id="jsonPreview"></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- 帮助弹层 -->
+<div class="modal-mask" id="helpMask">
+  <div class="modal">
+    <div class="panel-head">
+      标记语法
+      <button class="ghost" id="btnCloseHelp">关闭</button>
+    </div>
+    <div class="panel-body">
+      <table>
+        <thead><tr><th>写法</th><th>含义</th></tr></thead>
+        <tbody>
+          <tr><td><code>[b]…[/b]</code></td><td>加粗</td></tr>
+          <tr><td><code>[i]…[/i]</code></td><td>斜体</td></tr>
+          <tr><td><code>[u]…[/u]</code></td><td>下划线</td></tr>
+          <tr><td><code>[color=red]…[/color]</code></td><td>颜色：命名色或 #rgb / #rrggbb</td></tr>
+          <tr><td><code>[size=22]…[/size]</code></td><td>局部字号（8–200px）</td></tr>
+          <tr><td><code>[wait=300]</code></td><td>停顿 300 毫秒，逐字播放时会等待</td></tr>
+          <tr><td><code>[pause]</code></td><td>默认时长停顿</td></tr>
+          <tr><td><code>[br]</code> 或直接换行</td><td>强制换行</td></tr>
+          <tr><td><code>[page]</code></td><td>分页，导出数据中独立成页</td></tr>
+          <tr><td><code>[[</code></td><td>字面量方括号 [</td></tr>
+        </tbody>
+      </table>
+      <p class="muted" style="margin-top:10px;">
+        错误标记不会阻塞预览：错误片段按普通文本显示，右侧问题面板给出 行:列 定位，点击可跳转到原文。
+        emoji（含 👨‍👩‍👧 这类 ZWJ 组合与国旗 🇨🇳）和组合字符（café）始终作为一个不可拆分的显示与播放单位。
+      </p>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<canvas id="measureCanvas" style="position:absolute;left:-9999px;top:-9999px;visibility:hidden;" width="8" height="8"></canvas>
+
+<script src="js/grapheme.js?v=4"></script>
+<script src="js/parser.js?v=4"></script>
+<script src="js/layout.js?v=4"></script>
+<script src="js/renderer.js?v=4"></script>
+<script src="js/player.js?v=4"></script>
+<script src="js/exporter.js?v=4"></script>
+<script src="js/storage.js?v=4"></script>
+<script src="js/samples.js?v=4"></script>
+<script src="js/app.js?v=4"></script>
+</body>
+</html>
