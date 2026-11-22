@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>均衡器调音试验台</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>均衡器调音试验台</h1>
+  <p class="sub">对比两套 EQ 设置：耳朵听（等响度 A/B 切换），眼睛看（合成频响曲线 + 实测频带能量）</p>
+</header>
+
+<section class="panel transport">
+  <div class="row">
+    <label class="btn file-btn">载入音频文件…<input type="file" id="fileInput" accept="audio/*" hidden></label>
+    <span class="sep">或样音：</span>
+    <button id="demoSweep">扫频</button>
+    <button id="demoDrums">鼓点</button>
+    <button id="demoStereo">双声道样音</button>
+    <span id="fileName" class="muted">未载入音频</span>
+  </div>
+  <div class="row">
+    <button id="playBtn" disabled>▶ 播放</button>
+    <input type="range" id="seekBar" min="0" max="1000" value="0" disabled>
+    <span id="timeLabel" class="mono">00:00 / 00:00</span>
+    <label class="chk"><input type="checkbox" id="bypassAll"> 旁路全部（听原声）</label>
+    <label class="chk"><input type="checkbox" id="showSpectrum" checked> 显示实时频谱</label>
+  </div>
+  <div class="row ab-row">
+    <span>当前设置：</span>
+    <div class="ab-switch">
+      <button id="btnA" class="ab active">A</button>
+      <button id="btnB" class="ab">B</button>
+    </div>
+    <label class="chk"><input type="checkbox" id="matchLoudness" checked> 切换时等响度</label>
+    <span id="trimInfo" class="muted mono"></span>
+    <span class="spacer"></span>
+    <button id="exportWav" disabled>导出处理后的音频 (WAV)</button>
+    <button id="saveSettings">保存设置到文件</button>
+    <label class="btn file-btn">从文件载入设置…<input type="file" id="loadSettings" accept="application/json" hidden></label>
+  </div>
+</section>
+
+<section class="panel">
+  <canvas id="curveCanvas" height="340"></canvas>
+  <div class="hint">单击频段手柄选中该段（自动框选其作用频段）；拖动手柄可直接改频率/增益；在空白处横向拖动可自选分析频段。粗白线 = 合成响应，细彩线 = 各段贡献（虚线 = 已旁路）。</div>
+</section>
+
+<section class="panel energy" id="energyPanel">
+  <h2>选中频段能量对比</h2>
+  <div id="energyContent" class="muted">尚未选择频段 —— 在曲线上单击频段手柄或横向拖动选择。</div>
+</section>
+
+<section class="panel">
+  <div class="row bands-head">
+    <h2>频段（正在编辑设置 <span id="editingWhich">A</span>）</h2>
+    <button id="addBand">+ 添加频段</button>
+  </div>
+  <div id="bandList"></div>
+</section>
+
+<footer class="muted">
+  设置会自动保存在浏览器本地（localStorage），重新打开后 A/B 两套对照都会恢复；也可用「保存设置到文件」做备份或分享。
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
