@@ -1,0 +1,38 @@
+{
+  "format": 3,
+  "meta": {
+    "save_id": "sample-current-v3",
+    "created_at": "2026-11-01T10:00:00+08:00",
+    "playtime_seconds": 4380
+  },
+  "player": {
+    "name": "林雾",
+    "level": 12,
+    "xp": 3400
+  },
+  "location": {
+    "region": "harbor_town",
+    "x": 131.86,
+    "y": -45.885,
+    "checkpoint": "pier_gate"
+  },
+  "inventory": {
+    "slots": [
+      {"id": 3101, "qty": 1},
+      {"id": 3102, "qty": 2},
+      {"id": 3104, "qty": 18},
+      {"id": 3105, "qty": 5},
+      {"id": 3107, "qty": 1}
+    ]
+  },
+  "quests": {
+    "active": [
+      {"id": "q_lighthouse_keeper", "chapter": 1, "step": 1, "status": "active"},
+      {"id": "q_lost_child", "chapter": 2, "step": 1, "status": "active"}
+    ],
+    "completed": [
+      {"id": "q_harbor_letters", "chapter": 1, "step": 2, "status": "complete"},
+      {"id": "q_salt_smugglers", "chapter": 2, "step": 2, "status": "complete"}
+    ]
+  }
+}

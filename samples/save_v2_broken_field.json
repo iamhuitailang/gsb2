@@ -1,0 +1,30 @@
+{
+  "format": 2,
+  "meta": {
+    "save_id": "sample-broken-field-v2",
+    "created_at": "2025-02-02T02:02:02+08:00",
+    "playtime_seconds": 120
+  },
+  "player": {
+    "name": "沈灯",
+    "level": 750,
+    "xp": 120
+  },
+  "location": {
+    "region": "lighthouse",
+    "x": 410,
+    "y": 75
+  },
+  "inventory": {
+    "slots": [
+      {"id": 2101, "qty": 1},
+      {"id": 2105, "qty": "三"}
+    ]
+  },
+  "quests": {
+    "active": [
+      {"id": "q_tide_chart", "stage": 2}
+    ],
+    "completed": []
+  }
+}

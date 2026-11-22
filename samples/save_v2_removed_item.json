@@ -1,0 +1,35 @@
+{
+  "format": 2,
+  "meta": {
+    "save_id": "sample-removed-v2",
+    "created_at": "2025-01-09T09:30:00+08:00",
+    "playtime_seconds": 7777
+  },
+  "player": {
+    "name": "程砚",
+    "level": 24,
+    "xp": 15800
+  },
+  "location": {
+    "region": "marsh",
+    "x": 233.5,
+    "y": 88.2
+  },
+  "inventory": {
+    "slots": [
+      {"id": 2101, "qty": 2},
+      {"id": 2104, "qty": 40},
+      {"id": 2106, "qty": 1},
+      {"id": 2108, "qty": 12}
+    ]
+  },
+  "quests": {
+    "active": [
+      {"id": "q_lost_child", "stage": 3},
+      {"id": "q_tide_chart", "stage": 1}
+    ],
+    "completed": [
+      {"id": "q_harbor_letters", "stage": 2}
+    ]
+  }
+}

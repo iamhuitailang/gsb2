@@ -1,0 +1,118 @@
+{
+  "schema": 1,
+  "game": "潮汐信标（虚构样例）",
+  "current_version": 3,
+  "versions": {
+    "1": {"label": "初版", "released": "2023-06"},
+    "2": {"label": "港口更新", "released": "2024-11"},
+    "3": {"label": "潮汐更新", "released": "2026-10"}
+  },
+  "builds": {
+    "1": "0.9.3",
+    "2": "1.4.0",
+    "3": "2.0.0"
+  },
+  "items": {
+    "1->2": {
+      "101": 2101,
+      "102": 2102,
+      "104": 2104,
+      "105": 2105,
+      "106": 2106,
+      "107": 2107,
+      "108": 2108
+    },
+    "2->3": {
+      "2101": 3101,
+      "2102": 3102,
+      "2104": 3104,
+      "2105": 3105,
+      "2107": 3107,
+      "2108": 3108
+    }
+  },
+  "removed_items": {
+    "1->2": {
+      "103": "护符系统在版本 2 被移除，破损护符无处存放"
+    },
+    "2->3": {
+      "2106": "船票系统并入新的交通界面，旧船票不再作为背包物品保留"
+    }
+  },
+  "item_catalog": {
+    "1": {
+      "101": "铜钥匙",
+      "102": "旧地图",
+      "103": "破损护符",
+      "104": "银币",
+      "105": "药草",
+      "106": "船票",
+      "107": "提灯",
+      "108": "鱼干"
+    },
+    "2": {
+      "2101": "铜钥匙",
+      "2102": "地图残页",
+      "2104": "银币",
+      "2105": "药草",
+      "2106": "船票",
+      "2107": "提灯",
+      "2108": "鱼干"
+    },
+    "3": {
+      "3101": "铜钥匙",
+      "3102": "海图残页",
+      "3104": "银币",
+      "3105": "药草",
+      "3107": "提灯",
+      "3108": "鱼干"
+    }
+  },
+  "regions": {
+    "1->2": {
+      "harbor_town": "harbor",
+      "salt_marsh": "marsh",
+      "lighthouse_cliff": "lighthouse"
+    },
+    "2->3": {
+      "harbor": "harbor_town",
+      "marsh": "salt_marsh",
+      "lighthouse": "lighthouse_point"
+    }
+  },
+  "map_transforms": {
+    "1->2": {"scale": 1.05, "offset_x": 6, "offset_y": 4},
+    "2->3": {"scale": 0.98, "offset_x": 2.5, "offset_y": -3.5}
+  },
+  "checkpoints": {
+    "harbor_town": "pier_gate",
+    "salt_marsh": "reed_hut",
+    "lighthouse_point": "lamp_room"
+  },
+  "quest_stage_split": {
+    "2->3": {
+      "1": {"chapter": 1, "step": 1},
+      "2": {"chapter": 1, "step": 2},
+      "3": {"chapter": 2, "step": 1},
+      "4": {"chapter": 2, "step": 2},
+      "5": {"chapter": 3, "step": 1}
+    }
+  },
+  "quest_labels": {
+    "q_harbor_letters": "港口来信",
+    "q_lighthouse_keeper": "守灯人",
+    "q_salt_smugglers": "盐沼私运",
+    "q_lost_child": "走失的孩子",
+    "q_tide_chart": "潮汐图"
+  },
+  "inventory_capacity": 20,
+  "max_stack": 99,
+  "world_bounds": {
+    "x": [-1000, 1000],
+    "y": [-1000, 1000]
+  },
+  "player_limits": {
+    "level": [1, 60],
+    "xp": [0, 999999]
+  }
+}
