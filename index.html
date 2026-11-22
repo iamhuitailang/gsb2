@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>图片压缩预算工具 · 游戏更新包</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-logo">IMG</span>
+    <div>
+      <h1>图片压缩预算工具</h1>
+      <p>按总字节上限为整组图片分配画质 · 所有字节数均为真实编码结果</p>
+    </div>
+  </div>
+  <div class="actions">
+    <button id="btn-import" type="button">导入图片</button>
+    <input id="file-input" type="file" multiple accept="image/*" hidden>
+    <button id="btn-samples" type="button">载入示例</button>
+    <span class="budget-box">
+      <label for="budget">总字节上限</label>
+      <input id="budget" type="number" min="1" step="1024" placeholder="字节">
+      <span id="budget-human" class="muted"></span>
+    </span>
+    <button id="btn-tight" type="button" class="scenario" disabled>极紧预算示例</button>
+    <button id="btn-normal" type="button" class="scenario" disabled>正常预算示例</button>
+    <button id="btn-unlock" type="button">解锁全部</button>
+    <button id="btn-export" type="button" class="primary">导出整组</button>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="item-panel">
+    <div class="panel-head">
+      <h2>图片列表 <span id="item-count" class="muted"></span></h2>
+    </div>
+    <div id="item-list" class="item-list">
+      <div class="empty-hint">尚未导入图片。点击「导入图片」选择一组图片，或「载入示例」查看内置演示。</div>
+    </div>
+  </aside>
+
+  <section class="detail">
+    <div id="item-config" class="card hidden">
+      <h3>单图配置 — <span id="cfg-name"></span></h3>
+      <div class="cfg-grid">
+        <label>优先级
+          <select id="cfg-priority">
+            <option value="high">高（关键图，最后牺牲）</option>
+            <option value="mid">中</option>
+            <option value="low">低（背景类，优先压缩）</option>
+          </select>
+        </label>
+        <label>最小可接受宽 (px)<input id="cfg-minw" type="number" min="1"></label>
+        <label>最小可接受高 (px)<input id="cfg-minh" type="number" min="1"></label>
+        <label class="check-label"><input id="cfg-alpha" type="checkbox"> 必须保留透明通道</label>
+        <button id="cfg-remove" type="button" class="danger">移除该图</button>
+      </div>
+      <p id="cfg-meta" class="muted"></p>
+    </div>
+
+    <div id="candidate-section" class="card hidden">
+      <div class="card-head">
+        <h3>压缩候选 <span id="cand-progress" class="muted"></span></h3>
+        <p class="hint">字节数为浏览器实际编码后大小；PSNR 为候选与原图同尺寸逐像素对比。带约束标记的候选不可选，仅用于说明放宽限制的潜在收益。</p>
+      </div>
+      <div class="table-wrap">
+        <table id="candidate-table">
+          <thead>
+            <tr>
+              <th>选择</th><th>编码方案</th><th>实际字节</th><th>分辨率</th>
+              <th>透明</th><th>画质差异 PSNR</th><th>约束检查</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="compare-section" class="card hidden">
+      <div class="card-head">
+        <h3>同步对照</h3>
+        <div class="cmp-controls">
+          <span class="ctrl-group">
+            <button type="button" data-zoom="fit">适应</button>
+            <button type="button" data-zoom="1">原尺寸</button>
+            <button type="button" data-zoom="2">2×</button>
+            <button type="button" data-zoom="4">4×</button>
+          </span>
+          <span class="ctrl-group">
+            透明底色
+            <button type="button" data-bg="checker">棋盘格</button>
+            <button type="button" data-bg="white">白</button>
+            <button type="button" data-bg="black">黑</button>
+          </span>
+          <span id="zoom-readout" class="muted"></span>
+        </div>
+      </div>
+      <div class="cmp-panes">
+        <div class="cmp-pane" id="pane-orig">
+          <div class="pane-title">原图 <span id="orig-label"></span></div>
+          <div class="pane-scroll" id="scroll-orig"><canvas id="canvas-orig"></canvas></div>
+        </div>
+        <div class="cmp-pane" id="pane-cand">
+          <div class="pane-title">候选 <span id="cand-label"></span></div>
+          <div class="pane-scroll" id="scroll-cand"><canvas id="canvas-cand"></canvas></div>
+        </div>
+      </div>
+      <p class="hint">两栏缩放与平移完全同步：滚轮缩放（以指针为中心）、拖拽平移。透明图切换底色可检查边缘杂边。</p>
+    </div>
+
+    <div id="detail-empty" class="card">
+      <div class="empty-hint">从左侧选择一张图片查看压缩候选与对照。</div>
+    </div>
+  </section>
+</main>
+
+<footer class="plan-bar" id="plan-bar">
+  <div class="plan-summary">
+    <div id="plan-total" class="plan-total">尚未生成方案</div>
+    <div id="plan-chips" class="plan-chips"></div>
+  </div>
+  <div id="plan-report" class="plan-report hidden"></div>
+  <details id="plan-steps-wrap" class="hidden">
+    <summary>分配过程</summary>
+    <ol id="plan-steps"></ol>
+  </details>
+</footer>
+
+<div id="modal-root"></div>
+
+<script src="js/util.js"></script>
+<script src="js/zip.js"></script>
+<script src="js/encoding.js"></script>
+<script src="js/samples.js"></script>
+<script src="js/allocation.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
