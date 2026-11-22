@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>纹理接缝检查工具 · Seam Inspector</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div id="app">
+  <!-- 顶部工具条 -->
+  <header class="topbar">
+    <div class="brand">🧵 接缝检查 <span class="brand-sub">Seam Inspector</span></div>
+    <div class="top-actions">
+      <label class="btn">
+        载入图片
+        <input type="file" id="file-input" accept="image/*" hidden />
+      </label>
+      <div class="dropdown-wrap">
+        <button class="btn" id="sample-btn" type="button">示例纹理 ▾</button>
+        <div class="dropdown" id="sample-menu" hidden>
+          <button type="button" data-sample="cloth">① 平滑平铺 · 布纹（无接缝）</button>
+          <button type="button" data-sample="floor">② 仅竖向露缝 · 地砖</button>
+        </div>
+      </div>
+      <span class="sep"></span>
+      <button class="btn" id="export-image-btn" type="button" disabled>导出修正图 PNG</button>
+      <button class="btn" id="export-diag-btn" type="button" disabled>导出诊断 JSON</button>
+      <span class="sep"></span>
+      <button class="btn" id="save-project-btn" type="button" disabled>保存项目</button>
+      <label class="btn">
+        打开项目
+        <input type="file" id="project-input" accept=".seam.json,application/json" hidden />
+      </label>
+    </div>
+  </header>
+
+  <!-- 左侧工具条 -->
+  <aside class="sidebar-left">
+    <div class="tool-group">
+      <div class="tool-title">平铺</div>
+      <div class="btn-col" id="repeat-mode-group">
+        <button type="button" class="tool-btn active" data-mode="both">双向 3×3+</button>
+        <button type="button" class="tool-btn" data-mode="horizontal">仅横向</button>
+        <button type="button" class="tool-btn" data-mode="vertical">仅纵向</button>
+        <button type="button" class="tool-btn" data-mode="single">单图（原图核对）</button>
+      </div>
+    </div>
+
+    <div class="tool-group">
+      <div class="tool-title">视图</div>
+      <div class="btn-col">
+        <button type="button" class="tool-btn" id="zoom-in-btn">放大 +</button>
+        <button type="button" class="tool-btn" id="zoom-out-btn">缩小 −</button>
+        <button type="button" class="tool-btn" id="zoom-fit-btn">适应窗口</button>
+        <button type="button" class="tool-btn" id="zoom-100-btn">100%（1 像素=1 像素）</button>
+        <label class="check-line"><input type="checkbox" id="toggle-boundaries" checked /> 显示接缝位置线</label>
+        <label class="check-line"><input type="checkbox" id="toggle-markers" checked /> 显示异常标记</label>
+        <label class="check-line"><input type="checkbox" id="toggle-protect-overlay" checked /> 显示保护区</label>
+      </div>
+    </div>
+
+    <div class="tool-group">
+      <div class="tool-title">把接缝移到中间</div>
+      <div class="btn-col">
+        <button type="button" class="tool-btn" id="center-v-btn">竖向接缝 → 居中</button>
+        <button type="button" class="tool-btn" id="center-h-btn">横向接缝 → 居中</button>
+        <button type="button" class="tool-btn" id="center-both-btn">两条接缝 → 居中</button>
+        <button type="button" class="tool-btn" id="center-reset-btn">复位平移</button>
+      </div>
+    </div>
+
+    <div class="tool-group">
+      <div class="tool-title">保护区（原图坐标绘制）</div>
+      <div class="btn-col">
+        <button type="button" class="tool-btn" data-protect-tool="brush">画笔</button>
+        <button type="button" class="tool-btn" data-protect-tool="rect">矩形</button>
+        <button type="button" class="tool-btn" data-protect-tool="eraser">橡皮</button>
+        <label class="slider-line">笔刷/橡皮宽度
+          <input type="range" id="brush-size" min="2" max="120" value="24" />
+          <span class="val" id="brush-size-val">24px</span>
+        </label>
+        <button type="button" class="tool-btn danger" id="protect-clear-btn">清空保护区</button>
+        <p class="hint">保护区内的像素不会被平滑修正改变。</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 中间画布 -->
+  <main class="stage">
+    <div class="stage-toolbar">
+      <span id="view-readout" class="readout">未载入图片</span>
+      <span class="spacer"></span>
+      <span class="badge" id="analysis-badge">—</span>
+    </div>
+    <div class="canvas-wrap" id="canvas-wrap">
+      <canvas id="stage-canvas"></canvas>
+      <div class="empty-hint" id="empty-hint">
+        <p>载入一张地砖 / 布纹纹理，或从「示例纹理」开始</p>
+        <p class="sub">所有接缝分析均在原始分辨率上计算，缩放预览的插值不会参与诊断</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- 右侧面板 -->
+  <aside class="sidebar-right">
+    <nav class="tabs" id="tabs">
+      <button type="button" class="tab active" data-tab="diagnosis">边缘诊断</button>
+      <button type="button" class="tab" data-tab="correction">平滑修正</button>
+      <button type="button" class="tab" data-tab="compare">原版对比</button>
+      <button type="button" class="tab" data-tab="project">项目</button>
+    </nav>
+
+    <section class="tab-panel active" data-panel="diagnosis">
+      <div class="panel-block">
+        <div class="row">
+          <label>分析对象</label>
+          <select id="analysis-source">
+            <option value="current">当前版本（随修正实时更新）</option>
+            <option value="original">原始版本</option>
+          </select>
+        </div>
+        <div class="row">
+          <label>灵敏度 <span class="hint-i" title="异常阈值 = 内部纹理噪声 × 灵敏度">ⓘ</span></label>
+          <input type="range" id="sensitivity" min="1.5" max="5" step="0.1" value="2.5" />
+          <span class="val" id="sensitivity-val">2.5×</span>
+        </div>
+      </div>
+
+      <div class="panel-block">
+        <div class="block-title">竖向接缝（左右相对边缘）</div>
+        <div class="edge-stats" id="v-stats"></div>
+        <div class="seg-list" id="v-segments"></div>
+      </div>
+
+      <div class="panel-block">
+        <div class="block-title">横向接缝（上下相对边缘）</div>
+        <div class="edge-stats" id="h-stats"></div>
+        <div class="seg-list" id="h-segments"></div>
+      </div>
+
+      <div class="panel-block">
+        <div class="block-title">四角点（同时受两条边影响）</div>
+        <div class="corner-grid" id="corner-grid"></div>
+        <p class="hint">角点评分同时计入竖向与横向边缘的异常程度，并单独列出。</p>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="correction">
+      <div class="panel-block">
+        <div class="block-title">竖向边缘（左 / 右）</div>
+        <label class="slider-line">强度
+          <input type="range" id="v-strength" min="0" max="100" value="80" />
+          <span class="val" id="v-strength-val">80%</span>
+        </label>
+        <label class="slider-line">作用宽度
+          <input type="range" id="v-width" min="1" max="64" value="16" />
+          <span class="val" id="v-width-val">16px</span>
+        </label>
+      </div>
+      <div class="panel-block">
+        <div class="block-title">横向边缘（上 / 下）</div>
+        <label class="slider-line">强度
+          <input type="range" id="h-strength" min="0" max="100" value="80" />
+          <span class="val" id="h-strength-val">80%</span>
+        </label>
+        <label class="slider-line">作用宽度
+          <input type="range" id="h-width" min="1" max="64" value="16" />
+          <span class="val" id="h-width-val">16px</span>
+        </label>
+      </div>
+      <div class="panel-block">
+        <div class="block-title">效果</div>
+        <label class="check-line"><input type="checkbox" id="live-correction" checked /> 实时应用修正到预览</label>
+        <button type="button" class="btn wide" id="apply-correction-btn">应用并重新诊断</button>
+        <button type="button" class="btn wide" id="reset-correction-btn">回到原始版本</button>
+        <p class="hint">修正只发生在边缘宽度范围内，采用环绕式 feather 混合：强度 100% 时接缝两侧在数学上完全匹配；保护区与中间图案不受影响。</p>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="compare">
+      <div class="panel-block">
+        <div class="block-title">同位置对比</div>
+        <div class="btn-row">
+          <button type="button" class="tool-btn" data-compare="current">当前/修正版</button>
+          <button type="button" class="tool-btn" data-compare="original">原版</button>
+          <button type="button" class="tool-btn active" data-compare="split">左右分屏</button>
+        </div>
+        <label class="slider-line">分屏位置
+          <input type="range" id="split-pos" min="0" max="100" value="50" />
+          <span class="val" id="split-pos-val">50%</span>
+        </label>
+      </div>
+      <div class="panel-block">
+        <div class="block-title">接缝数值变化（修正前 → 修正后）</div>
+        <table class="metric-table" id="metric-table">
+          <thead><tr><th>指标</th><th>原版</th><th>修正版</th><th>变化</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p class="hint">颜色差为每通道平均绝对差（0–255）；走势差为跨接缝二阶亮度差与纹理内部噪声之比。</p>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-panel="project">
+      <div class="panel-block">
+        <div class="block-title">项目文件</div>
+        <p class="hint">项目（*.seam.json）保存：修正参数、保护区图形、视图状态与灵敏度。重新打开项目可完整恢复；原图通过内嵌 PNG 数据一并携带。</p>
+        <button type="button" class="btn wide" id="save-project-btn-2" disabled>保存项目文件</button>
+        <button type="button" class="btn wide" id="export-image-btn-2" disabled>导出修正后图片</button>
+        <button type="button" class="btn wide" id="export-diag-btn-2" disabled>导出边缘诊断报告</button>
+      </div>
+      <div class="panel-block">
+        <div class="block-title">当前参数</div>
+        <pre class="param-dump" id="param-dump"></pre>
+      </div>
+    </section>
+  </aside>
+
+  <footer class="statusbar">
+    <span id="status-msg">就绪</span>
+    <span class="spacer"></span>
+    <span id="cursor-readout"></span>
+  </footer>
+</div>
+
+<script src="js/core.js"></script>
+<script src="js/analysis.js"></script>
+<script src="js/correction.js"></script>
+<script src="js/samples.js"></script>
+<script src="js/tiled-view.js"></script>
+<script src="js/protection.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
