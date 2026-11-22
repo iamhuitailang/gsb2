@@ -1,0 +1,68 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0; font: 14px/1.5 -apple-system, "PingFang SC", sans-serif;
+  background: #1c1c1e; color: #eee;
+}
+header {
+  display: flex; align-items: baseline; gap: 16px;
+  padding: 10px 16px; background: #2c2c2e; border-bottom: 1px solid #000;
+}
+header h1 { font-size: 16px; margin: 0; }
+main { display: flex; gap: 12px; padding: 12px; align-items: flex-start; }
+#left { flex: 1 1 auto; min-width: 0; }
+#right { flex: 0 0 380px; max-height: calc(100vh - 80px); overflow-y: auto; }
+.dim { color: #9a9aa0; font-size: 12px; }
+.hidden { display: none !important; }
+
+#stageWrap {
+  background: #000; display: flex; justify-content: center;
+  border: 1px solid #333; min-height: 200px;
+}
+#stage { max-width: 100%; max-height: calc(100vh - 220px); background: #000; }
+
+#transport { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+#seek { flex: 1; }
+#timeLabel { font-variant-numeric: tabular-nums; min-width: 110px; text-align: right; }
+
+#flagBar { margin-top: 6px; min-height: 20px; }
+.flag {
+  display: inline-block; padding: 1px 8px; margin-right: 6px;
+  border-radius: 3px; font-size: 12px; background: #8e2f2f; color: #fff;
+}
+.flag.warn { background: #8a6d1d; }
+
+button {
+  background: #3a3a3c; color: #eee; border: 1px solid #555;
+  border-radius: 5px; padding: 4px 12px; cursor: pointer;
+}
+button:hover { background: #4a4a4c; }
+button.tab.active { background: #0a84ff; border-color: #0a84ff; }
+
+details { background: #2c2c2e; border-radius: 8px; margin-bottom: 10px; padding: 8px 12px; }
+summary { font-weight: 600; cursor: pointer; }
+details label { display: block; margin: 6px 0; }
+input[type=number] { width: 5.5em; }
+input.path { width: 100%; margin-top: 2px; }
+input[type=color] { width: 40px; height: 22px; padding: 0; border: none; vertical-align: middle; }
+fieldset { border: 1px solid #555; border-radius: 6px; margin: 8px 0; }
+fieldset label { display: inline-block; margin-right: 10px; }
+.row { display: flex; gap: 8px; align-items: center; margin: 6px 0; flex-wrap: wrap; }
+
+#hintList table { width: 100%; border-collapse: collapse; font-size: 12px; }
+#hintList td, #hintList th { padding: 2px; text-align: center; }
+#hintList input { width: 4em; }
+
+#violations { max-height: 180px; overflow-y: auto; font-size: 13px; }
+.viol { padding: 3px 6px; margin: 3px 0; background: #3a2a2a; border-radius: 4px; cursor: pointer; }
+.viol:hover { background: #4a3434; }
+.viol .t { color: #ffb340; font-variant-numeric: tabular-nums; }
+
+#exportLog { max-height: 120px; overflow-y: auto; white-space: pre-wrap; font-size: 11px; }
+
+#verifyPanel { margin-top: 12px; background: #2c2c2e; border-radius: 8px; padding: 10px 14px; }
+#verifyPanel h3 { margin: 4px 0 8px; font-size: 14px; }
+#verifyImgs { display: flex; gap: 10px; }
+#verifyImgs figure { margin: 0; flex: 1; }
+#verifyImgs canvas { width: 100%; background: #000; border: 1px solid #444; }
+#verifyImgs figcaption { font-size: 12px; color: #9a9aa0; text-align: center; }
+#verifyStat { font-size: 12px; }

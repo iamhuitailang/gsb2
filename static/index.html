@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>字幕版面预览与成片导出</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1>字幕版面预览与成片导出</h1>
+  <span id="videoInfo" class="dim">未载入视频</span>
+</header>
+
+<main>
+  <!-- 左：预览 -->
+  <section id="left">
+    <div id="stageWrap">
+      <canvas id="stage"></canvas>
+    </div>
+    <div id="transport">
+      <button id="btnPlay">▶ 播放</button>
+      <button id="btnBack">−1s</button>
+      <button id="btnFwd">+1s</button>
+      <input id="seek" type="range" min="0" max="1000" value="0">
+      <span id="timeLabel">0.00 / 0.00</span>
+    </div>
+    <div id="flagBar"></div>
+    <div id="verifyPanel" class="hidden">
+      <h3>成片核对 <span class="dim">同一时刻：预览渲染 vs 成片取帧</span></h3>
+      <div class="row">
+        <label>时间点(s) <input id="verifyT" type="number" step="0.1" value="5" style="width:6em"></label>
+        <button id="btnVerify">抽取对比</button>
+        <span id="verifyStat"></span>
+      </div>
+      <div id="verifyImgs">
+        <figure><figcaption>预览渲染</figcaption><canvas id="verifyPreview"></canvas></figure>
+        <figure><figcaption>成片取帧</figcaption><canvas id="verifyExport"></canvas></figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- 右：设置 -->
+  <section id="right">
+    <details open>
+      <summary>1. 素材</summary>
+      <label>视频路径 <input id="videoPath" class="path" placeholder="/abs/path/video.mp4"></label>
+      <label>字幕路径(SRT) <input id="srtPath" class="path" placeholder="/abs/path/subs.srt"></label>
+      <div class="row">
+        <button id="btnLoad">载入</button>
+        <button id="btnSample">生成并载入样例</button>
+      </div>
+      <div id="loadMsg" class="dim"></div>
+    </details>
+
+    <details open>
+      <summary>2. 画幅与安全区 <span class="dim">（两画幅共用字幕文字与时间，样式分别调）</span></summary>
+      <div class="row" id="orientTabs">
+        <button data-o="landscape" class="tab active">横版 16:9</button>
+        <button data-o="portrait" class="tab">竖版 9:16</button>
+      </div>
+      <fieldset>
+        <legend>安全区边距（占画幅 %）</legend>
+        <label>上 <input data-cfg="safeT" type="number" min="0" max="40" step="0.5"></label>
+        <label>下 <input data-cfg="safeB" type="number" min="0" max="40" step="0.5"></label>
+        <label>左 <input data-cfg="safeL" type="number" min="0" max="40" step="0.5"></label>
+        <label>右 <input data-cfg="safeR" type="number" min="0" max="40" step="0.5"></label>
+      </fieldset>
+      <fieldset>
+        <legend>内容提示区（平台 UI 遮挡，占画幅 %）</legend>
+        <div id="hintList"></div>
+        <div class="row">
+          <button id="btnAddHint">+ 添加</button>
+          <button id="btnHintPreset">竖版常用预设</button>
+        </div>
+      </fieldset>
+      <label class="row"><input id="showGuides" type="checkbox" checked> 预览上显示安全区/提示区</label>
+    </details>
+
+    <details open>
+      <summary>3. 字幕样式（当前画幅）</summary>
+      <label>字号（% 画幅高） <input data-cfg="fontSizePct" type="number" min="1" max="15" step="0.1"></label>
+      <label>纵向位置（底边距 %） <input data-cfg="bottomPct" type="number" min="0" max="80" step="0.5"></label>
+      <label>最大宽度（% 画幅宽） <input data-cfg="maxWidthPct" type="number" min="20" max="100" step="1"></label>
+      <label>行距 <input data-cfg="lineSpacing" type="number" min="1" max="2" step="0.05"></label>
+      <label>字色 <input data-cfg="color" type="color"></label>
+      <label>描边色 <input data-cfg="strokeColor" type="color"></label>
+      <label>描边宽（字号比例） <input data-cfg="strokeW" type="number" min="0" max="0.3" step="0.01"></label>
+      <label>底板色 <input data-cfg="bgColor" type="color"></label>
+      <label>底板不透明度 <input data-cfg="bgAlpha" type="number" min="0" max="1" step="0.05"></label>
+      <label>竖版裁切位置（0=左 1=右） <input data-cfg="cropX" type="number" min="0" max="1" step="0.01"></label>
+      <label>输出高度(px) <input data-cfg="outH" type="number" min="240" max="2160" step="2"></label>
+    </details>
+
+    <details open>
+      <summary>4. 超框 / 遮挡时间段</summary>
+      <div id="violations"><span class="dim">载入字幕后自动检查</span></div>
+    </details>
+
+    <details open>
+      <summary>5. 导出成片</summary>
+      <label>输出路径 <input id="outPath" class="path" placeholder="/abs/path/out.mp4"></label>
+      <div class="row">
+        <button id="btnExport">导出当前画幅</button>
+        <span id="exportState" class="dim"></span>
+      </div>
+      <pre id="exportLog" class="dim"></pre>
+    </details>
+  </section>
+</main>
+
+<video id="video" class="hidden" crossorigin="anonymous" preload="auto"></video>
+<script src="/static/app.js"></script>
+</body>
+</html>
