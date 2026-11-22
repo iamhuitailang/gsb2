@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>套色印刷预览器</title>
+<style>
+  :root { --bg:#1e1f24; --panel:#26272e; --line:#3a3b44; --fg:#e8e6e1; --dim:#9a98a0; --acc:#e0a458; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:13px/1.5 "PingFang SC","Hiragino Sans GB",sans-serif; background:var(--bg); color:var(--fg); height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+  header { display:flex; gap:8px; align-items:center; padding:8px 12px; background:var(--panel); border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  header .title { font-weight:700; margin-right:8px; color:var(--acc); }
+  button { background:#34353d; color:var(--fg); border:1px solid var(--line); border-radius:5px; padding:4px 10px; cursor:pointer; font-size:12px; }
+  button:hover { border-color:var(--acc); }
+  button.on { background:var(--acc); color:#20180c; border-color:var(--acc); font-weight:600; }
+  button.warn { color:#ff9a8a; }
+  input[type=color] { width:28px; height:24px; border:none; background:none; padding:0; vertical-align:middle; cursor:pointer; }
+  input[type=range] { width:90px; vertical-align:middle; }
+  input[type=number] { width:56px; background:#17181c; color:var(--fg); border:1px solid var(--line); border-radius:4px; padding:2px 4px; }
+  #main { flex:1; display:flex; min-height:0; }
+  aside { background:var(--panel); overflow-y:auto; padding:10px; }
+  #platesBar { width:190px; border-right:1px solid var(--line); }
+  #panel { width:300px; border-left:1px solid var(--line); }
+  #stage { flex:1; position:relative; overflow:auto; background:#15161a; }
+  #view { display:block; margin:24px; cursor:crosshair; box-shadow:0 4px 30px rgba(0,0,0,.6); }
+  #statusbar { position:sticky; bottom:0; left:0; padding:4px 12px; background:var(--panel); border-top:1px solid var(--line); color:var(--dim); font-size:12px; }
+  h3 { font-size:12px; color:var(--dim); text-transform:uppercase; letter-spacing:1px; margin:14px 0 6px; border-bottom:1px solid var(--line); padding-bottom:4px; }
+  h3:first-child { margin-top:0; }
+  .plateItem { border:1px solid var(--line); border-radius:6px; padding:6px; margin-bottom:8px; cursor:pointer; }
+  .plateItem.sel { border-color:var(--acc); box-shadow:0 0 0 1px var(--acc); }
+  .plateItem canvas { width:100%; border-radius:3px; background:#fff; display:block; }
+  .plateItem .nm { display:flex; justify-content:space-between; align-items:center; margin:4px 0 2px; font-size:12px; }
+  .row { display:flex; gap:6px; align-items:center; margin:5px 0; flex-wrap:wrap; }
+  .row label { color:var(--dim); min-width:44px; }
+  .nudge { display:grid; grid-template-columns:repeat(3,26px); grid-template-rows:repeat(3,26px); gap:2px; }
+  .nudge button { padding:0; font-size:11px; }
+  table.probe { width:100%; border-collapse:collapse; font-size:12px; }
+  table.probe td { padding:2px 4px; border-bottom:1px solid var(--line); }
+  .sw { display:inline-block; width:12px; height:12px; border-radius:2px; vertical-align:-2px; margin-right:4px; border:1px solid #0006; }
+  .mono { font-family:ui-monospace,Menlo,monospace; }
+  .hint { color:var(--dim); font-size:11px; }
+  .markInfo { font-size:12px; background:#17181c; border:1px solid var(--line); border-radius:5px; padding:6px 8px; margin:6px 0; white-space:pre-line; }
+  kbd { background:#34353d; border:1px solid var(--line); border-radius:3px; padding:0 4px; font-size:11px; }
+</style>
+</head>
+<body>
+<header>
+  <span class="title">套色印刷预览器</span>
+  <button id="btnImport">导入灰度图版…</button>
+  <input type="file" id="fileImport" accept="image/*" multiple hidden>
+  <button id="btnDemo">生成演示三版</button>
+  <span class="hint">纸色</span><input type="color" id="paperColor" value="#f4eedd">
+  <span style="flex:1"></span>
+  <button id="btnGaps">露白检测</button>
+  <button id="btnFringe">色边检测</button>
+  <button id="btnExportPng">导出预览 PNG</button>
+  <button id="btnExportParams">导出偏移参数</button>
+  <button id="btnSave">保存工程</button>
+  <button id="btnLoad">载入工程</button>
+  <input type="file" id="fileLoad" accept="application/json" hidden>
+</header>
+
+<div id="main">
+  <aside id="platesBar">
+    <h3>色版（自上而下为印刷顺序）</h3>
+    <div id="plateList"></div>
+    <div class="hint">点击条目选中；↑↓ 调整印刷顺序。方向键微调选中版 ±1px（⇧=±10px），<kbd>,</kbd><kbd>.</kbd> 旋转 ∓0.1°。</div>
+  </aside>
+
+  <section id="stage">
+    <canvas id="view"></canvas>
+    <div id="statusbar">就绪</div>
+  </section>
+
+  <aside id="panel">
+    <h3>选中版调整</h3>
+    <div id="selInfo" class="hint">未选中色版</div>
+    <div class="row"><label>颜料色</label><input type="color" id="inkColor"></div>
+    <div class="row"><label>覆盖强度</label><input type="range" id="strength" min="0" max="1" step="0.01"><span id="strengthVal" class="mono"></span></div>
+    <div class="row"><label>偏移 px</label>
+      Δx <input type="number" id="dx" step="0.5"> Δy <input type="number" id="dy" step="0.5">
+    </div>
+    <div class="row"><label>旋转 °</label><input type="number" id="rot" step="0.1"><span class="hint">（绕版心）</span></div>
+    <div class="row"><label>微调</label>
+      <div class="nudge">
+        <span></span><button data-n="0,-1">↑</button><span></span>
+        <button data-n="-1,0">←</button><button id="nudgeReset" title="归零">⌂</button><button data-n="1,0">→</button>
+        <span></span><button data-n="0,1">↓</button><span></span>
+      </div>
+      <span class="hint">标尺读数即左栏<br>Δx/Δy/旋转值</span>
+    </div>
+
+    <h3>像素探针</h3>
+    <div class="row">
+      <button data-mode="probe" class="modeBtn on">探针</button>
+      <span class="hint">点击画面查看该像素各色版覆盖与合成色</span>
+    </div>
+    <div id="probeOut" class="hint">尚未取样</div>
+
+    <h3>对位标记与校正</h3>
+    <div class="row">
+      <button data-mode="nom1" class="modeBtn">设理论标记①</button>
+      <button data-mode="nom2" class="modeBtn">设理论标记②</button>
+    </div>
+    <div class="row">
+      <button data-mode="obs1" class="modeBtn">测实际落点①</button>
+      <button data-mode="obs2" class="modeBtn">测实际落点②</button>
+    </div>
+    <div class="hint">理论标记 = 设计上应在的位置（各版共用）；实际落点 = 选中版上该标记现在偏到的位置。两点可解算平移+旋转。</div>
+    <div id="corrOut" class="markInfo">尚未设置标记</div>
+    <div class="row">
+      <button id="btnPreviewCorr">预览校正后</button>
+      <button id="btnApplyCorr">应用校正</button>
+      <button id="btnClearObs" class="warn">清除实测点</button>
+    </div>
+
+    <h3>视图</h3>
+    <div class="row">
+      <button id="zoomOut">−</button><span id="zoomVal" class="mono">100%</span><button id="zoomIn">＋</button>
+      <button id="zoomFit">适应窗口</button>
+    </div>
+  </aside>
+</div>
+
+<script>
+"use strict";
+/* ================= 基本状态 ================= */
+const W = 820, H = 620;                 // 设计幅面（px）
+const state = {
+  paper: '#f4eedd',
+  plates: [],                            // 印刷顺序：数组先 → 后
+  selId: null,
+  marks: { nom1: null, nom2: null },     // 理论标记（设计坐标）
+  probe: null,                           // 探针点（设计坐标）
+  mode: 'probe',
+  zoom: 1,
+  previewCorr: false,
+  showGaps: false, showFringe: false,
+};
+let plateSeq = 0;
+
+const $ = id => document.getElementById(id);
+const view = $('view'), vctx = view.getContext('2d');
+const comp = document.createElement('canvas');   // 合成结果（设计分辨率）
+comp.width = W; comp.height = H;
+const cctx = comp.getContext('2d', { willReadFrequently: true });
+let compData = null;                              // 合成 ImageData 缓存
+let overlayCanvas = null;                         // 露白/色边高亮层
+
+/* ================= 色版对象 ================= */
+function makePlate(name, srcCanvas) {
+  const src = document.createElement('canvas');
+  src.width = W; src.height = H;
+  const sc = src.getContext('2d', { willReadFrequently: true });
+  sc.fillStyle = '#fff'; sc.fillRect(0, 0, W, H);
+  if (srcCanvas) sc.drawImage(srcCanvas, 0, 0, W, H);
+  const p = {
+    id: ++plateSeq, name,
+    color: '#000000', strength: 0.9,
+    dx: 0, dy: 0, rot: 0,
+    visible: true,
+    obs1: null, obs2: null,            // 实测落点（合成坐标）
+    src, gray: null, tint: null,
+  };
+  rebuildGray(p); rebuildTint(p);
+  return p;
+}
+function rebuildGray(p) {               // 灰度 → 墨量 v∈[0,1]，黑=满墨
+  const d = p.src.getContext('2d').getImageData(0, 0, W, H).data;
+  const g = new Float32Array(W * H);
+  for (let i = 0, j = 0; i < d.length; i += 4, j++)
+    g[j] = 1 - (0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]) / 255;
+  p.gray = g;
+}
+function hex2rgb(h) { return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]; }
+function rebuildTint(p) {               // 着色版：白→颜料色，供 multiply 叠印
+  if (!p.tint) { p.tint = document.createElement('canvas'); p.tint.width = W; p.tint.height = H; }
+  const tc = p.tint.getContext('2d');
+  const img = tc.createImageData(W, H);
+  const [ir, ig, ib] = hex2rgb(p.color);
+  for (let j = 0, i = 0; j < p.gray.length; j++, i += 4) {
+    const a = p.gray[j] * p.strength;
+    img.data[i]     = 255 + (ir - 255) * a;
+    img.data[i + 1] = 255 + (ig - 255) * a;
+    img.data[i + 2] = 255 + (ib - 255) * a;
+    img.data[i + 3] = 255;
+  }
+  tc.putImageData(img, 0, 0);
+}
+
+/* ================= 坐标变换（绕版心旋转 + 平移） ================= */
+function effParams(p) {                 // 预览校正时选中版用校正后参数
+  if (state.previewCorr && p.id === state.selId) {
+    const c = computeCorrection(p);
+    if (c) return { dx: c.dx, dy: c.dy, rot: c.rot };
+  }
+  return p;
+}
+function fwd(par, x, y) {               // 设计坐标 → 合成坐标
+  const r = par.rot * Math.PI / 180, c = Math.cos(r), s = Math.sin(r);
+  const px = x - W / 2, py = y - H / 2;
+  return { x: W / 2 + par.dx + px * c - py * s, y: H / 2 + par.dy + px * s + py * c };
+}
+function inv(par, X, Y) {               // 合成坐标 → 设计坐标
+  const r = -par.rot * Math.PI / 180, c = Math.cos(r), s = Math.sin(r);
+  const px = X - W / 2 - par.dx, py = Y - H / 2 - par.dy;
+  return { x: W / 2 + px * c - py * s, y: H / 2 + px * s + py * c };
+}
+function coverageAt(p, X, Y) {          // 某版在合成坐标 (X,Y) 的有效覆盖
+  const q = inv(effParams(p), X, Y);
+  const x = Math.round(q.x), y = Math.round(q.y);
+  if (x < 0 || y < 0 || x >= W || y >= H) return 0;
+  return p.gray[y * W + x] * p.strength;
+}
+
+/* ================= 合成与视图 ================= */
+function renderComposite() {
+  cctx.globalCompositeOperation = 'source-over';
+  cctx.fillStyle = state.paper; cctx.fillRect(0, 0, W, H);
+  cctx.globalCompositeOperation = 'multiply';   // 多层油墨：反射率相乘，重叠处变深而不遮盖
+  for (const p of state.plates) {
+    if (!p.visible) continue;
+    const par = effParams(p);
+    cctx.save();
+    cctx.translate(W / 2 + par.dx, H / 2 + par.dy);
+    cctx.rotate(par.rot * Math.PI / 180);
+    cctx.drawImage(p.tint, -W / 2, -H / 2);
+    cctx.restore();
+  }
+  compData = cctx.getImageData(0, 0, W, H);
+}
+function renderView() {
+  const z = state.zoom;
+  view.width = Math.round(W * z); view.height = Math.round(H * z);
+  vctx.imageSmoothingEnabled = z < 1;
+  vctx.drawImage(comp, 0, 0, view.width, view.height);
+  if (overlayCanvas) vctx.drawImage(overlayCanvas, 0, 0, view.width, view.height);
+  drawOverlay();
+  $('zoomVal').textContent = Math.round(z * 100) + '%';
+}
+function drawCross(x, y, color, r = 7) {
+  const z = state.zoom;
+  vctx.strokeStyle = color; vctx.lineWidth = 1.5;
+  vctx.beginPath();
+  vctx.moveTo(x * z - r, y * z); vctx.lineTo(x * z + r, y * z);
+  vctx.moveTo(x * z, y * z - r); vctx.lineTo(x * z, y * z + r);
+  vctx.stroke();
+  vctx.beginPath(); vctx.arc(x * z, y * z, r * 0.7, 0, 7); vctx.stroke();
+}
+function drawOverlay() {
+  const z = state.zoom, m = state.marks;
+  if (m.nom1) drawCross(m.nom1.x, m.nom1.y, '#ffffff');
+  if (m.nom2) drawCross(m.nom2.x, m.nom2.y, '#ffffff');
+  const p = selPlate();
+  if (p) {
+    if (p.obs1) drawCross(p.obs1.x, p.obs1.y, '#ff5f9e');
+    if (p.obs2) drawCross(p.obs2.x, p.obs2.y, '#ff5f9e');
+    // 偏移标尺：版心位移箭头 + 读数
+    if (p.dx || p.dy || p.rot) {
+      const par = effParams(p);
+      vctx.strokeStyle = '#e0a458'; vctx.fillStyle = '#e0a458'; vctx.lineWidth = 1.5;
+      vctx.beginPath(); vctx.moveTo(W / 2 * z, H / 2 * z);
+      vctx.lineTo((W / 2 + par.dx) * z, (H / 2 + par.dy) * z); vctx.stroke();
+      vctx.font = '12px Menlo,monospace';
+      vctx.fillText(`Δx ${par.dx.toFixed(1)}px  Δy ${par.dy.toFixed(1)}px  ∠${par.rot.toFixed(2)}°`,
+        (W / 2 + par.dx) * z + 8, (H / 2 + par.dy) * z - 8);
+    }
+  }
+  if (state.probe) drawCross(state.probe.x, state.probe.y, '#39c5ff', 5);
+}
+function renderAll() {
+  renderComposite();
+  overlayCanvas = null;
+  if (state.showGaps) buildGapOverlay();
+  if (state.showFringe) buildFringeOverlay();
+  renderView(); renderPlateList(); updateProbe(); updateCorr();
+}
+
+/* ================= 露白 / 色边检测 ================= */
+function coverageMaps() {               // 每版覆盖图 + 综合覆盖图
+  const n = state.plates.length, maps = [];
+  const combined = new Float32Array(W * H).fill(1);
+  for (const p of state.plates) {
+    const m = new Float32Array(W * H);
+    if (p.visible) {
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++)
+        m[y * W + x] = coverageAt(p, x, y);
+      for (let j = 0; j < W * H; j++) combined[j] *= 1 - m[j];
+    }
+    maps.push(m);
+  }
+  for (let j = 0; j < W * H; j++) combined[j] = 1 - combined[j];
+  return { maps, combined };
+}
+function buildGapOverlay() {            // 露白：附近有满墨（3px 内）但此处几乎无墨
+  const { maps, combined } = coverageMaps();
+  const maxCov = new Float32Array(W * H);
+  for (const m of maps) for (let j = 0; j < W * H; j++) if (m[j] > maxCov[j]) maxCov[j] = m[j];
+  const dil = new Float32Array(W * H);  // 3px 膨胀
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    let mx = 0;
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+      const xx = x + dx, yy = y + dy;
+      if (xx >= 0 && yy >= 0 && xx < W && yy < H && maxCov[yy * W + xx] > mx) mx = maxCov[yy * W + xx];
+    }
+    dil[y * W + x] = mx;
+  }
+  overlayCanvas = document.createElement('canvas');
+  overlayCanvas.width = W; overlayCanvas.height = H;
+  const oc = overlayCanvas.getContext('2d');
+  const img = oc.createImageData(W, H);
+  for (let j = 0, i = 0; j < W * H; j++, i += 4) {
+    if (combined[j] < 0.12 && dil[j] > 0.5) { img.data[i] = 255; img.data[i + 3] = 200; }
+  }
+  oc.putImageData(img, 0, 0);
+}
+function buildFringeOverlay() {         // 色边：仅单一版强覆盖，其余版几乎无墨
+  const { maps } = coverageMaps();
+  overlayCanvas = document.createElement('canvas');
+  overlayCanvas.width = W; overlayCanvas.height = H;
+  const oc = overlayCanvas.getContext('2d');
+  const img = oc.createImageData(W, H);
+  const cols = state.plates.map(p => hex2rgb(p.color));
+  for (let j = 0, i = 0; j < W * H; j++, i += 4) {
+    for (let k = 0; k < maps.length; k++) {
+      if (!state.plates[k].visible || maps[k][j] < 0.5) continue;
+      let others = 0;
+      for (let q = 0; q < maps.length; q++) if (q !== k) others += maps[q][j];
+      if (others < 0.1) {
+        img.data[i] = cols[k][0]; img.data[i + 1] = cols[k][1]; img.data[i + 2] = cols[k][2]; img.data[i + 3] = 160;
+        break;
+      }
+    }
+  }
+  oc.putImageData(img, 0, 0);
+}
+
+/* ================= 侧栏：色版列表 ================= */
+function selPlate() { return state.plates.find(p => p.id === state.selId) || null; }
+function renderPlateList() {
+  const box = $('plateList'); box.innerHTML = '';
+  state.plates.forEach((p, idx) => {
+    const div = document.createElement('div');
+    div.className = 'plateItem' + (p.id === state.selId ? ' sel' : '');
+    const th = document.createElement('canvas');   // 缩略图：纸色上 multiply 着色版
+    th.width = 164; th.height = 124;
+    const tc = th.getContext('2d');
+    tc.fillStyle = state.paper; tc.fillRect(0, 0, 164, 124);
+    tc.globalCompositeOperation = 'multiply';
+    tc.drawImage(p.tint, 0, 0, 164, 124);
+    div.appendChild(th);
+    const nm = document.createElement('div'); nm.className = 'nm';
+    nm.innerHTML = `<span><span class="sw" style="background:${p.color}"></span>${idx + 1}. ${p.name}</span>`;
+    const tools = document.createElement('span');
+    const mk = (t, fn, title) => { const b = document.createElement('button'); b.textContent = t; b.title = title; b.onclick = e => { e.stopPropagation(); fn(); }; tools.appendChild(b); };
+    mk('↑', () => { if (idx > 0) { state.plates.splice(idx, 1); state.plates.splice(idx - 1, 0, p); renderAll(); } }, '先印');
+    mk('↓', () => { if (idx < state.plates.length - 1) { state.plates.splice(idx, 1); state.plates.splice(idx + 1, 0, p); renderAll(); } }, '后印');
+    mk(p.visible ? '显' : '隐', () => { p.visible = !p.visible; renderAll(); }, '显示/隐藏');
+    mk('✕', () => { state.plates.splice(idx, 1); if (state.selId === p.id) state.selId = null; renderAll(); syncPanel(); }, '删除');
+    nm.appendChild(tools); div.appendChild(nm);
+    const off = document.createElement('div');
+    off.className = 'hint mono';
+    off.textContent = `Δx ${p.dx.toFixed(1)}  Δy ${p.dy.toFixed(1)}  ∠${p.rot.toFixed(2)}°  强度 ${p.strength.toFixed(2)}`;
+    div.appendChild(off);
+    div.onclick = () => { state.selId = p.id; renderAll(); syncPanel(); };
+    box.appendChild(div);
+  });
+}
+
+/* ================= 面板同步 ================= */
+function syncPanel() {
+  const p = selPlate();
+  $('selInfo').textContent = p ? `当前：${p.name}` : '未选中色版';
+  for (const id of ['inkColor', 'strength', 'dx', 'dy', 'rot']) $(id).disabled = !p;
+  if (p) {
+    $('inkColor').value = p.color;
+    $('strength').value = p.strength;
+    $('strengthVal').textContent = p.strength.toFixed(2);
+    $('dx').value = p.dx; $('dy').value = p.dy; $('rot').value = p.rot;
+  }
+}
+$('inkColor').oninput = e => { const p = selPlate(); if (p) { p.color = e.target.value; rebuildTint(p); renderAll(); } };
+$('strength').oninput = e => { const p = selPlate(); if (p) { p.strength = +e.target.value; $('strengthVal').textContent = p.strength.toFixed(2); rebuildTint(p); renderAll(); } };
+for (const [id, key] of [['dx', 'dx'], ['dy', 'dy'], ['rot', 'rot']])
+  $(id).onchange = e => { const p = selPlate(); if (p) { p[key] = +e.target.value || 0; renderAll(); } };
+document.querySelectorAll('.nudge button[data-n]').forEach(b => b.onclick = () => {
+  const p = selPlate(); if (!p) return;
+  const [dx, dy] = b.dataset.n.split(',').map(Number);
+  p.dx += dx; p.dy += dy; renderAll(); syncPanel();
+});
+$('nudgeReset').onclick = () => { const p = selPlate(); if (p) { p.dx = p.dy = p.rot = 0; renderAll(); syncPanel(); } };
+
+/* ================= 画布交互：探针 / 标记 ================= */
+let mode = 'probe';
+document.querySelectorAll('.modeBtn').forEach(b => b.onclick = () => {
+  mode = b.dataset.mode;
+  document.querySelectorAll('.modeBtn').forEach(x => x.classList.toggle('on', x === b));
+});
+view.addEventListener('click', e => {
+  const r = view.getBoundingClientRect();
+  const x = (e.clientX - r.left) / state.zoom, y = (e.clientY - r.top) / state.zoom;
+  const pt = { x: +x.toFixed(1), y: +y.toFixed(1) };
+  if (mode === 'probe') state.probe = pt;
+  else if (mode === 'nom1') state.marks.nom1 = pt;
+  else if (mode === 'nom2') state.marks.nom2 = pt;
+  else if (mode === 'obs1' || mode === 'obs2') {
+    const p = selPlate();
+    if (!p) { setStatus('请先选中一个色版再测实际落点'); return; }
+    p[mode === 'obs1' ? 'obs1' : 'obs2'] = pt;
+  }
+  renderView(); updateProbe(); updateCorr();
+});
+view.addEventListener('mousemove', e => {
+  const r = view.getBoundingClientRect();
+  setStatus(`坐标 (${((e.clientX - r.left) / state.zoom).toFixed(0)}, ${((e.clientY - r.top) / state.zoom).toFixed(0)})　模式：${{ probe: '探针', nom1: '设理论①', nom2: '设理论②', obs1: '测实际①', obs2: '测实际②' }[mode]}`);
+});
+function setStatus(t) { $('statusbar').textContent = t; }
+
+function updateProbe() {
+  const out = $('probeOut');
+  if (!state.probe) { out.textContent = '尚未取样'; return; }
+  const { x, y } = state.probe;
+  const px = Math.max(0, Math.min(W - 1, Math.round(x))), py = Math.max(0, Math.min(H - 1, Math.round(y)));
+  const i = (py * W + px) * 4;
+  const rgb = [compData.data[i], compData.data[i + 1], compData.data[i + 2]];
+  let html = `<div class="mono">@${px},${py}　合成色 <span class="sw" style="background:rgb(${rgb})"></span>#${rgb.map(v => v.toString(16).padStart(2, '0')).join('')}</div>`;
+  html += '<table class="probe"><tr><td>版</td><td>覆盖</td><td></td></tr>';
+  let combined = 1;
+  state.plates.forEach((p, idx) => {
+    const a = p.visible ? coverageAt(p, x, y) : 0;
+    combined *= 1 - a;
+    html += `<tr><td>${idx + 1}. ${p.name}${p.visible ? '' : '（隐）'}</td><td class="mono">${(a * 100).toFixed(1)}%</td>
+      <td><span style="display:inline-block;height:8px;width:${Math.round(a * 80)}px;background:${p.color}"></span></td></tr>`;
+  });
+  html += `</table><div class="mono">总覆盖 ${((1 - combined) * 100).toFixed(1)}%${combined > 0.9 ? '　⚠ 接近露白' : ''}</div>`;
+  out.innerHTML = html;
+}
+
+/* ================= 对位校正解算 ================= */
+function computeCorrection(p) {
+  const { nom1, nom2 } = state.marks;
+  if (!nom1 || !nom2 || !p.obs1 || !p.obs2) return null;
+  const aObs = Math.atan2(p.obs2.y - p.obs1.y, p.obs2.x - p.obs1.x);
+  const aNom = Math.atan2(nom2.y - nom1.y, nom2.x - nom1.x);
+  const dRot = (aNom - aObs) * 180 / Math.PI;
+  const r = dRot * Math.PI / 180, c = Math.cos(r), s = Math.sin(r);
+  // 校正变换 C(q) = R·q + t，使 C(obs_i) = nom_i
+  const tx = nom1.x - (c * p.obs1.x - s * p.obs1.y);
+  const ty = nom1.y - (s * p.obs1.x + c * p.obs1.y);
+  // 新变换 T' = C∘T：rot' = rot+dRot；c+d' = R(c+d)+t
+  const cx = W / 2 + p.dx, cy = H / 2 + p.dy;
+  const ncx = c * cx - s * cy + tx, ncy = s * cx + c * cy + ty;
+  return { dRot, dx: ncx - W / 2, dy: ncy - H / 2, rot: p.rot + dRot };
+}
+function updateCorr() {
+  const out = $('corrOut'), p = selPlate();
+  const m = state.marks;
+  let txt = `理论① ${m.nom1 ? `(${m.nom1.x},${m.nom1.y})` : '未设'}　理论② ${m.nom2 ? `(${m.nom2.x},${m.nom2.y})` : '未设'}\n`;
+  if (!p) { out.textContent = txt + '未选中色版'; return; }
+  txt += `实测① ${p.obs1 ? `(${p.obs1.x},${p.obs1.y})` : '未测'}　实测② ${p.obs2 ? `(${p.obs2.x},${p.obs2.y})` : '未测'}\n`;
+  const c = computeCorrection(p);
+  if (c) {
+    txt += `建议校正：Δx ${p.dx.toFixed(1)}→${c.dx.toFixed(1)}　Δy ${p.dy.toFixed(1)}→${c.dy.toFixed(1)}　∠${p.rot.toFixed(2)}°→${c.rot.toFixed(2)}°`;
+    $('btnApplyCorr').disabled = false; $('btnPreviewCorr').disabled = false;
+  } else {
+    txt += '（设齐理论①②与实测①②后给出建议校正）';
+    $('btnApplyCorr').disabled = true; $('btnPreviewCorr').disabled = true;
+  }
+  out.textContent = txt;
+  $('btnPreviewCorr').classList.toggle('on', state.previewCorr);
+}
+$('btnPreviewCorr').onclick = () => { state.previewCorr = !state.previewCorr; renderAll(); };
+$('btnApplyCorr').onclick = () => {
+  const p = selPlate(); if (!p) return;
+  const c = computeCorrection(p); if (!c) return;
+  p.dx = +c.dx.toFixed(2); p.dy = +c.dy.toFixed(2); p.rot = +c.rot.toFixed(3);
+  p.obs1 = p.obs2 = null; state.previewCorr = false;
+  renderAll(); syncPanel();
+};
+$('btnClearObs').onclick = () => { const p = selPlate(); if (p) { p.obs1 = p.obs2 = null; renderAll(); } };
+
+/* ================= 缩放 ================= */
+function setZoom(z) { state.zoom = Math.max(0.2, Math.min(8, z)); renderView(); }
+$('zoomIn').onclick = () => setZoom(state.zoom * 1.25);
+$('zoomOut').onclick = () => setZoom(state.zoom / 1.25);
+$('zoomFit').onclick = () => setZoom(Math.min(($('stage').clientWidth - 60) / W, ($('stage').clientHeight - 60) / H));
+view.addEventListener('wheel', e => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); setZoom(state.zoom * (e.deltaY < 0 ? 1.1 : 0.9)); } }, { passive: false });
+
+/* ================= 键盘微调 ================= */
+window.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  const p = selPlate(); if (!p) return;
+  const st = e.shiftKey ? 10 : 1;
+  const map = { ArrowLeft: [-st, 0], ArrowRight: [st, 0], ArrowUp: [0, -st], ArrowDown: [0, st] };
+  if (map[e.key]) { p.dx += map[e.key][0]; p.dy += map[e.key][1]; e.preventDefault(); }
+  else if (e.key === ',') p.rot = +(p.rot - 0.1).toFixed(3);
+  else if (e.key === '.') p.rot = +(p.rot + 0.1).toFixed(3);
+  else return;
+  renderAll(); syncPanel();
+});
+
+/* ================= 导入 / 演示版 ================= */
+$('btnImport').onclick = () => $('fileImport').click();
+$('fileImport').onchange = async e => {
+  for (const f of e.target.files) {
+    const img = await createImageBitmap(f);
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    const cx = c.getContext('2d');
+    cx.fillStyle = '#fff'; cx.fillRect(0, 0, W, H);
+    const s = Math.min(W / img.width, H / img.height);
+    cx.drawImage(img, (W - img.width * s) / 2, (H - img.height * s) / 2, img.width * s, img.height * s);
+    const p = makePlate(f.name.replace(/\.\w+$/, ''), c);
+    p.color = ['#c0392b', '#2471a3', '#b7950b', '#1e8449'][state.plates.length % 4];
+    state.plates.push(p); state.selId = p.id;
+  }
+  e.target.value = ''; renderAll(); syncPanel();
+};
+
+/* 三张程序绘制演示版：轮廓版 / 文字版 / 底纹版 */
+function demoOutline() {                // 版1：轮廓 + 对位十字
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
+  x.strokeStyle = '#000'; x.fillStyle = '#000';
+  x.lineWidth = 3; x.strokeRect(40, 40, W - 80, H - 80);
+  x.lineWidth = 4; x.beginPath(); x.arc(W / 2, H / 2 - 40, 130, 0, 7); x.stroke();
+  x.lineWidth = 2;
+  x.beginPath(); x.moveTo(W / 2 - 180, H - 140); x.lineTo(W / 2 + 180, H - 140); x.stroke();
+  x.font = '700 64px "PingFang SC",sans-serif'; x.textAlign = 'center';
+  x.strokeText('套色印刷', W / 2, H - 180);
+  for (const [mx, my] of [[90, 90], [W - 90, H - 90]]) {   // 对位十字（理论标记位置）
+    x.lineWidth = 2;
+    x.beginPath(); x.moveTo(mx - 14, my); x.lineTo(mx + 14, my); x.moveTo(mx, my - 14); x.lineTo(mx, my + 14); x.stroke();
+    x.beginPath(); x.arc(mx, my, 9, 0, 7); x.stroke();
+  }
+  return c;
+}
+function demoText() {                   // 版2：实心文字 + 填充圆
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
+  x.fillStyle = '#000'; x.textAlign = 'center';
+  x.font = '700 64px "PingFang SC",sans-serif';
+  x.fillText('套色印刷', W / 2, H - 180);
+  x.font = '400 26px "PingFang SC",sans-serif';
+  x.fillText('多层油墨叠印 · 偏版露白演示', W / 2, H - 128);
+  x.beginPath(); x.arc(W / 2, H / 2 - 40, 96, 0, 7); x.fill();
+  for (const [mx, my] of [[90, 90], [W - 90, H - 90]]) {   // 同款对位十字
+    x.strokeStyle = '#000'; x.lineWidth = 2;
+    x.beginPath(); x.moveTo(mx - 14, my); x.lineTo(mx + 14, my); x.moveTo(mx, my - 14); x.lineTo(mx, my + 14); x.stroke();
+    x.beginPath(); x.arc(mx, my, 9, 0, 7); x.stroke();
+  }
+  return c;
+}
+function demoTint() {                   // 版3：半调底纹 + 渐变条
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  x.fillStyle = '#fff'; x.fillRect(0, 0, W, H);
+  x.fillStyle = '#000';
+  for (let ry = 0; ry < 14; ry++) for (let rx = 0; rx < 30; rx++) {   // 圆内半调点
+    const px = W / 2 - 174 + rx * 12, py = H / 2 - 118 + ry * 12;
+    const d = Math.hypot(px - W / 2, py - (H / 2 - 40));
+    if (d < 128 && ((rx + ry) % 2 === 0)) { x.beginPath(); x.arc(px, py, 2.6, 0, 7); x.fill(); }
+  }
+  for (let i = 0; i < 40; i++) {        // 底部渐变条
+    x.globalAlpha = i / 40;
+    x.fillRect(60 + i * 17, H - 100, 15, 24);
+  }
+  x.globalAlpha = 1;
+  return c;
+}
+$('btnDemo').onclick = () => {
+  state.plates = [];
+  const p1 = makePlate('轮廓版', demoOutline()); p1.color = '#1d4e89'; p1.strength = 0.95;
+  const p2 = makePlate('文字版', demoText());    p2.color = '#c0392b'; p2.strength = 0.9;
+  p2.dx = 7; p2.dy = -5; p2.rot = 1.1;           // 故意偏版：演示露白与色边
+  const p3 = makePlate('底纹版', demoTint());    p3.color = '#b7950b'; p3.strength = 0.75;
+  p3.dx = -4; p3.dy = 3; p3.rot = -0.5;
+  state.plates = [p1, p2, p3];
+  state.selId = p2.id;
+  state.marks.nom1 = { x: 90, y: 90 }; state.marks.nom2 = { x: W - 90, y: H - 90 };
+  state.probe = { x: W / 2, y: H / 2 - 40 };
+  renderAll(); syncPanel();
+  setStatus('已生成演示三版：文字版与底纹版被故意偏版，可开「露白检测」查看，或用对位标记校正');
+};
+
+/* ================= 检测开关 ================= */
+$('btnGaps').onclick = () => { state.showGaps = !state.showGaps; $('btnGaps').classList.toggle('on', state.showGaps); renderAll(); };
+$('btnFringe').onclick = () => { state.showFringe = !state.showFringe; $('btnFringe').classList.toggle('on', state.showFringe); renderAll(); };
+$('paperColor').oninput = e => { state.paper = e.target.value; renderAll(); };
+
+/* ================= 导出 / 工程存取 ================= */
+function download(name, url) { const a = document.createElement('a'); a.href = url; a.download = name; a.click(); }
+$('btnExportPng').onclick = () => download('套色预览.png', comp.toDataURL('image/png'));
+$('btnExportParams').onclick = () => {
+  const data = {
+    纸色: state.paper, 导出时间: new Date().toISOString(),
+    色版: state.plates.map((p, i) => ({
+      顺序: i + 1, 名称: p.name, 颜料色: p.color, 覆盖强度: p.strength,
+      偏移x_px: p.dx, 偏移y_px: p.dy, 旋转_度: p.rot, 可见: p.visible,
+    })),
+    对位标记: state.marks,
+  };
+  download('偏移参数.json', URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })));
+};
+$('btnSave').onclick = () => {
+  const data = {
+    version: 1, paper: state.paper, marks: state.marks, probe: state.probe,
+    plates: state.plates.map(p => ({
+      name: p.name, color: p.color, strength: p.strength,
+      dx: p.dx, dy: p.dy, rot: p.rot, visible: p.visible,
+      obs1: p.obs1, obs2: p.obs2,
+      img: p.src.toDataURL('image/png'),
+    })),
+  };
+  download('套色工程.json', URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' })));
+};
+$('btnLoad').onclick = () => $('fileLoad').click();
+$('fileLoad').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  const data = JSON.parse(await f.text());
+  state.paper = data.paper; $('paperColor').value = data.paper;
+  state.marks = data.marks || { nom1: null, nom2: null };
+  state.probe = data.probe || null;
+  state.plates = [];
+  for (const pd of data.plates) {
+    const img = new Image();
+    await new Promise(res => { img.onload = res; img.src = pd.img; });
+    const c = document.createElement('canvas'); c.width = W; c.height = H;
+    c.getContext('2d').drawImage(img, 0, 0);
+    const p = makePlate(pd.name, c);
+    Object.assign(p, { color: pd.color, strength: pd.strength, dx: pd.dx, dy: pd.dy, rot: pd.rot, visible: pd.visible, obs1: pd.obs1, obs2: pd.obs2 });
+    rebuildTint(p);
+    state.plates.push(p);
+  }
+  state.selId = state.plates[0]?.id ?? null;
+  e.target.value = ''; renderAll(); syncPanel();
+  setStatus('工程已载入，可逐版复查偏移参数与露白位置');
+};
+
+/* ================= 启动 ================= */
+$('btnDemo').click();
+setZoom(Math.min(($('stage').clientWidth - 60) / W, ($('stage').clientHeight - 60) / H));
+</script>
+</body>
+</html>
