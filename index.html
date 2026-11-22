@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>斜俯视场景遮挡检查页</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #e9edf2; color: #1f2937; font-size: 13px; }
+  header { padding: 10px 16px; background: #1f2937; color: #fff; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; }
+  header .hint { color: #9ca3af; font-size: 12px; }
+  .layout { display: flex; gap: 12px; padding: 12px; align-items: flex-start; }
+  .stage { background: #fff; border-radius: 10px; padding: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.08); flex: 0 0 auto; }
+  canvas { display: block; border-radius: 6px; background: #f7f8fa; cursor: crosshair; }
+  .toolbar { display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap; }
+  button { font: inherit; border: 1px solid #c7ced6; background: #fff; border-radius: 6px; padding: 5px 11px; cursor: pointer; }
+  button:hover { background: #f1f5f9; }
+  button.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+  button.danger { color: #b91c1c; border-color: #f0a8a8; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  aside { width: 340px; display: flex; flex-direction: column; gap: 10px; }
+  .card { background: #fff; border-radius: 10px; padding: 12px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  .card h2 { margin: 0 0 8px; font-size: 13px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+  .tabs { display: flex; gap: 4px; }
+  .tabs button { padding: 3px 9px; font-size: 12px; }
+  .field { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .field label { width: 88px; color: #4b5563; flex: 0 0 auto; }
+  .field input, .field select, .field textarea { flex: 1; min-width: 0; font: inherit; border: 1px solid #c7ced6; border-radius: 5px; padding: 4px 6px; }
+  .field textarea { font-family: ui-monospace, Menlo, monospace; font-size: 11px; height: 64px; resize: vertical; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 11px; background: #e5e7eb; }
+  .badge.ok { background: #d1fae5; color: #065f46; }
+  .badge.bad { background: #fee2e2; color: #991b1b; }
+  .badge.warn { background: #fef3c7; color: #92400e; }
+  .conflict-item { border: 1px solid #f3c2c2; background: #fef2f2; border-radius: 6px; padding: 6px 8px; margin-bottom: 6px; cursor: pointer; }
+  .conflict-item:hover { background: #fee2e2; }
+  .conflict-item .t { font-weight: 600; color: #991b1b; margin-bottom: 2px; }
+  .reason-item { border-left: 3px solid #cbd5e1; padding: 5px 8px; margin-bottom: 5px; background: #f8fafc; border-radius: 0 5px 5px 0; }
+  .reason-item.conflict { border-left-color: #e02424; background: #fef2f2; }
+  .reason-item.front { border-left-color: #059669; }
+  .reason-item b { cursor: pointer; }
+  .reason-item b:hover { text-decoration: underline; color: #2563eb; }
+  .muted { color: #6b7280; }
+  .route-item { display: flex; align-items: center; gap: 6px; padding: 5px 6px; border-radius: 6px; }
+  .route-item:hover { background: #f1f5f9; }
+  .route-item.sel { background: #dbeafe; }
+  .route-item .nm { flex: 1; }
+  .shot { position: relative; border: 1px solid #d1d5db; border-radius: 6px; overflow: hidden; margin-bottom: 8px; }
+  .shot img { width: 100%; display: block; }
+  .shot .cap { font-size: 11px; padding: 4px 6px; background: #f3f4f6; }
+  .shot button { position: absolute; top: 4px; right: 4px; padding: 1px 7px; font-size: 11px; }
+  .order-line { font-family: ui-monospace, Menlo, monospace; font-size: 11px; background: #f3f4f6; border-radius: 5px; padding: 5px 7px; word-break: break-all; }
+  .scroll { max-height: 260px; overflow-y: auto; }
+  kbd { background: #f3f4f6; border: 1px solid #d1d5db; border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font-size: 11px; }
+  .grid-info { font-family: ui-monospace, Menlo, monospace; font-size: 11px; color: #4b5563; }
+</style>
+</head>
+<body>
+<header>
+  <h1>斜俯视场景遮挡检查页</h1>
+  <span class="hint"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> / 方向键走动，点画面中的物体核对遮挡原因</span>
+</header>
+
+<div class="layout">
+  <div class="stage">
+    <div class="toolbar">
+      <button data-view="normal" class="active">正常画面</button>
+      <button data-view="footprint">占地区域</button>
+      <button data-view="order">绘制顺序</button>
+      <span style="width:10px"></span>
+      <button id="btnShot">截图存关键位置</button>
+      <button id="btnConflictDemo">制造排序冲突示例</button>
+      <button id="btnReset" class="danger">恢复默认场景</button>
+    </div>
+    <canvas id="cv" width="960" height="640"></canvas>
+    <div class="toolbar" style="margin-top:8px; margin-bottom:0">
+      <button id="btnPlay">▶ 播放路线</button>
+      <button id="btnPause">⏸ 暂停</button>
+      <button id="btnStep">逐步 →</button>
+      <button id="btnRecord">● 录制手动路线</button>
+      <button id="btnSaveScene">保存场景</button>
+      <button id="btnExport">导出 JSON</button>
+      <button id="btnImport">导入 JSON</button>
+      <input type="file" id="fileImport" accept="application/json" hidden>
+      <span class="grid-info" id="posInfo"></span>
+    </div>
+  </div>
+
+  <aside>
+    <div class="card">
+      <h2>当前冲突 <span id="conflictBadge" class="badge ok">无冲突</span></h2>
+      <div id="conflictList" class="scroll"><div class="muted">排序结果完全确定。</div></div>
+    </div>
+
+    <div class="card">
+      <h2>
+        物体核对
+        <div class="tabs">
+          <button data-panel="inspect" class="active">核对</button>
+          <button data-panel="config">配置</button>
+        </div>
+      </h2>
+      <div id="panel-inspect">
+        <div id="inspectBody" class="muted">点击场景中的物体，这里会列出它与每个物体的前后关系及判定依据。</div>
+      </div>
+      <div id="panel-config" hidden>
+        <div id="configBody" class="muted">先选中一个物体。可改地面坐标（格子）、所在高度 base、参与排序的 z 区间与占地范围，改完立即重算。</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>路线 <span id="routeBadge" class="badge">手动模式</span></h2>
+      <div id="routeList"></div>
+      <div class="row">
+        <button id="btnReplayCheck">重放一致性核对</button>
+        <button id="btnGotoUnder">定位桥下位置</button>
+        <button id="btnGotoOver">定位桥上位置</button>
+      </div>
+      <div id="replayResult" style="margin-top:6px"></div>
+    </div>
+
+    <div class="card">
+      <h2>关键位置截图 <span class="badge" id="shotCount">0 张</span></h2>
+      <div id="shotList"><div class="muted">播放或手动走到关键位置（如桥上、桥底），点「截图存关键位置」保存对照。</div></div>
+    </div>
+  </aside>
+</div>
+
+<script src="js/core.js"></script>
+<script src="js/render.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
