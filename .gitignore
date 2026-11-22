@@ -45,3 +45,6 @@ coverage/
 
 # 生成的示例素材(可用 npm run generate:samples 恢复)
 public/samples/
+
+# 工具运行期产物 (预览/转换/自检素材, 可重新生成)
+workdir/
