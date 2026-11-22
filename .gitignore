@@ -20,6 +20,9 @@ data.json
 *.sqlite3
 tmp/
 
+# 无头浏览器冒烟测试生成的截图（可由 tests/browser-smoke.mjs 重新生成）
+tests/smoke-*.png
+
 # ---- 依赖与构建产物 ----
 node_modules/
 __pycache__/

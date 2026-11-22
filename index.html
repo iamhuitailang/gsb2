@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>动态压缩试听台 · 音量动态调整试验页</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div class="app">
+  <header class="app-header">
+    <h1>动态压缩试听台</h1>
+    <p class="subtitle">
+      导入短音频，对照输入/输出波形与增益曲线，听“突然响一声”压住了多少、何时放开。
+    </p>
+  </header>
+
+  <!-- 1. 素材与播放 -->
+  <section class="card">
+    <div class="card-row">
+      <div class="file-controls">
+        <button id="loadSampleBtn" class="btn">载入内置样音</button>
+        <label class="btn btn-file">
+          导入音频
+          <input type="file" id="fileInput" accept="audio/*" hidden />
+        </label>
+        <span id="fileName" class="file-name">未载入素材</span>
+        <span id="dropHint" class="drop-hint">（也可把音频文件拖到页面上）</span>
+      </div>
+      <div class="transport">
+        <button id="playBtn" class="btn btn-primary" disabled>播放</button>
+        <button id="stopBtn" class="btn" disabled>停止</button>
+        <span id="timeReadout" class="time-readout">0.00 / 0.00 s</span>
+      </div>
+    </div>
+
+    <div class="views">
+      <figure class="view-block">
+        <figcaption>
+          <span class="view-title">输入波形（原声）</span>
+          <span class="view-hint">点击/拖动任意视图可跳转，三个视图时间位置始终对应</span>
+        </figcaption>
+        <canvas id="inputCanvas" class="view-canvas"></canvas>
+      </figure>
+
+      <figure class="view-block">
+        <figcaption>
+          <span class="view-title">输出波形（压缩 + 补偿增益）</span>
+          <span id="clipLegend" class="clip-legend hidden">
+            <span class="clip-swatch"></span>红色列 = 该时刻出现削波
+          </span>
+        </figcaption>
+        <canvas id="outputCanvas" class="view-canvas"></canvas>
+      </figure>
+
+      <figure class="view-block">
+        <figcaption>
+          <span class="view-title">增益变化曲线（每声道实际施加的增益衰减）</span>
+        </figcaption>
+        <canvas id="gainCanvas" class="view-canvas gain-canvas"></canvas>
+      </figure>
+
+      <div id="tooltip" class="tooltip hidden"></div>
+    </div>
+  </section>
+
+  <!-- 2. 参数与试听 -->
+  <section class="card params-card">
+    <div class="params-grid">
+      <div class="param">
+        <label for="threshold">阈值 <span id="thresholdVal" class="val"></span></label>
+        <input type="range" id="threshold" min="-60" max="0" step="0.5" value="-20" />
+        <span class="param-hint">超过此电平开始压缩（dBFS）</span>
+      </div>
+      <div class="param">
+        <label for="ratio">压缩比例 <span id="ratioVal" class="val"></span></label>
+        <input type="range" id="ratio" min="1" max="20" step="0.5" value="4" />
+        <span class="param-hint">超出阈值部分按 1 : N 压缩</span>
+      </div>
+      <div class="param">
+        <label for="attack">起效速度 <span id="attackVal" class="val"></span></label>
+        <input type="range" id="attack" min="0.1" max="200" step="0.1" value="5" />
+        <span class="param-hint">attack 时间常数，越小压得越快</span>
+      </div>
+      <div class="param">
+        <label for="release">恢复速度 <span id="releaseVal" class="val"></span></label>
+        <input type="range" id="release" min="5" max="2000" step="1" value="250" />
+        <span class="param-hint">release 时间常数，越小放开越快</span>
+      </div>
+      <div class="param param-inline">
+        <label class="check">
+          <input type="checkbox" id="linked" checked />
+          <span>双声道联动（取两侧峰值共享一条增益）</span>
+        </label>
+        <span class="param-hint">取消勾选后左右声道独立压缩，可核对单侧突变时各用了多少增益</span>
+      </div>
+      <div class="param">
+        <label for="makeup">补偿增益 <span id="makeupVal" class="val"></span></label>
+        <input type="range" id="makeup" min="-12" max="24" step="0.1" value="0" />
+        <span class="param-hint">压缩后整体抬升/降低音量（dB）</span>
+      </div>
+      <div class="param param-inline">
+        <label class="check">
+          <input type="checkbox" id="loudnessMatch" />
+          <span>按同一响度对照（自动补偿到与原声 RMS 一致）</span>
+        </label>
+        <span id="matchInfo" class="param-hint"></span>
+      </div>
+    </div>
+
+    <div class="listen-row">
+      <div class="seg" role="group" aria-label="试听来源">
+        <span class="seg-label">试听：</span>
+        <button id="listenOriginal" class="seg-btn">原声</button>
+        <button id="listenProcessed" class="seg-btn active">处理结果</button>
+        <button id="quickToggle" class="btn btn-small" disabled>快速切换（空格）</button>
+      </div>
+      <div class="meters" id="meters">
+        <div class="meter-row" id="meterRowL">
+          <span class="meter-name"><span class="dot dot-l"></span>L</span>
+          <span id="grL" class="meter-val">0.0 dB</span>
+          <span id="lvlL" class="meter-val muted">峰值 -∞</span>
+        </div>
+        <div class="meter-row" id="meterRowR">
+          <span class="meter-name"><span class="dot dot-r"></span>R</span>
+          <span id="grR" class="meter-val">0.0 dB</span>
+          <span id="lvlR" class="meter-val muted">峰值 -∞</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="clipWarning" class="clip-warning hidden" role="status"></div>
+  </section>
+
+  <!-- 3. 统计与预设/导出 -->
+  <section class="card">
+    <div class="stats-grid">
+      <div class="stat">
+        <span class="stat-label">原声 RMS / 峰值</span>
+        <span id="statIn" class="stat-val">—</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">输出 RMS / 峰值（含补偿）</span>
+        <span id="statOut" class="stat-val">—</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">最大增益衰减</span>
+        <span id="statGr" class="stat-val">—</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">首尾静音（原声 → 输出，-60dBFS 门限，秒）</span>
+        <span id="statSilence" class="stat-val">—</span>
+      </div>
+    </div>
+    <p class="silence-note" id="silenceNote">
+      输出与输入逐采样等长（不会裁切首尾）。若恢复时间较长，压缩器放开时的尾音可能让“低于 -60dBFS 的静音段”
+      判定略短于原声，这是电平门限的统计口径，不是静音被删——实际样本数完全一致。
+    </p>
+
+    <div class="preset-row">
+      <div class="preset-box">
+        <div class="preset-head">
+          <span class="preset-title">设置 A</span>
+          <span id="presetAInfo" class="preset-info">空</span>
+        </div>
+        <div class="preset-actions">
+          <button id="saveA" class="btn btn-small" disabled>存入当前参数</button>
+          <button id="loadA" class="btn btn-small" disabled>调出对照</button>
+        </div>
+      </div>
+      <div class="preset-box">
+        <div class="preset-head">
+          <span class="preset-title">设置 B</span>
+          <span id="presetBInfo" class="preset-info">空</span>
+        </div>
+        <div class="preset-actions">
+          <button id="saveB" class="btn btn-small" disabled>存入当前参数</button>
+          <button id="loadB" class="btn btn-small" disabled>调出对照</button>
+        </div>
+      </div>
+      <div class="export-box">
+        <button id="exportBtn" class="btn btn-primary" disabled>导出处理后 WAV</button>
+        <span class="param-hint">16-bit PCM，长度与原素材逐采样一致，首尾静音不裁不补</span>
+      </div>
+    </div>
+    <div id="statusLine" class="status-line" aria-live="polite"></div>
+  </section>
+
+  <footer class="app-footer">
+    所有处理在本地浏览器内完成，音频不会上传。复查方法见 <code>README.md</code>。
+  </footer>
+</div>
+
+<script src="js/dsp.js"></script>
+<script src="js/sample.js"></script>
+<script src="js/peaks.js"></script>
+<script src="js/views.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
