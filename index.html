@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>像素放大对照台</title>
+<style>
+  :root{
+    --bg:#14161c; --panel:#1c1f28; --line:#2c3140; --fg:#dfe3ec; --dim:#8b93a7;
+    --acc:#5aa2ff; --warn:#ffd34d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:13px/1.55 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif}
+  header{padding:10px 16px;border-bottom:1px solid var(--line)}
+  h1{font-size:15px;margin:0 0 6px;font-weight:600}
+  h1 .hint{font-size:12px;color:var(--dim);font-weight:400;margin-left:8px}
+  .row{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin:5px 0}
+  .grp{color:var(--dim);margin-left:6px}
+  .sep{width:1px;height:18px;background:var(--line);margin:0 6px}
+  button,select,.filebtn{
+    background:#262b38;color:var(--fg);border:1px solid #3a4152;border-radius:6px;
+    padding:3px 10px;cursor:pointer;font-size:12px;line-height:1.6}
+  button:hover,.filebtn:hover{border-color:var(--acc)}
+  button.on{background:#1f3a5f;border-color:var(--acc);color:#cfe4ff}
+  main{display:flex;gap:12px;padding:12px 16px;align-items:flex-start;flex-wrap:wrap}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px;min-width:0}
+  .phead{display:flex;align-items:center;gap:10px;margin-bottom:8px;color:var(--dim);flex-wrap:wrap}
+  .phead b{color:var(--fg);font-weight:600}
+  .phead .fr{margin-left:auto;display:flex;gap:6px}
+  .view{overflow:auto;max-width:72vw;max-height:64vh;border:1px solid var(--line);
+    border-radius:4px;background:#101218}
+  canvas{display:block;image-rendering:pixelated}
+  #src{cursor:crosshair}
+  #palette{display:flex;flex-wrap:wrap;gap:3px;margin-top:8px;align-items:center;max-width:420px}
+  #palette .sw{width:16px;height:16px;border-radius:3px;border:1px solid #3a4152}
+  #regions{margin-top:8px;max-width:420px}
+  #regions .ritem{display:inline-flex;align-items:center;gap:6px;background:#232837;
+    border:1px solid #35405a;border-radius:5px;padding:1px 4px 1px 8px;margin:2px 4px 2px 0;font-size:12px}
+  #regions .ritem button{padding:0 6px;font-size:11px}
+  footer{padding:8px 16px 16px;border-top:1px solid var(--line);color:var(--dim)}
+  #info{color:var(--fg)}
+  #selInfo{margin-top:4px;color:var(--warn)}
+  .ok{color:#6fdc8c}.bad{color:#ff6b81}
+</style>
+</head>
+<body>
+<header>
+  <h1>像素放大对照台<span class="hint">A=直接复制像素，B=保留斜边转折（EPX）；点击输出图像可回看原图位置</span></h1>
+  <div class="row">
+    <label class="filebtn">导入图片…<input type="file" id="file" accept="image/*" hidden></label>
+    <span class="grp">样例</span>
+    <button id="s1">断点连线</button>
+    <button id="s2">透明边缘图标</button>
+    <button id="s3">箭头光标</button>
+    <span class="sep"></span>
+    <span class="grp">倍数</span>
+    <select id="scale">
+      <option>2</option><option selected>3</option><option>4</option>
+      <option>5</option><option>6</option><option>8</option>
+    </select>
+    <span class="grp">方式</span>
+    <button id="mA">A 直接复制</button>
+    <button id="mB">B 保斜边</button>
+    <button id="mSplit" class="on">分割对比</button>
+    <button id="tGrid" class="on">网格</button>
+    <button id="tPal" class="on">限定原调色板</button>
+  </div>
+  <div class="row">
+    <span class="grp">检查</span>
+    <button id="iThin">细线</button>
+    <button id="iCorner">尖角</button>
+    <button id="iHollow">挖空</button>
+    <button id="iSemi">半透明边缘</button>
+    <button id="iDiff">A/B 差异</button>
+    <button id="iSeam">保护区接缝</button>
+    <span class="sep"></span>
+    <button id="tDraw">框选保护区</button>
+    <button id="undoRegion">还原保护区</button>
+    <button id="clearRegion">清空保护区</button>
+    <span class="sep"></span>
+    <button id="wipe">清除本地存档</button>
+  </div>
+</header>
+<main>
+  <section class="panel">
+    <div class="phead"><b>原图</b><span id="srcMeta"></span></div>
+    <div class="view"><canvas id="src"></canvas></div>
+    <div id="palette"></div>
+    <div id="regions"></div>
+  </section>
+  <section class="panel">
+    <div class="phead">
+      <b>输出</b><span id="outMeta"></span>
+      <button id="zOut">−</button><button id="zFit">适应</button><button id="zIn">＋</button>
+      <span class="fr">
+        <button id="expA">导出 A png</button>
+        <button id="expB">导出 B png</button>
+      </span>
+    </div>
+    <div class="view"><canvas id="out"></canvas></div>
+  </section>
+</main>
+<footer>
+  <div id="info">移动鼠标查看像素来源；在输出图上点击可定位原图像素；开启「框选保护区」后在原图上拖拽可锁定区域用直接放大。</div>
+  <div id="selInfo"></div>
+</footer>
+<script src="app.js"></script>
+</body>
+</html>
