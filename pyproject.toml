@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "proxylink"
+version = "1.0.0"
+description = "本地代理素材挂接与时间位置校验工具（原片/低清代理时间线映射、可靠区间检查、剪辑点溯源）"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "Pillow>=9.0",
+]
+
+[project.scripts]
+proxylink = "proxylink.cli:main"
+
+[tool.setuptools]
+packages = ["proxylink"]

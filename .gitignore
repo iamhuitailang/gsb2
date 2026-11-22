@@ -19,6 +19,11 @@ data.json
 *.sqlite
 *.sqlite3
 tmp/
+# proxylink 本地项目状态与生成的测试素材
+.proxylink/
+demo_media/
+media/
+moved/
 
 # ---- 依赖与构建产物 ----
 node_modules/
@@ -26,6 +31,7 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+*.egg-info/
 dist/
 build/
 target/
