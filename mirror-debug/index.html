@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>镜面放置调试页</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #14171c; font-family: -apple-system, "PingFang SC", sans-serif; }
+  #app { position: fixed; inset: 0; }
+  #panel {
+    position: fixed; top: 10px; left: 10px; width: 250px; max-height: calc(100% - 60px);
+    overflow-y: auto; background: rgba(20,24,30,.92); color: #cfd6e1; border: 1px solid #2c3340;
+    border-radius: 8px; padding: 10px 12px; font-size: 12px; z-index: 10;
+  }
+  #panel h1 { font-size: 14px; margin: 0 0 8px; color: #fff; }
+  #panel h2 { font-size: 12px; margin: 12px 0 4px; color: #8fb8ff; }
+  #panel .row { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0; }
+  #panel button {
+    background: #242b36; color: #cfd6e1; border: 1px solid #3a4354; border-radius: 4px;
+    padding: 4px 8px; font-size: 12px; cursor: pointer;
+  }
+  #panel button:hover { background: #2f3948; }
+  #panel button.on { background: #2b5cb8; border-color: #4a80e0; color: #fff; }
+  #panel textarea {
+    width: 100%; box-sizing: border-box; height: 64px; background: #10141a; color: #9fb4d8;
+    border: 1px solid #3a4354; border-radius: 4px; font-size: 10px; font-family: monospace;
+  }
+  #panel details { margin-top: 10px; color: #9aa7ba; line-height: 1.6; }
+  #panel summary { cursor: pointer; color: #8fb8ff; }
+  #status {
+    position: fixed; left: 10px; bottom: 10px; background: rgba(20,24,30,.92); color: #9fe08f;
+    border: 1px solid #2c3340; border-radius: 6px; padding: 6px 10px; font-size: 12px;
+    font-family: monospace; z-index: 10; white-space: pre;
+  }
+  #hint { color: #6b7889; margin-top: 6px; line-height: 1.5; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="panel">
+  <h1>镜面放置调试</h1>
+
+  <h2>机位</h2>
+  <div class="row" id="camRow">
+    <button data-cam="front">正面</button>
+    <button data-cam="side">侧面</button>
+    <button data-cam="top">高位</button>
+    <button data-cam="back">镜背</button>
+  </div>
+
+  <h2>选中操作（点击场景物体）</h2>
+  <div class="row">
+    <button id="btnTranslate" class="on">平移</button>
+    <button id="btnRotate">旋转</button>
+    <button id="btnDeselect">取消选中</button>
+  </div>
+
+  <h2>反射</h2>
+  <div class="row">
+    <button id="btnDepth1" class="on">层级 1</button>
+    <button id="btnDepth2">层级 2（镜中镜）</button>
+  </div>
+  <div class="row">
+    <button id="btnPreview">反射视图</button>
+    <button id="btnFrustum">裁切视锥</button>
+    <button id="btnMarkers" class="on">地面标记</button>
+  </div>
+
+  <h2>预设</h2>
+  <div class="row">
+    <button id="btnPresetFront">正对镜面</button>
+    <button id="btnPresetTilt">斜放镜子</button>
+  </div>
+
+  <h2>存档（两个镜子 + 道具）</h2>
+  <div class="row">
+    <button id="btnSave">保存</button>
+    <button id="btnLoad">载入</button>
+    <button id="btnExport">导出</button>
+    <button id="btnImport">导入</button>
+  </div>
+  <textarea id="io" placeholder="导出 JSON 在此生成；粘贴 JSON 后点「导入」"></textarea>
+
+  <details>
+    <summary>规则与说明</summary>
+    <div>
+      <b>背面规则</b>：相机走到镜面法线反侧时，镜面显示灰色网格背板，不渲染反射（状态栏显示「背」）。<br>
+      <b>有效范围</b>：反射只画在镜框内；镜后物体由斜投影裁剪面剔除，不会出现在镜面里。<br>
+      <b>遮挡</b>：不透明物体挡住镜子时由深度缓冲自动保留遮挡关系；开「反射视图」看反射相机画面、开「裁切视锥」看裁剪范围可核对原因。<br>
+      <b>重复反射</b>：层级 1 = 每面镜只反射一次；层级 2 = 镜中镜再算一次（第二级用较低分辨率）。递归深度固定受限，每帧每面镜每级只渲染一次，不会无限刷新；更深层显示上一级纹理（有一帧延迟）。<br>
+      <b>穿帮检查</b>：镜框边缘为黄色描边；拖镜子贴墙/贴地、开反射视图对比主画面，可找边缘穿帮。<br>
+      <b>地面标记</b>：A/B 近、C/D 远，红绿蓝黄四色杆带名牌。镜中 A 仍在画面左侧、远近关系反转（近标记的像显得更远），用来核对左右、远近和位置。
+    </div>
+  </details>
+  <div id="hint">拖动空白处旋转视角，滚轮缩放。点击镜子/道具选中后可平移或旋转。</div>
+</div>
+
+<div id="status">初始化…</div>
+
+<script type="module" src="./main.js"></script>
+</body>
+</html>
