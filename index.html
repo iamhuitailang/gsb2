@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>传送带机关 · 逐步预演工具</title>
+<style>
+  :root {
+    --bg: #1e1f26; --panel: #2a2c36; --panel2: #23252e; --line: #3a3d4a;
+    --txt: #e6e6ea; --dim: #9aa0b0; --accent: #5b8def;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+         background: var(--bg); color: var(--txt); }
+  header { display: flex; align-items: center; gap: 18px; padding: 10px 16px;
+           background: #17181e; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  header h1 { font-size: 16px; margin: 0; }
+  header .stat { color: var(--dim); font-size: 13px; }
+  header .stat b { color: var(--txt); }
+  #banner { padding: 4px 12px; border-radius: 6px; font-size: 13px; display: none; }
+  #banner.deadlock { display: block; background: #5a2b2b; color: #ffb3b3; }
+  #banner.info { display: block; background: #2b3f5a; color: #b3d1ff; }
+
+  main { display: flex; gap: 12px; padding: 12px; align-items: flex-start; flex-wrap: wrap; }
+  #left { flex: 0 0 auto; }
+  #grid { display: grid; gap: 2px; background: #14151a; padding: 8px; border-radius: 8px; }
+  .cell { width: 46px; height: 46px; background: #262832; border-radius: 6px; position: relative;
+          display: flex; align-items: center; justify-content: center; font-size: 22px;
+          color: #8b93a7; cursor: pointer; user-select: none; }
+  .cell.belt { background: #2c3547; }
+  .cell.splitter { background: #3a2c47; }
+  .cell.stop { background: #472c2c; color: #d98c8c; font-size: 15px; }
+  .cell:hover { outline: 2px solid #566; }
+  .cell .sa, .cell .sb { position: absolute; font-size: 12px; line-height: 1; }
+  .cell .sa { top: 3px; right: 5px; color: #e0b0ff; }
+  .cell .sb { bottom: 3px; left: 5px; color: #9f8fc0; }
+  .blk { position: absolute; inset: 6px; border-radius: 8px; display: flex; align-items: center;
+         justify-content: center; font-weight: 700; color: #fff; font-size: 14px;
+         text-shadow: 0 1px 2px rgba(0,0,0,.55); }
+  .blk.red { background: #d84a4a; } .blk.blue { background: #3f7fd9; }
+  .blk.green { background: #3fae6a; } .blk.yellow { background: #d9a83f; }
+  .blk.purple { background: #9a5fd0; }
+  .blk.moved { box-shadow: 0 0 0 3px #4cd97b; }
+  .blk.waiting { box-shadow: 0 0 0 3px #f2c94c; }
+  .blk.stuck { box-shadow: 0 0 0 3px #ff5a5a; animation: pulse 1s infinite; }
+  .blk.stopped { box-shadow: 0 0 0 3px #6a6f7e; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(255,90,90,.35); } }
+
+  #legend { display: flex; gap: 14px; margin-top: 8px; font-size: 12px; color: var(--dim);
+            flex-wrap: wrap; max-width: 580px; }
+  .lg { display: inline-flex; align-items: center; gap: 5px; }
+  .dot { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+  #right { flex: 1 1 340px; min-width: 320px; max-width: 460px; }
+  .panel { background: var(--panel); border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; }
+  .panel h2 { font-size: 13px; margin: 0 0 8px; color: var(--dim); font-weight: 600; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 6px; }
+  .row:last-child { margin-bottom: 0; }
+  button, select { background: var(--panel2); color: var(--txt); border: 1px solid var(--line);
+                   border-radius: 6px; padding: 5px 10px; font-size: 13px; cursor: pointer; }
+  button:hover, select:hover { border-color: var(--accent); }
+  button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .tool-btn { min-width: 40px; }
+  .swatch { width: 14px; height: 14px; border-radius: 3px; display: inline-block;
+            vertical-align: -2px; margin-right: 4px; }
+  .hint { font-size: 12px; color: var(--dim); }
+  #ruleText { font-size: 12px; color: #b9c4e0; background: var(--panel2); border-radius: 6px;
+              padding: 6px 8px; }
+
+  #log { max-height: 320px; overflow-y: auto; font-size: 12px; }
+  #log details { border-top: 1px solid var(--line); padding: 4px 0; }
+  #log summary { cursor: pointer; color: var(--txt); }
+  #log summary .tag { font-size: 11px; padding: 1px 6px; border-radius: 4px; margin-left: 6px; }
+  .tag.ok { background: #274a33; color: #8fe0a8; }
+  .tag.wait { background: #4a4127; color: #f2c94c; }
+  .tag.bad { background: #4a2727; color: #ff9a9a; }
+  #log .line { padding: 1px 0 1px 14px; color: var(--dim); }
+  #log .line b { color: var(--txt); }
+  #log .sys { color: #8fb8ff; padding: 4px 0; border-top: 1px dashed var(--line); }
+</style>
+</head>
+<body>
+<header>
+  <h1>传送带机关 · 逐步预演</h1>
+  <span class="stat">步数 <b id="tick">0</b></span>
+  <span class="stat">方块 <b id="blkCount">0</b></span>
+  <span id="banner"></span>
+</header>
+
+<main>
+  <div id="left">
+    <div id="grid"></div>
+    <div id="legend">
+      <span class="lg"><span class="dot" style="background:#2c3547"></span>方向格</span>
+      <span class="lg"><span class="dot" style="background:#3a2c47"></span>分流格</span>
+      <span class="lg"><span class="dot" style="background:#472c2c"></span>停止格</span>
+      <span class="lg"><span class="dot" style="box-shadow:0 0 0 2px #4cd97b"></span>上一步移动成功</span>
+      <span class="lg"><span class="dot" style="box-shadow:0 0 0 2px #f2c94c"></span>等待（下步可恢复）</span>
+      <span class="lg"><span class="dot" style="box-shadow:0 0 0 2px #ff5a5a"></span>卡死（结构性）</span>
+      <span class="lg"><span class="dot" style="box-shadow:0 0 0 2px #6a6f7e"></span>停止/无动力</span>
+    </div>
+  </div>
+
+  <div id="right">
+    <div class="panel">
+      <h2>运行控制</h2>
+      <div class="row">
+        <button id="btnRun" class="primary">▶ 运行</button>
+        <button id="btnStep">单步</button>
+        <button id="btnRerun" title="从起点按当前规则重新推演">↺ 重跑（从起点）</button>
+        <button id="btnSnapshot" title="把当前局面设为新的起点">设为起点</button>
+        <select id="speed">
+          <option value="800">慢速</option>
+          <option value="450" selected>中速</option>
+          <option value="180">快速</option>
+        </select>
+      </div>
+      <div class="hint">空格键：运行/暂停。编辑地图会自动回到起点（编辑后的局面即新起点）。</div>
+    </div>
+
+    <div class="panel">
+      <h2>规则（修改后点「重跑」从同一起点验证）</h2>
+      <div class="row">
+        <label>争用规则
+          <select id="ruleContention">
+            <option value="dir">方向优先</option>
+            <option value="id">编号小者优先</option>
+            <option value="color">颜色优先</option>
+          </select>
+        </label>
+      </div>
+      <div class="row">
+        <label>分流：颜色 <select id="splitColor"></select> →
+          <select id="splitMatch"></select></label>
+        <label>其他 → <select id="splitOther"></select></label>
+      </div>
+      <div id="ruleText"></div>
+    </div>
+
+    <div class="panel">
+      <h2>摆放工具（点击/拖动格子）</h2>
+      <div class="row" id="paletteCells"></div>
+      <div class="row" id="paletteBlocks"></div>
+    </div>
+
+    <div class="panel">
+      <h2>示例场景</h2>
+      <div class="row">
+        <button data-ex="merge">会合争用</button>
+        <button data-ex="split">分流</button>
+        <button data-ex="loopGap">环路（一空位）</button>
+        <button data-ex="loopFull">环路（全满）</button>
+      </div>
+      <div class="hint" id="exNote"></div>
+    </div>
+
+    <div class="panel">
+      <h2>保存 / 载入</h2>
+      <div class="row">
+        <button id="btnExport">导出场景</button>
+        <button id="btnImport">导入场景</button>
+        <input type="file" id="fileInput" accept=".json" style="display:none">
+        <button id="btnExportLog">导出步骤记录</button>
+      </div>
+      <div class="hint">场景文件包含地图、方块、当前步数、起点快照与规则；步骤记录与之一一对应。</div>
+    </div>
+
+    <div class="panel">
+      <h2>步骤记录（点击展开某一步的提议 / 动作 / 失败依据）</h2>
+      <div id="log"></div>
+    </div>
+  </div>
+</main>
+
+<script src="sim.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
