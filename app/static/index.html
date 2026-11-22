@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>本地视频亮度范围检查与转换</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>视频亮度范围检查与转换 <span class="sub">limited(TV 16–235) / full(PC 0–255) · 纯本地运行</span></h1>
+  <div class="hrow">
+    <label class="filebtn">
+      加载本地短视频
+      <input type="file" id="fileInput" accept="video/*">
+    </label>
+    <button id="genSamplesBtn" class="ghost">生成程序样例（灰阶+色条，含正确/错误标记）</button>
+    <span id="loadStatus" class="status"></span>
+  </div>
+</header>
+
+<main>
+<!-- ① 声明范围 vs 当前解释 -->
+<section class="card" id="probeCard" hidden>
+  <h2>① 文件声明的范围 vs 预览采用的解释</h2>
+  <div class="grid4">
+    <div><div class="k">容器 / 编码</div><div class="v" id="pContainer">–</div></div>
+    <div><div class="k">文件声明的 color_range</div><div class="v" id="pDeclared">–</div></div>
+    <div><div class="k">像素格式</div><div class="v" id="pPixfmt">–</div></div>
+    <div><div class="k">分辨率 / 帧率 / 帧数</div><div class="v" id="pGeom">–</div></div>
+  </div>
+  <div id="missingTagBox" class="warnbox" hidden>
+    <b>该文件没有范围标记（unknown）。</b>播放器此时只能猜：多数按 limited 处理，
+    实际是 full 的素材就会看起来“蒙了一层灰”。请明确选择本工具按哪种范围解释像素：
+    <div class="seg" id="assumeSeg">
+      <button data-rng="tv" class="active">按 limited(TV) 解释</button>
+      <button data-rng="pc">按 full(PC) 解释</button>
+    </div>
+  </div>
+  <div id="tagOkBox" class="notebox" hidden>
+    预览默认采用文件声明的解释，你仍可手动切换对比，切换只影响显示，不会改动文件：
+    <div class="seg" id="interpSeg">
+      <button data-rng="tv">按 limited(TV) 解释</button>
+      <button data-rng="pc">按 full(PC) 解释</button>
+    </div>
+  </div>
+  <div class="grid2">
+    <div><div class="k">当前预览解释</div><div class="v hl" id="pInterpret">–</div></div>
+    <div><div class="k">实际像素线索（帧内真实 Y）</div>
+      <div class="v" id="pPixelClue">–</div></div>
+  </div>
+  <video id="srcVideo" controls preload="metadata" playsinline></video>
+  <div class="hint">正常播放走浏览器原生管线（保持当前范围选择不变）；下方并排对比基于 ffmpeg 抽取的<b>真实编码像素</b>逐帧渲染。</div>
+</section>
+
+<!-- ② 并排解释 + 直方图 + 检查点 -->
+<section class="card" id="analysisCard" hidden>
+  <h2>② 两种范围解释并排核对</h2>
+  <div class="compare">
+    <figure>
+      <figcaption>解释 A：<span class="rng-tv">limited / TV（Y 16–235 拉伸到 0–255）</span></figcaption>
+      <canvas id="cvTv"></canvas>
+    </figure>
+    <figure>
+      <figcaption>解释 B：<span class="rng-pc">full / PC（Y 0–255 原样显示）</span></figcaption>
+      <canvas id="cvPc"></canvas>
+    </figure>
+  </div>
+
+  <div class="framebar">
+    <button id="prevFrame">◀ 上一帧</button>
+    <label>跳转到帧 <input type="number" id="frameInput" min="0" value="0" style="width:90px"></label>
+    <button id="goFrame">跳转</button>
+    <button id="nextFrame">下一帧 ▶</button>
+    <span class="hint">当前帧：<b id="curFrame">0</b> / <span id="maxFrame">–</span></span>
+    <span class="hint" id="seekHint"></span>
+  </div>
+
+  <h3>亮度直方图（按真实编码 Y 电平，0–255）</h3>
+  <canvas id="histCanvas" height="220"></canvas>
+  <div class="legend">
+    <span class="lg lg-dark">暗部越界区 Y&lt;16（full 才有，被 limited 解释压成同一级黑）</span>
+    <span class="lg lg-mid">limited 合法区 16–235</span>
+    <span class="lg lg-high">高光越界区 Y&gt;235（被 limited 解释压成同一级白）</span>
+    <span class="hint" id="histTip"></span>
+  </div>
+  <div class="grid4" id="histStats"></div>
+
+  <h3>检查点：同一编码 Y 在两种解释下的显示结果</h3>
+  <div class="tablewrap">
+    <table id="checkTable">
+      <thead><tr>
+        <th>编码 Y</th><th>limited 解释→显示灰阶</th><th>full 解释→显示灰阶</th>
+        <th>本帧是否出现</th><th>含义</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <h3>灰阶条带实测（检测被压成同一级的暗部/高光）</h3>
+  <div class="tablewrap">
+    <table id="bandTable">
+      <thead><tr><th>Y 带</th><th>带内峰值电平</th><th>像素数</th><th>limited 解释显示</th><th>full 解释显示</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div id="crushNote" class="warnbox" hidden></div>
+</section>
+
+<!-- ③ 两种修正操作 -->
+<section class="card" id="convertCard" hidden>
+  <h2>③ 选择修正方式</h2>
+  <div class="twocol">
+    <div class="op">
+      <h3>A. 仅修正标记（不改像素，秒级、无损）</h3>
+      <p>视频码流直接复制，只把范围标志位改成目标值。<b>影响：</b>
+      标记与像素本来匹配时画面恢复正确；若判断错了，播放器换一种拉伸方式，画面会变白/变灰。
+      适合“像素是对的、只是标志位错了”的素材。MP4/MOV 为流复制零损失；
+      MKV 的范围信号在容器层、ffmpeg 无法流复制改写，会做一次保持像素电平不变的重编码（有压缩损失，界面会提示）。</p>
+      <div class="seg target-seg" data-mode="retag">
+        <button data-rng="tv">标记为 limited(TV)</button>
+        <button data-rng="pc">标记为 full(PC)</button>
+      </div>
+      <button class="go" data-mode="retag">执行仅改标记</button>
+    </div>
+    <div class="op">
+      <h3>B. 实际转换像素（重映射电平并重新编码）</h3>
+      <p>按你选定的<b>源范围</b>把每个像素映射到目标范围，视频重编码（CRF 16），音轨原样保留。
+      <b>影响：</b>像素值真实改变（如 16→0、235→255），有不可逆的重编码损失；
+      limited→full 时原 0–15 / 236–255 的信息无法恢复。适合标记缺失或需要在全范围管线里使用的素材。</p>
+      <label class="mini">源范围（按当前预览解释预填，可改）：
+        <select id="srcRangeSel"><option value="tv">limited(TV)</option><option value="pc">full(PC)</option></select>
+      </label>
+      <div class="seg target-seg" data-mode="pixels">
+        <button data-rng="tv">转到 limited(TV)</button>
+        <button data-rng="pc">转到 full(PC)</button>
+      </div>
+      <button class="go" data-mode="pixels">执行像素转换</button>
+    </div>
+  </div>
+  <div id="confirmBox" class="warnbox" hidden>
+    <div id="confirmMsg"></div>
+    <div class="hrow">
+      <button id="confirmYes" class="danger">仍要继续转换</button>
+      <button id="confirmNo" class="ghost">取消</button>
+    </div>
+  </div>
+  <div id="convertResult" class="resultbox" hidden></div>
+</section>
+
+<!-- ④ 导出与回读 -->
+<section class="card" id="exportCard" hidden>
+  <h2>④ 导出记录与回读复核（源文件永不改动，音轨保留）</h2>
+  <div class="tablewrap">
+    <table id="historyTable">
+      <thead><tr>
+        <th>文件</th><th>角色</th><th>声明范围（回读）</th><th>操作</th>
+        <th>帧0 Y min/max 实际变化</th><th>越界像素变化</th><th></th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div id="recheckBox" class="resultbox" hidden></div>
+</section>
+
+<section class="card" id="sampleCard" hidden>
+  <h2>⑤ 程序生成的样例素材</h2>
+  <p class="hint">样例为 4 秒 1280×720 短片：上半幅 16 级灰阶阶梯、下半幅 8 条色条，带 440Hz 测试音。
+  其中两份像素完全相同（full-range），仅范围标记不同——这正是“换个播放器就发灰”的最小复现。</p>
+  <div id="sampleList"></div>
+</section>
+</main>
+
+<footer>
+  所有处理均在本机通过 ffmpeg 完成，不上传任何文件。工作区：<code>workspace/</code>（sources 原件 / outputs 导出 / samples 样例）。
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

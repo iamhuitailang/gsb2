@@ -20,6 +20,9 @@ data.json
 *.sqlite3
 tmp/
 
+# 本地亮度范围工具的工作区（上传原件/导出/样例，含用户素材不进仓库）
+workspace/
+
 # ---- 依赖与构建产物 ----
 node_modules/
 __pycache__/
