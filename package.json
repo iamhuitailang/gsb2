@@ -1,0 +1,13 @@
+{
+  "name": "tile-rule-checker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "自动铺地块规则检查器：邻接掩码选块、缺项/冲突定位、可复现变体、版本化保存",
+  "scripts": {
+    "test": "node --test tests/engine.test.js tests/app.test.js",
+    "smoke": "node tests/browser.smoke.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

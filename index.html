@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>自动铺地块规则检查器</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <strong>自动铺地块规则检查器</strong>
+    <span id="rule-version" class="badge" title="当前规则版本（规则改动即变化）"></span>
+  </div>
+  <div class="top-actions">
+    <label class="seed-box">固定种子
+      <input id="seed-input" type="number" value="20261123">
+    </label>
+    <button id="btn-undo" title="撤销 Ctrl+Z">↶ 撤销</button>
+    <button id="btn-redo" title="重做 Ctrl+Y">↷ 重做</button>
+    <button id="btn-problems">⚠ 问题扫描 <span id="problem-count" class="badge">0</span></button>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- 左栏：地表 + 工具 -->
+  <aside class="panel left-panel">
+    <section>
+      <h3>地表类型</h3>
+      <div id="terrain-list"></div>
+      <div class="row gap">
+        <input id="new-terrain-name" type="text" placeholder="新地表名称" maxlength="12">
+        <button id="btn-add-terrain">添加</button>
+      </div>
+    </section>
+
+    <section>
+      <h3>地图工具</h3>
+      <div class="tool-grid">
+        <button data-tool="draw" class="tool-btn active">✏ 绘制</button>
+        <button data-tool="erase" class="tool-btn">⌫ 擦除</button>
+        <button data-tool="fill" class="tool-btn">🪣 填充</button>
+        <button data-tool="inspect" class="tool-btn">🔍 检查</button>
+      </div>
+      <p class="hint">提示：绘制/擦除按住拖动可连续操作；填充点击连通区域；检查点击任意格查看命中规则。</p>
+      <div class="row gap">
+        <label>格大小 <input id="cell-size" type="range" min="20" max="56" value="34"></label>
+      </div>
+      <div class="row gap">
+        <button id="btn-clear-map">清空地图</button>
+        <button id="btn-demo-map">重置为演示地图</button>
+      </div>
+    </section>
+
+    <section>
+      <h3>保存 / 载入 / 导出</h3>
+      <div class="col gap">
+        <button id="btn-save-rules">保存规则 (JSON)</button>
+        <button id="btn-load-rules">载入规则</button>
+        <button id="btn-save-map">保存地图 (JSON)</button>
+        <button id="btn-load-map">载入地图</button>
+        <button id="btn-export-csv">导出图块编号+方向 (CSV)</button>
+      </div>
+      <input id="file-input" type="file" accept=".json,application/json" hidden>
+    </section>
+  </aside>
+
+  <!-- 中栏：地图画布 -->
+  <main class="panel canvas-panel">
+    <div class="canvas-scroll" id="canvas-scroll">
+      <canvas id="map-canvas"></canvas>
+    </div>
+    <div id="map-status" class="map-status"></div>
+  </main>
+
+  <!-- 右栏：规则编辑 / 检查器 -->
+  <aside class="panel right-panel">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="rules">规则编辑</button>
+      <button class="tab-btn" data-tab="inspector">格检查器</button>
+      <button class="tab-btn" data-tab="custom">自定义规则</button>
+    </div>
+
+    <div class="tab-pane active" id="tab-rules">
+      <div class="row gap">
+        <label>编辑地表
+          <select id="rule-terrain-select"></select>
+        </label>
+      </div>
+      <p class="hint">未完全配置的组合以黄叉标注「缺项」。每个图块可配置多个外观变体（逗号分隔的变体 ID）。</p>
+      <div id="rule-editor"></div>
+    </div>
+
+    <div class="tab-pane" id="tab-inspector">
+      <div id="inspector-empty" class="muted">点击地图上的任意格查看邻接情况、命中规则与旋转方向。</div>
+      <div id="inspector-body" hidden></div>
+    </div>
+
+    <div class="tab-pane" id="tab-custom">
+      <p class="hint">自定义规则按邻接掩码匹配（1=同类，0=非同类，-1=通配），优先级高者胜出；同优先级同时命中会在地图上标红并可定位。</p>
+      <button id="btn-add-custom">+ 新建自定义规则</button>
+      <div id="custom-list"></div>
+    </div>
+  </aside>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="js/engine.js"></script>
+<script src="js/render.js"></script>
+<script src="js/demo.js"></script>
+<script src="js/app.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
