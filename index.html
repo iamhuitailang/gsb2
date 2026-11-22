@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>波次入场预演台</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>波次入场预演台</h1>
+  <select id="scenarioSel" title="场景"></select>
+  <label>种子 <input id="seedInput" type="number" step="1" style="width:90px"></label>
+  <span id="scenarioDesc" class="desc"></span>
+</header>
+
+<div id="toolbar">
+  <button id="btnPlay">▶ 播放</button>
+  <button id="btnStep">+0.1s</button>
+  <button id="btnStep1s">+1s</button>
+  <button id="btnRestart">⟲ 重置</button>
+  <button id="btnRerun" title="从头重放到最新时点并校验入场/离场顺序哈希">🔁 重跑校验</button>
+  <label>速度
+    <select id="speedSel">
+      <option value="0.5">0.5x</option>
+      <option value="1" selected>1x</option>
+      <option value="2">2x</option>
+      <option value="4">4x</option>
+      <option value="10">10x</option>
+    </select>
+  </label>
+  <span id="timeLabel" class="time">t = 0.0s</span>
+  <span id="hashLabel" class="hash" title="入场/离场顺序哈希"></span>
+  <label>关键时点 <select id="checkpointSel"><option value="">— 跳转 —</option></select></label>
+  <input id="seekSlider" type="range" min="0" max="0" value="0" step="1" title="拖动回到任意时点">
+</div>
+
+<main>
+  <section id="stage">
+    <canvas id="cv" width="980" height="600"></canvas>
+    <div id="legend"></div>
+    <div class="hint">点击画布上的通道可手动临时关闭/恢复（会记入运行记录，重跑可复现）。放行顺序：波次优先级 → 排队先后；通道容量全波次共享。</div>
+  </section>
+
+  <aside id="panel">
+    <nav id="tabs">
+      <button data-tab="plan" class="active">计划</button>
+      <button data-tab="log">实际记录</button>
+      <button data-tab="compare">对比</button>
+      <button data-tab="project">工程</button>
+    </nav>
+
+    <div id="tab-plan" class="tab active">
+      <div id="planTable"></div>
+    </div>
+
+    <div id="tab-log" class="tab">
+      <div class="row">
+        <label>筛选 <select id="logFilter">
+          <option value="">全部</option>
+          <option value="trigger">批次触发</option>
+          <option value="batch-done">批次完成</option>
+          <option value="edge">通道开关</option>
+          <option value="done">完成</option>
+        </select></label>
+      </div>
+      <div id="eventLog" class="scroll"></div>
+      <h3>逐角色入场/离场记录</h3>
+      <div id="charTable" class="scroll small"></div>
+    </div>
+
+    <div id="tab-compare" class="tab">
+      <div class="row">
+        <span>方案A：当前计划</span>
+        <label>方案B <select id="variantSel"></select></label>
+        <button id="btnCompare">运行对比</button>
+      </div>
+      <div id="compareSummary"></div>
+      <canvas id="cmpCv" width="430" height="220"></canvas>
+      <div id="compareTable" class="scroll small"></div>
+    </div>
+
+    <div id="tab-project" class="tab">
+      <div class="row">
+        <input id="projName" placeholder="工程名" style="width:120px">
+        <button id="btnSaveProj">保存工程</button>
+        <button id="btnExport">导出JSON</button>
+        <button id="btnImport">导入JSON</button>
+        <input id="importFile" type="file" accept=".json" hidden>
+      </div>
+      <div id="projList"></div>
+      <h3>本轮运行记录 <button id="btnClearRuns" class="mini">清空</button></h3>
+      <div id="runList" class="scroll small"></div>
+      <h3>配置 JSON（可编辑后应用）</h3>
+      <textarea id="configJson" spellcheck="false"></textarea>
+      <div class="row">
+        <button id="btnApplyConfig">应用配置</button>
+        <span id="configMsg"></span>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<footer id="statusBar">就绪</footer>
+
+<script src="js/engine.js"></script>
+<script src="js/scenarios.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
