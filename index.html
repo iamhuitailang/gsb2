@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>贴图划痕修补工具 · 本地版</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header id="topbar">
+  <div class="group">
+    <button id="btnOpenImage" title="打开待修补贴图（PNG，含透明通道）">打开贴图</button>
+    <button id="btnLoadSample1" title="加载内置样例1：棋盘纹理+划线">样例1</button>
+    <button id="btnLoadSample2" title="加载内置样例2：擦痕靠近透明边缘">样例2</button>
+    <input type="file" id="fileImage" accept="image/png,image/webp,image/bmp" hidden>
+  </div>
+  <div class="sep"></div>
+  <div class="group">
+    <button id="btnRotateL" title="仅改变观察角度，掩码保存在原图坐标">↺90°</button>
+    <button id="btnRotateR" title="仅改变观察角度，掩码保存在原图坐标">↻90°</button>
+    <button id="btnRotateReset" title="旋转归零">角度归零</button>
+    <button id="btnFit" title="适配窗口">适配窗口</button>
+    <button id="btnZoomOut">−</button>
+    <button id="btnZoomIn">＋</button>
+  </div>
+  <div class="sep"></div>
+  <div class="group">
+    <button id="btnUndo" title="撤销：先撤画笔笔迹，再撤最近一次修补">撤销</button>
+    <button id="btnCompare" title="按住或点按切换：原图 / 当前修补结果（A/B 对比）">对比原图(A/B)</button>
+  </div>
+  <div class="sep"></div>
+  <div class="group">
+    <button id="btnApply" class="primary" title="把当前掩码+参考区域固化为一步修补">应用修补</button>
+    <button id="btnExportResult" title="导出原分辨率修补结果">导出结果</button>
+    <button id="btnExportMask" title="导出原分辨率修补掩码（不含保护区）">导出掩码</button>
+    <button id="btnSaveProject" title="保存工程（原图、掩码、每一步参考位置与羽化）">保存工程</button>
+    <button id="btnOpenProject">打开工程</button>
+    <input type="file" id="fileProject" accept="application/json,.json" hidden>
+  </div>
+  <div id="statusText">未载入图像</div>
+</header>
+
+<main id="workspace">
+  <aside id="toolbar">
+    <div class="tool-block">
+      <div class="tool-title">修补掩码</div>
+      <button class="tool active" data-tool="brushAdd" title="B">画笔 涂掩码</button>
+      <button class="tool" data-tool="brushSub" title="按住 Alt 也可临时减去">画笔 减范围</button>
+      <button class="tool" data-tool="rectAdd">矩形 加选区</button>
+      <button class="tool" data-tool="rectSub">矩形 减选区</button>
+      <label class="slider-label">笔刷直径 <span id="brushSizeVal">24</span> px
+        <input type="range" id="brushSize" min="2" max="400" value="24">
+      </label>
+      <button id="btnClearMask" title="清空当前修补掩码（不动保护区）">清空掩码</button>
+    </div>
+
+    <div class="tool-block">
+      <div class="tool-title">参考区域</div>
+      <button class="tool" data-tool="refPick" title="在图上拖出一块干净纹理作为来源">框选参考</button>
+      <button id="btnRefToMask" title="参考框对齐到当前掩码外接框">参考对齐掩码</button>
+      <div class="hint">箭头键可微移参考框 1px（Shift=10px）</div>
+    </div>
+
+    <div class="tool-block">
+      <div class="tool-title">保护区（永不改动）</div>
+      <button class="tool" data-tool="protectAdd">画笔 标记保护</button>
+      <button class="tool" data-tool="protectSub">画笔 解除保护</button>
+      <button id="btnProtectAlpha" title="把原图透明像素全部标记为保护，修复透明边缘划痕时使用">透明像素一键保护</button>
+      <button id="btnClearProtect">清空保护区</button>
+    </div>
+
+    <div class="tool-block">
+      <div class="tool-title">视图</div>
+      <button class="tool" data-tool="pan" title="H / 空格">平移视图</button>
+    </div>
+  </aside>
+
+  <div id="canvasWrap">
+    <canvas id="viewCanvas"></canvas>
+    <div id="emptyHint">
+      <p>请打开贴图，或点击顶部「样例1 / 样例2」。</p>
+      <p>全部处理在本机浏览器内完成，不联网、不调用任何模型。</p>
+    </div>
+  </div>
+
+  <aside id="sidepanel">
+    <div class="panel-block">
+      <div class="panel-title">修补步骤（生效顺序：自上而下叠加）</div>
+      <ol id="opList"></ol>
+      <div class="hint">点「编辑」可回看该步参考位置与羽化并重新调整；<br>上移/下移改变实际叠加顺序。</div>
+    </div>
+
+    <div class="panel-block">
+      <div class="panel-title">当前修补参数</div>
+      <label class="slider-label">柔和边缘（羽化） <span id="featherVal">6</span> px
+        <input type="range" id="feather" min="0" max="120" value="6">
+      </label>
+      <div id="refInfo" class="hint">参考区域：未选择</div>
+    </div>
+
+    <div class="panel-block">
+      <div class="panel-title">图层显示</div>
+      <label><input type="checkbox" id="showMask" checked> 显示修补掩码（青）</label>
+      <label><input type="checkbox" id="showProtect" checked> 显示保护区（红）</label>
+      <label><input type="checkbox" id="showRef" checked> 显示参考框（黄）</label>
+    </div>
+  </aside>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "texture-patch-tool",
+  "version": "1.0.0",
+  "private": true,
+  "description": "本地贴图划痕修补工具：掩码圈选 + 相邻纹理参考修补，纯浏览器端处理，无网络、无模型依赖",
+  "scripts": {
+    "generate:samples": "python3 tools/generate_samples.py",
+    "test": "node tests/selftest.js",
+    "serve": "python3 -m http.server 8000"
+  }
+}
