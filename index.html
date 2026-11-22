@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>网格转换检查器</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; font: 13px/1.5 "PingFang SC", "Microsoft YaHei", sans-serif; background: #1e2126; color: #d7dce2; }
+  #panel { position: fixed; left: 0; top: 0; bottom: 0; width: 350px; overflow-y: auto; background: #262a31; padding: 10px 14px 40px; border-right: 1px solid #3a3f47; }
+  #panel h1 { font-size: 16px; margin: 6px 0 10px; }
+  #panel h2 { font-size: 13px; margin: 14px 0 6px; color: #8ab4f8; border-bottom: 1px solid #3a3f47; padding-bottom: 3px; }
+  #panel section { margin-bottom: 4px; }
+  select, input[type=number], button { background: #333842; color: #d7dce2; border: 1px solid #4a5058; border-radius: 4px; padding: 3px 6px; font-size: 12px; }
+  button { cursor: pointer; margin: 2px 2px 2px 0; }
+  button:hover { background: #3f4652; }
+  input[type=number] { width: 56px; }
+  label { display: block; margin: 2px 0; }
+  .row { margin: 4px 0; }
+  .hint { color: #8b929c; font-size: 11px; margin: 3px 0; }
+  .cust { margin: 2px 0 2px 8px; }
+  #main { position: fixed; left: 350px; right: 0; top: 0; bottom: 0; }
+  #gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .viewTitle { position: absolute; top: 8px; font-weight: bold; font-size: 13px; text-shadow: 0 1px 2px #000; pointer-events: none; }
+  #titleL { left: 12px; } #titleR { left: calc(50% + 12px); }
+  .overlay { position: absolute; bottom: 8px; font-size: 11px; color: #aeb6c0; background: rgba(20,22,26,.72); padding: 5px 8px; border-radius: 4px; pointer-events: none; white-space: pre-line; max-width: 46%; }
+  #infoL { left: 12px; } #infoR { left: calc(50% + 12px); }
+  #labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  #labels div { position: absolute; font-size: 11px; font-weight: bold; text-shadow: 0 1px 2px #000; transform: translate(-50%, -50%); }
+  table { border-collapse: collapse; width: 100%; font-size: 11px; }
+  td, th { border: 1px solid #3a3f47; padding: 2px 5px; text-align: left; }
+  th { color: #8ab4f8; }
+  .bad { color: #ff6b6b; font-weight: bold; }
+  .ok { color: #7bd88a; }
+  #warn { font-size: 11px; margin-top: 4px; white-space: pre-line; }
+  #verifyOut { font-size: 11px; margin-top: 4px; white-space: pre-line; }
+  #toast { position: fixed; left: 370px; top: 10px; background: #324a35; color: #b8f0c0; padding: 6px 12px; border-radius: 4px; display: none; z-index: 9; max-width: 50%; }
+  #mirrorInfo { font-size: 11px; margin-top: 3px; }
+  #scaleInfo { font-size: 11px; color: #8ab4f8; }
+</style>
+</head>
+<body>
+<aside id="panel">
+  <h1>网格转换检查器</h1>
+
+  <section>
+    <h2>1. 模型</h2>
+    <div class="row">
+      <input type="file" id="file" accept=".obj,.stl,.ply">
+      <button id="demo">载入演示模型</button>
+    </div>
+    <div id="meshInfo" class="hint">未载入模型 — 可将 OBJ / STL / PLY 文件拖放到右侧视图</div>
+  </section>
+
+  <section>
+    <h2>2. 单位</h2>
+    <div class="row">源单位
+      <select id="srcUnit"></select>
+      目标单位
+      <select id="dstUnit"></select>
+    </div>
+    <div id="scaleInfo"></div>
+  </section>
+
+  <section>
+    <h2>3. 轴向约定(上 / 前 / 左右手)</h2>
+    <div class="row">源 <select id="srcPreset"></select></div>
+    <div class="cust" id="srcCustom" style="display:none">
+      上 <select id="srcUp"></select> 前 <select id="srcFwd"></select>
+      手性 <select id="srcHand"><option value="RH">右手</option><option value="LH">左手</option></select>
+    </div>
+    <div class="row">目标 <select id="dstPreset"></select></div>
+    <div class="cust" id="dstCustom" style="display:none">
+      上 <select id="dstUp"></select> 前 <select id="dstFwd"></select>
+      手性 <select id="dstHand"><option value="RH">右手</option><option value="LH">左手</option></select>
+    </div>
+    <div id="mirrorInfo"></div>
+  </section>
+
+  <section>
+    <h2>4. 基准点与旋转</h2>
+    <label><input type="radio" name="pivot" value="center" checked> 网格中心</label>
+    <label><input type="radio" name="pivot" value="bottom"> 底部(沿源"上"轴最低处)</label>
+    <label><input type="radio" name="pivot" value="vertex"> 指定顶点 <span id="pivotVert">#-</span></label>
+    <div class="hint">在任一视图中单击,可拾取最近顶点作为基准点(黄色十字标记)。之后的旋转始终绕该点。</div>
+    <div class="row">旋转(绕基准点,作用于目标空间,度):
+      X <input type="number" id="rx" value="0" step="5">
+      Y <input type="number" id="ry" value="0" step="5">
+      Z <input type="number" id="rz" value="0" step="5">
+      <button id="rotReset">重置</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>5. 诊断(按部件)</h2>
+    <label><input type="checkbox" id="hlBad"> 高亮零面积面 / 含异常坐标的部件</label>
+    <table id="diagTable"></table>
+    <div id="warn"></div>
+  </section>
+
+  <section>
+    <h2>6. 导出与验证</h2>
+    <div class="row">
+      <button id="expObj">导出 OBJ</button>
+      <button id="expStl">导出 STL</button>
+      <button id="expVerify">导出并重新导入验证</button>
+    </div>
+    <div class="row">或验证已有文件: <input type="file" id="verifyFile" accept=".obj,.stl,.ply"></div>
+    <div class="hint">OBJ 导出按部件分组(g 段);顶点颜色仅用于查看,不写入 OBJ/STL。</div>
+    <div id="verifyOut"></div>
+  </section>
+
+  <section>
+    <h2>7. 转换设置</h2>
+    <div class="row">
+      <button id="saveSet">保存设置(本机)</button>
+      <button id="dlSet">下载设置文件</button>
+      <input type="file" id="loadSet" accept=".json">
+    </div>
+    <div class="hint">启动时自动恢复本机保存的设置,便于下一批模型沿用。</div>
+  </section>
+</aside>
+
+<main id="main">
+  <canvas id="gl"></canvas>
+  <div class="viewTitle" id="titleL">转换前(源坐标)</div>
+  <div class="viewTitle" id="titleR">转换后(目标)</div>
+  <div class="overlay" id="infoL"></div>
+  <div class="overlay" id="infoR"></div>
+  <div id="labels"></div>
+</main>
+<div id="toast"></div>
+
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
