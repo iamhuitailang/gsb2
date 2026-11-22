@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>多边形三角剖分检查页</title>
+<style>
+  body{margin:0;font:13px/1.5 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:#1e1e24;color:#ddd;}
+  #app{display:flex;gap:10px;padding:10px;align-items:flex-start;}
+  canvas{background:#26262e;border:1px solid #3a3a44;border-radius:6px;cursor:crosshair;display:block;}
+  #status{margin-top:6px;color:#9ad;min-height:18px;}
+  #panel{flex:1;min-width:330px;max-width:430px;height:672px;overflow-y:auto;padding-right:4px;}
+  .sec{background:#2a2a33;border:1px solid #3a3a44;border-radius:6px;padding:8px 10px;margin-bottom:8px;}
+  .sec h3{margin:0 0 6px;font-size:13px;color:#8ab4f8;}
+  button{background:#3c4048;color:#eee;border:1px solid #555;border-radius:4px;padding:3px 8px;margin:2px 3px 2px 0;cursor:pointer;font-size:12px;}
+  button:hover{background:#4a4f59;}
+  button.on{background:#2b6cb0;border-color:#63a0e8;}
+  button.fix{background:#6b4a1c;border-color:#a06a2c;}
+  .issue{color:#ff9a9a;margin:3px 0;cursor:pointer;}
+  .issue:hover{text-decoration:underline;}
+  .issue.active{color:#ffe08a;font-weight:bold;}
+  .notice{color:#ffd479;margin:3px 0;}
+  .ok{color:#8fdd8f;} .bad{color:#ff9a9a;} .dim{color:#888;}
+  table{border-collapse:collapse;} td,th{padding:1px 8px 1px 0;text-align:left;font-weight:normal;vertical-align:top;}
+  textarea{width:100%;height:96px;background:#1e1e24;color:#cde;border:1px solid #444;border-radius:4px;font:11px/1.4 monospace;box-sizing:border-box;}
+  kbd{background:#444;border-radius:3px;padding:0 4px;font-size:11px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div>
+    <canvas id="cv"></canvas>
+    <div id="status"></div>
+  </div>
+  <div id="panel">
+    <div class="sec" id="sec-mode"></div>
+    <div class="sec" id="sec-rings"></div>
+    <div class="sec" id="sec-issues"></div>
+    <div class="sec" id="sec-area"></div>
+    <div class="sec" id="sec-tri"></div>
+    <div class="sec" id="sec-presets"></div>
+    <div class="sec" id="sec-io"></div>
+  </div>
+</div>
+<script>
+'use strict';
+/* ================= 几何基础（纯函数，可在 Node 中测试） ================= */
+const EPS = 1e-7;
+const dist = (a,b)=>Math.hypot(a.x-b.x, a.y-b.y);
+// 叉积 (b-a)×(c-a)
+const cross = (a,b,c)=>(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
+// 鞋带公式有向面积（画布坐标系 y 向下：正值 = 视觉顺时针）
+function ringArea(pts){ let s=0; for(let i=0;i<pts.length;i++){ const p=pts[i], q=pts[(i+1)%pts.length]; s+=p.x*q.y-q.x*p.y; } return s/2; }
+function onSeg(a,b,p){
+  return p.x>=Math.min(a.x,b.x)-1e-9 && p.x<=Math.max(a.x,b.x)+1e-9 &&
+         p.y>=Math.min(a.y,b.y)-1e-9 && p.y<=Math.max(a.y,b.y)+1e-9;
+}
+// 线段是否相交（含端点接触、共线重叠）
+function segTouch(a,b,c,d){
+  const o1=cross(a,b,c), o2=cross(a,b,d), o3=cross(c,d,a), o4=cross(c,d,b);
+  if(o1*o2<0 && o3*o4<0) return true;
+  if(Math.abs(o1)<1e-9 && onSeg(a,b,c)) return true;
+  if(Math.abs(o2)<1e-9 && onSeg(a,b,d)) return true;
+  if(Math.abs(o3)<1e-9 && onSeg(c,d,a)) return true;
+  if(Math.abs(o4)<1e-9 && onSeg(c,d,b)) return true;
+  return false;
+}
+// 射线法点在环内（不含边界）
+function pointInRing(p, ring){
+  let inside=false;
+  for(let i=0,j=ring.length-1;i<ring.length;j=i++){
+    const a=ring[i], b=ring[j];
+    if((a.y>p.y)!==(b.y>p.y) && p.x < (b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x) inside=!inside;
+  }
+  return inside;
+}
+function strictInTri(A,B,C,p){
+  const d1=cross(A,B,p), d2=cross(B,C,p), d3=cross(C,A,p);
+  const neg=(d1<-EPS)||(d2<-EPS)||(d3<-EPS), pos=(d1>EPS)||(d2>EPS)||(d3>EPS);
+  return !(neg&&pos) && Math.abs(d1)>EPS && Math.abs(d2)>EPS && Math.abs(d3)>EPS;
+}
+
+/* ================= 三角剖分：孔洞桥接 + 耳切法 ================= */
+// 输入：outer/holes 为 {x,y} 数组；顶点全局编号 = 外轮廓在前，孔依次拼接。
+// 输出：[[i,j,k],...] 全局编号三角形；失败返回 null。
+function triangulate(outerIn, holesIn){
+  if(outerIn.length<3) return null;
+  const outer=outerIn.map((p,i)=>({x:p.x,y:p.y,id:i}));
+  if(ringArea(outer)<0) outer.reverse();           // 统一为画布坐标正面积
+  let base=outer.length;
+  let holes=holesIn.filter(h=>h.length>=3).map(h=>{
+    const r=h.map(p=>({x:p.x,y:p.y,id:base++}));
+    if(ringArea(r)>0) r.reverse();                  // 孔与外轮廓反向
+    return r;
+  });
+  // 按最右点 x 从大到小依次并入
+  holes.sort((h1,h2)=>Math.max(...h2.map(p=>p.x))-Math.max(...h1.map(p=>p.x)));
+  let poly=outer;
+  for(const hole of holes){
+    const br=findBridge(poly,hole);
+    if(!br) return null;
+    poly=mergeHole(poly,hole,br.iP,br.iM);
+  }
+  return earClip(poly);
+}
+// 找孔到已合并多边形的桥接点（Eberly 算法）
+function findBridge(poly, hole){
+  let iM=0;
+  for(let i=1;i<hole.length;i++)
+    if(hole[i].x>hole[iM].x+1e-9 || (Math.abs(hole[i].x-hole[iM].x)<=1e-9 && hole[i].y<hole[iM].y)) iM=i;
+  const M=hole[iM];
+  // 从 M 向 +x 射线，找最近的边交点
+  let bestX=Infinity, edgeIdx=-1;
+  for(let i=0;i<poly.length;i++){
+    const a=poly[i], b=poly[(i+1)%poly.length];
+    if((a.y<=M.y&&b.y>M.y)||(b.y<=M.y&&a.y>M.y)){
+      const x=a.x+(M.y-a.y)*(b.x-a.x)/(b.y-a.y);
+      if(x>=M.x-1e-9 && x<bestX){ bestX=x; edgeIdx=i; }
+    }
+  }
+  if(edgeIdx<0) return null;
+  const I={x:bestX,y:M.y};
+  const a=poly[edgeIdx], b=poly[(edgeIdx+1)%poly.length];
+  let iP;
+  if(dist(I,a)<1e-6) iP=edgeIdx;
+  else if(dist(I,b)<1e-6) iP=(edgeIdx+1)%poly.length;
+  else if(a.x!==b.x) iP=(a.x>b.x)?edgeIdx:(edgeIdx+1)%poly.length;
+  else iP=(Math.abs(a.y-I.y)>=Math.abs(b.y-I.y))?edgeIdx:(edgeIdx+1)%poly.length;
+  // 若三角形 M-I-P 内有 reflex 顶点，改连夹角最小者
+  const P=poly[iP];
+  let bestK=-1, bestTan=Infinity;
+  for(let k=0;k<poly.length;k++){
+    if(k===iP) continue;
+    const v=poly[k], prev=poly[(k-1+poly.length)%poly.length], next=poly[(k+1)%poly.length];
+    if(cross(prev,v,next)>=-EPS) continue;          // 只看凹顶点
+    if(!strictInTri(M,I,P,v)) continue;
+    const tan=Math.abs((v.y-M.y)/((v.x-M.x)||1e-12));
+    if(tan<bestTan-1e-12 || (Math.abs(tan-bestTan)<=1e-12 && bestK>=0 && dist(v,M)>dist(poly[bestK],M))){
+      bestTan=tan; bestK=k;
+    }
+  }
+  if(bestK>=0) iP=bestK;
+  return {iP, iM};
+}
+function mergeHole(poly, hole, iP, iM){
+  const rot=hole.slice(iM).concat(hole.slice(0,iM));
+  return poly.slice(0,iP+1).concat(rot).concat([rot[0]],[poly[iP]]).concat(poly.slice(iP+1));
+}
+// 耳切法（顶点带 id；桥接产生的重复坐标会形成零面积耳，直接摘除）
+function earClip(poly){
+  const tris=[];
+  const pts=poly.slice();
+  let guard=0;
+  const maxGuard=pts.length*pts.length+100;
+  while(pts.length>3){
+    if(++guard>maxGuard) return null;
+    const m=pts.length;
+    let done=false;
+    for(let i=0;i<m;i++){
+      const ia=(i-1+m)%m, ic=(i+1)%m;
+      const a=pts[ia], b=pts[i], c=pts[ic];
+      const cr=cross(a,b,c);
+      if(cr<=EPS){
+        // 共线/重复顶点：线段 a-c 上无其他点时可安全摘除
+        if(Math.abs(cr)<=EPS && !anyOnSegment(pts,i)){ pts.splice(i,1); done=true; break; }
+        continue;
+      }
+      if(!anyInTriangle(pts,ia,i,ic)){
+        tris.push([a.id,b.id,c.id]);
+        pts.splice(i,1); done=true; break;
+      }
+    }
+    if(!done) return null;
+  }
+  if(Math.abs(cross(pts[0],pts[1],pts[2]))>EPS) tris.push([pts[0].id,pts[1].id,pts[2].id]);
+  return tris;
+}
+function anyInTriangle(pts,ia,ib,ic){
+  const a=pts[ia],b=pts[ib],c=pts[ic];
+  for(let k=0;k<pts.length;k++){
+    if(k===ia||k===ib||k===ic) continue;
+    const p=pts[k];
+    if(cross(a,b,p)>EPS && cross(b,c,p)>EPS && cross(c,a,p)>EPS) return true;
+  }
+  return false;
+}
+function anyOnSegment(pts,i){
+  const m=pts.length, ia=(i-1+m)%m, ic=(i+1)%m, a=pts[ia], c=pts[ic];
+  for(let k=0;k<m;k++){
+    if(k===i||k===ia||k===ic) continue;
+    if(Math.abs(cross(a,c,pts[k]))<=1e-7 && onSeg(a,c,pts[k])) return true;
+  }
+  return false;
+}
+function triAreaSum(tris, verts){
+  let s=0;
+  for(const t of tris) s+=Math.abs(cross(verts[t[0]],verts[t[1]],verts[t[2]]))/2;
+  return s;
+}
+
+/* ================= 校验（纯函数） ================= */
+// 返回 {issues, notices}；issue.edges = [[ringKey, edgeIdx],...]，ringKey: -1=外轮廓, 0..=孔
+function validate(outer, holes){
+  const issues=[], notices=[];
+  const rings=[{pts:outer,label:'外轮廓',key:-1}];
+  holes.forEach((h,i)=>rings.push({pts:h,label:'孔'+(i+1),key:i}));
+  const gid=(key,i)=>{ if(key===-1) return i; let b=outer.length; for(let k=0;k<key;k++) b+=holes[k].length; return b+i; };
+  const ename=(key,i,n)=>`边${gid(key,i)}→${gid(key,(i+1)%n)}`;
+
+  rings.forEach(r=>{
+    const n=r.pts.length;
+    if(n===0){ if(r.key===-1) issues.push({msg:'外轮廓为空，请先绘制',edges:[]}); return; }
+    if(n<3){ issues.push({msg:`${r.label} 顶点数不足（${n} < 3）`,edges:[]}); return; }
+    for(let i=0;i<n;i++){
+      if(dist(r.pts[i],r.pts[(i+1)%n])<0.5)
+        issues.push({msg:`${r.label} 存在零长度${ename(r.key,i,n)}（两点重合）`,edges:[[r.key,i]],fix:'zero'});
+    }
+    for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){
+      if(j===(i+1)%n) continue;
+      if(i===0 && j===n-1) continue;
+      if(segTouch(r.pts[i],r.pts[(i+1)%n],r.pts[j],r.pts[(j+1)%n]))
+        issues.push({msg:`${r.label} 自交：${ename(r.key,i,n)} 与 ${ename(r.key,j,n)}`,edges:[[r.key,i],[r.key,j]]});
+    }
+    for(let i=0;i<n;i++){
+      const a=r.pts[(i-1+n)%n], b=r.pts[i], c=r.pts[(i+1)%n];
+      const ab=dist(a,b), bc=dist(b,c);
+      if(ab<0.5||bc<0.5) continue;
+      const sin=cross(a,b,c)/(ab*bc);
+      if(Math.abs(sin)<0.02){
+        const dot=(a.x-b.x)*(c.x-b.x)+(a.y-b.y)*(c.y-b.y);
+        if(dot>0) issues.push({msg:`${r.label} 顶点 ${gid(r.key,i)} 处为 180° 反向尖刺`,edges:[[r.key,(i-1+n)%n],[r.key,i]]});
+        else notices.push({msg:`${r.label} 顶点 ${gid(r.key,i)} 落在长直边上（连续多点，可精简）`,ring:r.key,idx:i,fix:'collinear'});
+      }
+    }
+    if(Math.abs(ringArea(r.pts))<1) issues.push({msg:`${r.label} 面积接近零（退化）`,edges:[]});
+  });
+
+  for(let a=0;a<rings.length;a++) for(let b=a+1;b<rings.length;b++){
+    const r1=rings[a], r2=rings[b];
+    if(r1.pts.length<2||r2.pts.length<2) continue;
+    for(let i=0;i<r1.pts.length;i++) for(let j=0;j<r2.pts.length;j++){
+      if(segTouch(r1.pts[i],r1.pts[(i+1)%r1.pts.length],r2.pts[j],r2.pts[(j+1)%r2.pts.length])){
+        const hk=r1.key===-1?r2.key:r1.key;
+        issues.push({msg:`${r1.label} 与 ${r2.label} 相交/接触：${ename(r1.key,i,r1.pts.length)} × ${ename(r2.key,j,r2.pts.length)}`,
+          edges:[[r1.key,i],[r2.key,j]], fix: hk>=0?'shrink':null, hole: hk>=0?hk:undefined});
+      }
+    }
+  }
+  if(outer.length>=3){
+    holes.forEach((h,k)=>{
+      if(h.length<3) return;
+      if(!pointInRing(h[0],outer)) issues.push({msg:`孔${k+1} 在外轮廓之外`,edges:[],fix:'delHole',hole:k});
+      holes.forEach((h2,m)=>{ if(m!==k && h2.length>=3 && pointInRing(h[0],h2))
+        issues.push({msg:`孔${k+1} 位于孔${m+1} 内部（孔洞嵌套）`,edges:[]}); });
+    });
+  }
+  return {issues,notices};
+}
+if(typeof module!=='undefined') module.exports={triangulate,validate,ringArea,segTouch,pointInRing,triAreaSum,cross};
+
+/* ================= 以下为浏览器 UI ================= */
+if(typeof document!=='undefined') (function(){
+const W=960, H=640;
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+const dpr=window.devicePixelRatio||1;
+cv.width=W*dpr; cv.height=H*dpr; cv.style.width=W+'px'; cv.style.height=H+'px';
+ctx.setTransform(dpr,0,0,dpr,0,0);
+
+const S={
+  outer:[], holes:[],
+  mode:'select',            // select | drawOuter | drawHole
+  drag:null,                // {ring, idx}
+  cursor:null,
+  selectedTri:null,         // 当前显示划分中的三角形下标
+  tris:null,                // 当前有效划分
+  lastValid:null,           // {tris, verts, area}
+  issues:[], notices:[],
+  activeIssue:-1,
+  importCheck:null,
+  status:'',
+};
+const $=id=>document.getElementById(id);
+const getRing=k=>k===-1?S.outer:S.holes[k];
+const allVerts=()=>S.outer.concat(...S.holes);
+const gidOf=(key,i)=>{ if(key===-1)return i; let b=S.outer.length; for(let k=0;k<key;k++)b+=S.holes[k].length; return b+i; };
+const ringOfGid=g=>{ if(g<S.outer.length)return '外'; let b=S.outer.length; for(let k=0;k<S.holes.length;k++){ if(g<b+S.holes[k].length)return '孔'+(k+1); b+=S.holes[k].length; } return '?'; };
+const fmt=n=>Math.abs(n)>=1000? n.toFixed(0) : n.toFixed(1);
+function status(m){ S.status=m; $('status').textContent=m; }
+
+/* ---------- 核心更新：校验 → 剖分 → 渲染 ---------- */
+function update(){
+  const {issues,notices}=validate(S.outer,S.holes);
+  S.issues=issues; S.notices=notices;
+  if(S.activeIssue>=issues.length) S.activeIssue=-1;
+  if(issues.length===0 && S.outer.length>=3){
+    const tris=triangulate(S.outer,S.holes);
+    if(tris){
+      S.tris=tris;
+      S.lastValid={tris, verts:allVerts().map(p=>({x:p.x,y:p.y})), area:triAreaSum(tris,allVerts())};
+    }else{
+      S.tris=null;
+      S.issues=[{msg:'剖分失败（形状过于退化）',edges:[]}];
+    }
+  }else S.tris=null;
+  render();
+}
+
+/* ---------- 修复操作 ---------- */
+function fixZero(){
+  for(const key of [-1,...S.holes.keys()]){
+    const r=getRing(key);
+    for(let i=r.length-1;i>=0;i--) if(r.length>1 && dist(r[i],r[(i+1)%r.length])<0.5) r.splice((i+1)%r.length,1);
+  }
+  S.holes=S.holes.filter(h=>h.length>0);
+  status('已移除重合点'); update();
+}
+function fixCollinear(){
+  for(let pass=0;pass<10;pass++){
+    let removed=false;
+    for(const key of [-1,...S.holes.keys()]){
+      const r=getRing(key);
+      for(let i=r.length-1;i>=0 && r.length>3;i--){
+        const a=r[(i-1+r.length)%r.length], b=r[i], c=r[(i+1)%r.length];
+        const ab=dist(a,b), bc=dist(b,c);
+        if(ab<0.5||bc<0.5) continue;
+        if(Math.abs(cross(a,b,c)/(ab*bc))<0.02 && ((a.x-b.x)*(c.x-b.x)+(a.y-b.y)*(c.y-b.y))<0){
+          r.splice(i,1); removed=true;
+        }
+      }
+    }
+    if(!removed) break;
+  }
+  status('已移除长直边上的共线点'); update();
+}
+function fixShrink(k){
+  const h=S.holes[k]; if(!h||!h.length) return;
+  const c=h.reduce((s,p)=>({x:s.x+p.x/h.length,y:s.y+p.y/h.length}),{x:0,y:0});
+  for(let t=0;t<60;t++){
+    h.forEach(p=>{ p.x=c.x+(p.x-c.x)*0.9; p.y=c.y+(p.y-c.y)*0.9; });
+    const okOuter=S.outer.length<3 || pointInRing(h[0],S.outer);
+    const hit=([-1,...S.holes.keys()].filter(x=>x!==k)).some(key2=>{
+      const r2=getRing(key2);
+      return r2.length>=2 && h.some((_,i)=>r2.some((_,j)=>
+        segTouch(h[i],h[(i+1)%h.length],r2[j],r2[(j+1)%r2.length])));
+    });
+    if(okOuter && !hit) break;
+  }
+  status('已将孔'+(k+1)+' 向质心收缩'); update();
+}
+function delHole(k){ S.holes.splice(k,1); status('已删除孔'+(k+1)); update(); }
+function unifyOrientation(){
+  // 约定：外轮廓视觉逆时针（画布面积<0），孔视觉顺时针
+  if(ringArea(S.outer)>0) S.outer.reverse();
+  S.holes.forEach(h=>{ if(ringArea(h)<0) h.reverse(); });
+  status('已统一方向：外轮廓逆时针、孔顺时针'); update();
+}
+function runFix(fix,hole){
+  if(fix==='zero') fixZero();
+  else if(fix==='collinear') fixCollinear();
+  else if(fix==='shrink') fixShrink(hole);
+  else if(fix==='delHole') delHole(hole);
+}
+
+/* ---------- 示例 ---------- */
+const P=(x,y)=>({x,y});
+function preset(name){
+  if(name==='doubleHole'){
+    S.outer=[P(80,80),P(880,80),P(880,560),P(80,560)];
+    S.holes=[
+      [P(200,180),P(420,180),P(420,360),P(200,360)],
+      [P(560,280),P(780,280),P(780,480),P(560,480)],
+    ];
+  }else if(name==='notch'){
+    // 细凹口 + 底边故意放几个共线点
+    S.outer=[P(80,120),P(430,120),P(430,400),P(446,400),P(446,120),P(880,120),P(880,520),P(700,520),P(520,520),P(300,520),P(80,520)];
+    S.holes=[];
+  }else if(name==='touch'){
+    // 孔的上边越过外轮廓上边（孔碰外边）
+    S.outer=[P(100,100),P(860,100),P(860,540),P(100,540)];
+    S.holes=[[P(600,60),P(800,60),P(800,260),P(600,260)]];
+  }
+  S.mode='select'; S.selectedTri=null; S.lastValid=null; S.importCheck=null;
+  update();
+}
+
+/* ---------- 导入导出 ---------- */
+function doExport(){
+  if(!S.tris){ status('当前输入无效，不能导出（请先修复标红的边）'); return; }
+  const verts=allVerts().map(p=>[Math.round(p.x*100)/100, Math.round(p.y*100)/100]);
+  const rings=[{type:'outer',start:0,count:S.outer.length}];
+  let base=S.outer.length;
+  S.holes.forEach(h=>{ rings.push({type:'hole',start:base,count:h.length}); base+=h.length; });
+  const data={version:1, vertices:verts, rings, triangles:S.tris, area:Math.round(triAreaSum(S.tris,allVerts())*100)/100};
+  $('io').value=JSON.stringify(data);
+  status('已导出 '+verts.length+' 个顶点、'+S.tris.length+' 个三角形到文本框');
+}
+function doImport(){
+  let data;
+  try{ data=JSON.parse($('io').value); }catch(e){ status('JSON 解析失败：'+e.message); return; }
+  if(!data.vertices||!data.rings){ status('格式不对：需要 vertices 和 rings'); return; }
+  const verts=data.vertices.map(v=>({x:v[0],y:v[1]}));
+  S.outer=[]; S.holes=[];
+  for(const r of data.rings){
+    const pts=verts.slice(r.start,r.start+r.count);
+    if(r.type==='outer') S.outer=pts; else S.holes.push(pts);
+  }
+  S.selectedTri=null; S.lastValid=null; S.mode='select';
+  update();
+  // 重新核对：用载入的顶点 + 导出的三角形顺序重算面积
+  const all=allVerts();
+  const fromImported=data.triangles? triAreaSum(data.triangles,all) : NaN;
+  const reTri=S.tris? triAreaSum(S.tris,all) : NaN;
+  const tol=Math.max(1,(data.area||0)*0.001);
+  S.importCheck={
+    exported:data.area, fromImported, reTri,
+    ok:Math.abs(fromImported-data.area)<=tol,
+    ok2:isNaN(reTri)? null : Math.abs(reTri-data.area)<=tol,
+  };
+  render();
+}
+
+/* ---------- 交互 ---------- */
+function toLogical(e){ const r=cv.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; }
+function hitVertex(p){
+  for(const key of [-1,...S.holes.keys()]){
+    const r=getRing(key);
+    for(let i=0;i<r.length;i++) if(dist(p,r[i])<8) return {ring:key,idx:i};
+  }
+  return null;
+}
+function hitEdge(p){
+  for(const key of [-1,...S.holes.keys()]){
+    const r=getRing(key);
+    for(let i=0;i<r.length;i++){
+      const a=r[i], b=r[(i+1)%r.length];
+      const L2=(b.x-a.x)**2+(b.y-a.y)**2;
+      if(L2<1) continue;
+      let t=((p.x-a.x)*(b.x-a.x)+(p.y-a.y)*(b.y-a.y))/L2;
+      t=Math.max(0.05,Math.min(0.95,t));
+      const q={x:a.x+t*(b.x-a.x), y:a.y+t*(b.y-a.y)};
+      if(dist(p,q)<6) return {ring:key,idx:i,t};
+    }
+  }
+  return null;
+}
+function displayedTris(){ return S.tris ? {tris:S.tris,verts:allVerts()} : (S.lastValid?{tris:S.lastValid.tris,verts:S.lastValid.verts}:null); }
+function hitTriangle(p){
+  const d=displayedTris(); if(!d) return null;
+  for(let i=d.tris.length-1;i>=0;i--){
+    const t=d.tris[i];
+    if(strictInTri(d.verts[t[0]],d.verts[t[1]],d.verts[t[2]],p) ||
+       Math.abs(cross(d.verts[t[0]],d.verts[t[1]],p))+Math.abs(cross(d.verts[t[1]],d.verts[t[2]],p))+Math.abs(cross(d.verts[t[2]],d.verts[t[0]],p)) <= Math.abs(cross(d.verts[t[0]],d.verts[t[1]],d.verts[t[2]]))+1)
+      return i;
+  }
+  return null;
+}
+cv.addEventListener('mousedown',e=>{
+  const p=toLogical(e);
+  if(S.mode==='drawOuter'){ S.outer.push(p); update(); return; }
+  if(S.mode==='drawHole'){ S.holes[S.holes.length-1].push(p); update(); return; }
+  const v=hitVertex(p);
+  if(v){ S.drag=v; return; }
+  const ed=hitEdge(p);
+  if(ed){
+    const r=getRing(ed.ring);
+    r.splice(ed.idx+1,0,{x:p.x,y:p.y});
+    S.drag={ring:ed.ring,idx:ed.idx+1};
+    update(); return;
+  }
+  S.selectedTri=hitTriangle(p);
+  render();
+});
+cv.addEventListener('mousemove',e=>{
+  const p=toLogical(e); S.cursor=p;
+  if(S.drag){
+    const r=getRing(S.drag.ring);
+    r[S.drag.idx].x=p.x; r[S.drag.idx].y=p.y;
+    update();                       // 拖动中连续重新校验 + 重新划分
+  }else if(S.mode!=='select') render();
+});
+window.addEventListener('mouseup',()=>{ S.drag=null; });
+function deleteVertexAt(p){
+  const v=hitVertex(p); if(!v) return false;
+  const r=getRing(v.ring);
+  if(r.length<=3){ status('顶点数不能少于 3，未删除'); return true; }
+  r.splice(v.idx,1); S.selectedTri=null; update(); return true;
+}
+cv.addEventListener('dblclick',e=>deleteVertexAt(toLogical(e)));
+cv.addEventListener('contextmenu',e=>{ e.preventDefault(); deleteVertexAt(toLogical(e)); });
+window.addEventListener('keydown',e=>{ if(e.key==='Escape') setMode('select'); });
+
+function setMode(m){
+  if(m==='drawOuter'){ S.outer=[]; S.selectedTri=null; }
+  if(m==='drawHole'){ S.holes=S.holes.filter(h=>h.length>=3); S.holes.push([]); }
+  if(m==='select'){
+    const dropped=S.holes.filter(h=>h.length>0&&h.length<3).length;
+    S.holes=S.holes.filter(h=>h.length===0||h.length>=3);
+    S.holes=S.holes.filter(h=>h.length>0);
+    if(dropped) status('已丢弃顶点数不足的孔');
+  }
+  S.mode=m; update();
+  if(m==='drawOuter') status('点击画布逐点绘制外轮廓，Esc 结束');
+  if(m==='drawHole') status('点击画布逐点绘制新孔洞，Esc 结束');
+}
+
+/* ---------- 渲染 ---------- */
+const FIX_LABEL={zero:'移除重合点',collinear:'移除共线点',shrink:'收缩该孔使其脱离',delHole:'删除该孔'};
+function render(){
+  // 画布
+  ctx.clearRect(0,0,W,H);
+  ctx.strokeStyle='#33333d';
+  for(let x=0;x<=W;x+=40){ ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke(); }
+  for(let y=0;y<=H;y+=40){ ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke(); }
+
+  const d=displayedTris();
+  if(d){
+    d.tris.forEach((t,i)=>{
+      const a=d.verts[t[0]],b=d.verts[t[1]],c=d.verts[t[2]];
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineTo(c.x,c.y); ctx.closePath();
+      if(!S.tris){ ctx.fillStyle='rgba(150,150,160,0.18)'; ctx.fill(); ctx.strokeStyle='rgba(150,150,160,0.5)'; ctx.setLineDash([4,3]); }
+      else{
+        ctx.fillStyle=`hsla(${(i*47)%360},65%,60%,0.30)`; ctx.fill();
+        ctx.strokeStyle=i===S.selectedTri?'#ff4fa0':`hsla(${(i*47)%360},65%,60%,0.8)`;
+        ctx.setLineDash([]);
+      }
+      ctx.lineWidth=i===S.selectedTri?2.5:1;
+      ctx.stroke(); ctx.setLineDash([]);
+    });
+  }
+  // 标红的问题边 / 选中的问题高亮
+  const bad=new Set(), hot=new Set();
+  S.issues.forEach((is,idx)=>(is.edges||[]).forEach(([k,i])=>(idx===S.activeIssue?hot:bad).add(k+':'+i)));
+  const drawRing=(pts,key,color)=>{
+    const n=pts.length; if(!n) return;
+    for(let i=0;i<n;i++){
+      const a=pts[i], b=pts[(i+1)%n];
+      const id=key+':'+i;
+      ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+      if(hot.has(id)){ ctx.strokeStyle='#ffe08a'; ctx.lineWidth=5; }
+      else if(bad.has(id)){ ctx.strokeStyle='#e53e3e'; ctx.lineWidth=3.5; }
+      else { ctx.strokeStyle=color; ctx.lineWidth=1.5; }
+      ctx.stroke();
+    }
+    pts.forEach((p,i)=>{
+      const g=gidOf(key,i);
+      const col=S.notices.some(nt=>nt.ring===key&&nt.idx===i);
+      ctx.beginPath(); ctx.arc(p.x,p.y,col?6:4.5,0,7);
+      ctx.fillStyle=col?'#ffd479':'#fff'; ctx.fill();
+      ctx.strokeStyle=color; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.fillStyle='#9aa'; ctx.font='10px monospace';
+      ctx.fillText(g,p.x+7,p.y-5);
+    });
+  };
+  drawRing(S.outer,-1,'#63a0e8');
+  S.holes.forEach((h,k)=>drawRing(h,k,'#ed8936'));
+  // 绘制模式的橡皮筋
+  if(S.mode!=='select'&&S.cursor){
+    const r=S.mode==='drawOuter'?S.outer:S.holes[S.holes.length-1];
+    if(r&&r.length){ const l=r[r.length-1];
+      ctx.beginPath(); ctx.moveTo(l.x,l.y); ctx.lineTo(S.cursor.x,S.cursor.y);
+      ctx.strokeStyle='#8ab4f8'; ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+  if(!S.tris&&S.lastValid){
+    ctx.fillStyle='#c9a'; ctx.font='13px sans-serif';
+    ctx.fillText('⚠ 当前输入无效（见右侧红字），灰色虚线为上一次有效划分',14,22);
+  }
+
+  // 面板
+  $('sec-mode').innerHTML=`<h3>操作</h3>
+    <button class="${S.mode==='select'?'on':''}" onclick="A.setMode('select')">选择 / 拖动</button>
+    <button class="${S.mode==='drawOuter'?'on':''}" onclick="A.setMode('drawOuter')">重绘外轮廓</button>
+    <button class="${S.mode==='drawHole'?'on':''}" onclick="A.setMode('drawHole')">添加孔洞</button>
+    <button onclick="A.clearAll()">清空</button>
+    <div class="dim">拖顶点移动 · 点边插入点 · 双击/右键删点 · 点三角形查看 · <kbd>Esc</kbd> 结束绘制</div>`;
+
+  const dir=a=>Math.abs(a)<1?'退化':(a<0?'逆时针':'顺时针');
+  let ringsHtml=`<h3>环（允许任意方向录入，剖分时自动统一）</h3><table>
+    <tr><th>环</th><th>顶点</th><th>方向(视觉)</th><th>面积</th></tr>
+    <tr><td>外轮廓</td><td>${S.outer.length}</td><td>${dir(ringArea(S.outer))}</td><td>${fmt(Math.abs(ringArea(S.outer)))}</td></tr>`;
+  S.holes.forEach((h,k)=>{ ringsHtml+=`<tr><td>孔${k+1}</td><td>${h.length}</td><td>${dir(ringArea(h))}</td><td>${fmt(Math.abs(ringArea(h)))}</td></tr>`; });
+  ringsHtml+=`</table><button onclick="A.unifyOrientation()">统一方向（外逆/孔顺）</button>`;
+  $('sec-rings').innerHTML=ringsHtml;
+
+  let issHtml='<h3>校验</h3>';
+  if(!S.issues.length&&!S.notices.length) issHtml+='<div class="ok">✓ 无问题</div>';
+  S.issues.forEach((is,idx)=>{
+    issHtml+=`<div class="issue ${idx===S.activeIssue?'active':''}" onclick="A.pickIssue(${idx})">✗ ${is.msg}${is.fix?` <button class="fix" onclick="event.stopPropagation();A.runFix('${is.fix}',${is.hole})">${FIX_LABEL[is.fix]}</button>`:''}</div>`;
+  });
+  S.notices.forEach((nt,idx)=>{
+    issHtml+=`<div class="notice">⚠ ${nt.msg} <button class="fix" onclick="A.runFix('collinear')">移除共线点</button></div>`;
+  });
+  $('sec-issues').innerHTML=issHtml;
+
+  const net=Math.abs(ringArea(S.outer))-S.holes.reduce((s,h)=>s+Math.abs(ringArea(h)),0);
+  let areaHtml='<h3>面积对照（验证凹口/孔没有被填上）</h3>';
+  if(S.outer.length>=3){
+    areaHtml+=`<table>
+      <tr><td>轮廓净面积（理论）</td><td>${fmt(net)}</td></tr>`;
+    if(S.tris){
+      const sum=triAreaSum(S.tris,allVerts());
+      const diff=sum-net, ok=Math.abs(diff)<=Math.max(1,net*0.001);
+      areaHtml+=`<tr><td>三角剖分面积和（实际）</td><td>${fmt(sum)}</td></tr>
+        <tr><td>差值</td><td class="${ok?'ok':'bad'}">${fmt(diff)} ${ok?'✓':'✗ 有区域被错误填充！'}</td></tr>
+        <tr><td>三角形数量</td><td>${S.tris.length}</td></tr>`;
+    }else if(S.lastValid){
+      areaHtml+=`<tr><td>当前输入无效</td><td class="bad">剖分已暂停</td></tr>
+        <tr><td>上一次有效划分面积</td><td>${fmt(S.lastValid.area)}（${S.lastValid.tris.length} 个三角形）</td></tr>`;
+    }
+    areaHtml+='</table>';
+  }else areaHtml+='<div class="dim">先绘制外轮廓</div>';
+  $('sec-area').innerHTML=areaHtml;
+
+  let triHtml='<h3>三角形检查（点击画布中的三角形）</h3>';
+  if(S.selectedTri!=null&&d&&d.tris[S.selectedTri]){
+    const t=d.tris[S.selectedTri];
+    const area=Math.abs(cross(d.verts[t[0]],d.verts[t[1]],d.verts[t[2]]))/2;
+    triHtml+=`<div>三角形 #${S.selectedTri}${S.tris?'':'（上一次有效划分）'}</div><table>
+      <tr><th>顶点</th><th>所属环</th><th>坐标</th></tr>
+      ${t.map(g=>`<tr><td>#${g}</td><td>${ringOfGid(g)}</td><td>(${fmt(d.verts[g].x)}, ${fmt(d.verts[g].y)})</td></tr>`).join('')}
+      <tr><td>面积</td><td colspan="2">${fmt(area)}</td></tr></table>`;
+  }else triHtml+='<div class="dim">未选中</div>';
+  $('sec-tri').innerHTML=triHtml;
+
+  $('sec-presets').innerHTML=`<h3>示例</h3>
+    <button onclick="A.preset('doubleHole')">双孔形状</button>
+    <button onclick="A.preset('notch')">细凹口（含共线点）</button>
+    <button onclick="A.preset('touch')">孔碰外边（可用修复）</button>
+    <div class="dim">「孔碰外边」载入后在校验区点「收缩该孔使其脱离」即可修复</div>`;
+
+  let ioHtml=`<h3>导出 / 载入核对</h3>
+    <button onclick="A.doExport()">导出顶点+三角面顺序</button>
+    <button onclick="A.doImport()">载入并重新核对</button>
+    <textarea id="io" placeholder="导出的 JSON 会出现在这里；粘贴后点「载入并重新核对」"></textarea>`;
+  if(S.importCheck){
+    const c=S.importCheck;
+    ioHtml+=`<table>
+      <tr><td>导出时面积</td><td>${fmt(c.exported)}</td></tr>
+      <tr><td>载入后按导出三角面重算</td><td class="${c.ok?'ok':'bad'}">${fmt(c.fromImported)} ${c.ok?'✓':'✗'}</td></tr>
+      ${c.ok2!=null?`<tr><td>载入后重新剖分面积</td><td class="${c.ok2?'ok':'bad'}">${fmt(c.reTri)} ${c.ok2?'✓':'✗'}</td></tr>`:''}
+    </table>`;
+  }
+  $('sec-io').innerHTML=ioHtml;
+}
+
+/* ---------- 暴露给内联事件 ---------- */
+window.A={
+  setMode, preset, doExport, doImport, runFix, unifyOrientation,
+  pickIssue(i){ S.activeIssue=S.activeIssue===i?-1:i; render(); },
+  clearAll(){ S.outer=[]; S.holes=[]; S.lastValid=null; S.selectedTri=null; S.importCheck=null; S.mode='select'; update(); },
+};
+
+preset('doubleHole');
+})();
+</script>
+</body>
+</html>
