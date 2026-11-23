@@ -1,0 +1,15 @@
+{
+  "name": "sfx-browser",
+  "version": "1.0.0",
+  "description": "游戏音效素材浏览器：扫描本地音效、试听、设循环点、打标签、按关键词检索",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "generate:samples": "node scripts/generate-samples.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "music-metadata": "^10.5.0"
+  }
+}

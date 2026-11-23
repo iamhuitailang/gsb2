@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SFX Browser · 游戏音效素材浏览器</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>🎮 SFX Browser</h1>
+  <div class="scan-bar">
+    <input id="scanDir" type="text" placeholder="本地音效目录路径，如 /Users/me/game/audio">
+    <button id="btnScan">扫描目录</button>
+    <button id="btnSamples" title="扫描内置示例素材">载入示例素材</button>
+  </div>
+  <div class="project-bar">
+    <button id="btnSave">保存项目</button>
+    <button id="btnExportJson">导出清单 JSON</button>
+    <button id="btnExportCsv">导出清单 CSV</button>
+    <span id="projectInfo" class="muted"></span>
+    <span id="saveStatus" class="muted"></span>
+  </div>
+</header>
+
+<main>
+  <!-- 左：筛选与标签管理 -->
+  <aside id="sidebar">
+    <section class="panel">
+      <h2>筛选</h2>
+      <input id="filterKeyword" type="search" placeholder="关键词（文件名/标签）">
+      <div class="dur-filter">
+        <label>时长(s)</label>
+        <input id="durMin" type="number" min="0" step="0.1" placeholder="最小">
+        <span>–</span>
+        <input id="durMax" type="number" min="0" step="0.1" placeholder="最大">
+      </div>
+      <div id="tagFilter"></div>
+      <button id="btnClearFilter">清除筛选</button>
+    </section>
+    <section class="panel">
+      <h2>标签管理</h2>
+      <div id="tagManager"></div>
+      <div class="row">
+        <input id="newGroupName" type="text" placeholder="新分组名">
+        <button id="btnAddGroup">加分组</button>
+      </div>
+    </section>
+  </aside>
+
+  <!-- 中：素材列表 -->
+  <section id="listArea">
+    <div id="batchBar" class="hidden">
+      <span id="batchCount"></span>
+      <select id="batchTag"></select>
+      <button id="btnBatchAdd">批量加标签</button>
+      <button id="btnBatchRemove">批量移除标签</button>
+      <button id="btnCompare">对比波形/循环点</button>
+      <button id="btnClearSel">取消选择</button>
+    </div>
+    <table id="assetTable">
+      <thead>
+        <tr>
+          <th><input type="checkbox" id="checkAll"></th>
+          <th>名称</th><th>格式</th><th>时长</th><th>声道</th><th>采样率</th><th>标签</th><th>循环</th>
+        </tr>
+      </thead>
+      <tbody id="assetTbody"></tbody>
+    </table>
+    <div id="listSummary" class="muted"></div>
+  </section>
+
+  <!-- 右：试听与循环点 -->
+  <aside id="detail">
+    <section class="panel" id="detailPanel">
+      <h2 id="detailTitle">未选择素材</h2>
+      <div id="detailMeta" class="muted"></div>
+      <canvas id="waveCanvas" width="360" height="140"></canvas>
+      <div class="transport">
+        <button id="btnPlay">▶ 播放</button>
+        <button id="btnStop">■ 停止</button>
+        <button id="btnLoop" class="toggle">🔁 循环段</button>
+        <button id="btnTrimPreview">✂ 试听裁剪段</button>
+      </div>
+      <div class="loop-inputs">
+        <label>循环起点(s) <input id="loopStart" type="number" min="0" step="0.001"></label>
+        <label>循环终点(s) <input id="loopEnd" type="number" min="0" step="0.001"></label>
+        <button id="btnClearLoop">清除循环点</button>
+      </div>
+      <p class="hint">拖动波形上的 <span class="mk-a">▏</span> 标记调整循环边界；点击波形定位播放头。开启「循环段」可反复检查边界是否平滑。</p>
+      <h3>当前素材标签</h3>
+      <div id="assetTags"></div>
+    </section>
+  </aside>
+</main>
+
+<!-- 对比视图 -->
+<div id="compareOverlay" class="overlay hidden">
+  <div class="overlay-inner">
+    <div class="overlay-head">
+      <h2>波形与循环点对比</h2>
+      <button id="btnCloseCompare">关闭</button>
+    </div>
+    <div id="compareList"></div>
+  </div>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
