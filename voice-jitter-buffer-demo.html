@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>语音接收缓冲（Jitter Buffer）演示</title>
+<style>
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;margin:16px;color:#1f2937;max-width:1180px}
+  h1{font-size:20px;margin:0 0 8px}
+  fieldset{border:1px solid #d1d5db;border-radius:8px;margin:0 0 10px;padding:8px 12px}
+  legend{font-weight:600;padding:0 6px}
+  label{margin-right:14px;white-space:nowrap}
+  input,select,textarea{font:inherit}
+  input[type=number]{width:70px}
+  button{margin:2px 4px 2px 0;padding:4px 12px;cursor:pointer}
+  textarea{width:100%;height:110px;font-family:ui-monospace,monospace;font-size:12px}
+  .row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start}
+  .col{flex:1;min-width:340px}
+  #chart{border:1px solid #d1d5db;border-radius:8px;background:#fff;width:100%}
+  .stats{font-family:ui-monospace,monospace;font-size:13px;white-space:pre-wrap;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px}
+  table{border-collapse:collapse;font-size:12px;font-family:ui-monospace,monospace}
+  th,td{border:1px solid #e5e7eb;padding:2px 8px;text-align:right}
+  th{background:#f3f4f6}
+  .scroll{max-height:260px;overflow:auto;border:1px solid #e5e7eb;border-radius:8px}
+  #events{max-height:180px;overflow:auto;font-size:12px;font-family:ui-monospace,monospace;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:6px 10px}
+  .ok{color:#16a34a}.bad{color:#dc2626}.warn{color:#d97706}.mut{color:#6b7280}
+  .legend span{margin-right:14px;font-size:12px}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;margin-right:3px}
+  #status{font-weight:600;margin:6px 0}
+  details{margin-bottom:10px;font-size:13px;color:#374151}
+</style>
+</head>
+<body>
+<h1>语音接收缓冲（Jitter Buffer）演示 —— 晚到 / 乱序 / 缺块 / 重复</h1>
+
+<details>
+<summary><b>模型与使用说明（点击展开）</b></summary>
+<ul>
+<li>声源为程序生成的旋律（小星星，16kHz 单声道），切成 <b>64 块 × 100ms</b>，块带序号，媒体时间 = 序号 × 100ms。</li>
+<li>到达表每行 <code>序号 到达时刻ms</code>；同一块多行 = 重复收到；没有行 = 丢失。可用预设+种子生成，也可手工编辑后点「应用到达表」。</li>
+<li>播放期限 = 块媒体时间 + 缓冲等待 offset。到期限未收到的块<b>不回头补</b>：该位置补空（静音或重复上一块），晚到的块直接丢弃。</li>
+<li>固定等待：offset 恒定。自适应：按最近到达延迟的 95 分位 + 余量调整 offset；需要大幅拉长时插入一个「主动等待」拍（可听到的停顿），小幅则平滑漂移。</li>
+<li>播放 / 走一步 / 跑完三种入口共用同一个确定性 step 函数，同输入同配置结果必然一致；「校验一致性」会把当前结果与从头跑一遍逐样本对比。</li>
+<li>播放中改参数立即生效并记录在时间图和事件日志里（橙色虚线），可分清哪一段用的是哪组参数。</li>
+<li>导出 WAV 就是界面里听到的那条 PCM；导出 JSON 含每块决定、打断次数与延迟统计。</li>
+</ul>
+</details>
+
+<fieldset><legend>1. 声源与到达样例</legend>
+  <div class="row">
+    <div class="col">
+      <button id="btnOrig">▶ 试听原始声音</button>
+      <span class="mut" id="srcInfo"></span><br><br>
+      <label>预设
+        <select id="preset">
+          <option value="clean">平稳（基线）</option>
+          <option value="jitter" selected>短时抖动</option>
+          <option value="ramp">持续延迟增长</option>
+          <option value="lossy">丢包 + 重复</option>
+        </select></label>
+      <label>种子 <input type="number" id="seed" value="42"></label>
+      <button id="btnGen">生成到达表</button>
+      <button id="btnApply">应用到达表</button>
+    </div>
+    <div class="col">
+      <textarea id="arrText" spellcheck="false"></textarea>
+      <div class="mut" id="arrInfo"></div>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset><legend>2. 缓冲与补声配置（播放中可改，改动会记录生效位置）</legend>
+  <label>等待模式
+    <select id="mode">
+      <option value="fixed" selected>固定等待</option>
+      <option value="adaptive">自适应等待</option>
+    </select></label>
+  <label>固定等待 ms <input type="number" id="fixedWait" value="150" step="10"></label>
+  <label>自适应初始等待 ms <input type="number" id="adaptInit" value="100" step="10"></label>
+  <label>自适应余量 ms <input type="number" id="margin" value="30" step="5"></label>
+  <label>缺块补声
+    <select id="conceal">
+      <option value="silence" selected>补静音</option>
+      <option value="repeat">重复上一块</option>
+    </select></label>
+</fieldset>
+
+<fieldset><legend>3. 运行</legend>
+  <button id="btnPlay">▶ 播放</button>
+  <button id="btnStep">走一步（100ms）</button>
+  <button id="btnRun">跑完并播放整段</button>
+  <button id="btnReset">重置</button>
+  <button id="btnCheck">校验一致性</button>
+  &nbsp;|&nbsp;
+  <button id="btnWav">导出 WAV</button>
+  <button id="btnJson">导出每块决定 JSON</button>
+  <div id="status" class="mut">就绪</div>
+</fieldset>
+
+<div class="row">
+  <div class="col" style="flex:2">
+    <canvas id="chart" width="1100" height="300"></canvas>
+    <div class="legend">
+      <span><span class="dot" style="background:#9ca3af"></span>发送</span>
+      <span><span class="dot" style="background:#2563eb"></span>收到</span>
+      <span><span class="dot" style="background:#f97316"></span>重复收到</span>
+      <span><span class="dot" style="background:#16a34a"></span>实际播放</span>
+      <span style="color:#dc2626">✕ 晚到丢弃 / 丢失</span>
+      <span style="color:#d97706">▼ 补空</span>
+      <span style="color:#7c3aed">▼ 主动等待(自适应拉长)</span>
+      <span style="color:#ef4444">| 播放位置</span>
+      <span style="color:#f59e0b">┆ 参数改动生效点</span>
+    </div>
+    <h3>事件日志</h3>
+    <div id="events"><span class="mut">（暂无）</span></div>
+  </div>
+  <div class="col">
+    <h3>统计</h3>
+    <div class="stats" id="stats"></div>
+    <h3>每块决定</h3>
+    <div class="scroll"><table id="decTable">
+      <thead><tr><th>块</th><th>发送ms</th><th>到达ms</th><th>播放ms</th><th>决定</th><th>延迟ms</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ================= 常量与声源 ================= */
+const SR = 16000;            // 采样率
+const D  = 100;              // 块时长 ms
+const CHUNK = SR * D / 1000; // 每块样本数 1600
+
+function genMelody(){
+  const beat = 0.4; // 秒/拍
+  const seq = [['C',1],['C',1],['G',1],['G',1],['A',1],['A',1],['G',2],
+               ['F',1],['F',1],['E',1],['E',1],['D',1],['D',1],['C',2]];
+  const F = {C:261.63, D:293.66, E:329.63, F:349.23, G:392.0, A:440.0};
+  const totalBeats = seq.reduce((s,n)=>s+n[1],0);
+  const pcm = new Float32Array(Math.round(totalBeats*beat*SR));
+  let pos = 0;
+  for(const [name,beats] of seq){
+    const f = F[name], len = Math.round(beats*beat*SR);
+    for(let i=0;i<len;i++){
+      const t=i/SR, u=i/len;
+      const env = Math.min(1,t/0.01) * (0.35+0.65*Math.exp(-3*u));
+      const v = Math.sin(2*Math.PI*f*t)+0.5*Math.sin(4*Math.PI*f*t)+0.25*Math.sin(6*Math.PI*f*t);
+      pcm[pos+i] = 0.5*env*v/1.75;
+    }
+    pos += len;
+  }
+  return pcm;
+}
+const MELODY = genMelody();
+const N = Math.ceil(MELODY.length / CHUNK); // 64 块
+const chunks = [];
+for(let i=0;i<N;i++) chunks.push(MELODY.slice(i*CHUNK, Math.min((i+1)*CHUNK, MELODY.length)));
+// 最后一块不足则补零到等长，保证输出对齐
+while(chunks[N-1].length < CHUNK){
+  const c = chunks[N-1], nc = new Float32Array(CHUNK);
+  nc.set(c); chunks[N-1] = nc;
+}
+
+/* ================= 工具 ================= */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const r1 = v => Math.round(v*10)/10;
+function pct95(arr){
+  if(!arr.length) return 0;
+  const s=[...arr].sort((a,b)=>a-b);
+  return s[Math.max(0, Math.ceil(0.95*s.length)-1)];
+}
+function concatPcm(list){
+  let n=0; for(const p of list) n+=p.length;
+  const out=new Float32Array(n); let o=0;
+  for(const p of list){ out.set(p,o); o+=p.length; }
+  return out;
+}
+function faded(pcm){ // 重复补声：5ms 淡入淡出避免爆音
+  const out=pcm.slice(), f=Math.round(SR*0.005);
+  for(let i=0;i<f;i++){ const g=i/f; out[i]*=g; out[out.length-1-i]*=g; }
+  return out;
+}
+
+/* ================= 到达样例生成 ================= */
+const PRESETS = {
+  clean: {base:180, jitter:20,  loss:0,    dup:0,    spikeP:0,    spike:0,   ramp:null},
+  jitter:{base:200, jitter:100, loss:0,    dup:0.02, spikeP:0.05, spike:250, ramp:null},
+  ramp:  {base:150, jitter:40,  loss:0,    dup:0,    spikeP:0,    spike:0,   ramp:{start:2000,end:5000,extra:400}},
+  lossy: {base:180, jitter:60,  loss:0.08, dup:0.06, spikeP:0,    spike:0,   ramp:null},
+};
+function genArrivals(seed,p){
+  const rnd=mulberry32(seed), arr=[];
+  for(let i=0;i<N;i++){
+    if(rnd()<p.loss) continue;                       // 缺块
+    let t=i*D + p.base + (rnd()*2-1)*p.jitter;       // 基础延迟+抖动
+    if(p.ramp && t>=p.ramp.start){                   // 持续延迟增长
+      const u=Math.min(1,(t-p.ramp.start)/(p.ramp.end-p.ramp.start));
+      t+=p.ramp.extra*u;
+    }
+    if(rnd()<p.spikeP) t+=p.spike*rnd();             // 偶发尖峰
+    t=Math.max(0,Math.round(t));
+    arr.push({seq:i,t});
+    if(rnd()<p.dup) arr.push({seq:i, t:t+10+Math.round(rnd()*50)}); // 重复
+  }
+  arr.sort((a,b)=>a.t-b.t||a.seq-b.seq);
+  return arr;
+}
+function parseArrivals(text){
+  const out=[];
+  for(const line of text.split('\n')){
+    const s=line.trim();
+    if(!s||s.startsWith('#')) continue;
+    const m=s.split(/[,\s]+/).map(Number);
+    if(m.length<2||!isFinite(m[0])||!isFinite(m[1])) continue;
+    const seq=Math.round(m[0]);
+    if(seq<0||seq>=N) continue;
+    out.push({seq, t:m[1]});
+  }
+  out.sort((a,b)=>a.t-b.t||a.seq-b.seq);
+  return out;
+}
+
+/* ================= 配置 ================= */
+const cfg = {mode:'fixed', fixedWait:150, adaptInit:100, margin:30, conceal:'silence'};
+
+/* ================= 确定性模拟器 =================
+   getCfg(): 返回当前配置（主模拟器读实时配置以支持播放中改参；
+             校验模拟器读冻结配置）。三种运行入口都调用同一个 step。 */
+let arrivals = [];
+function createSim(getCfg){
+  const firstArr = arrivals.length ? arrivals[0].t : 0;
+  const c0 = getCfg();
+  const wait0 = c0.mode==='fixed' ? c0.fixedWait : c0.adaptInit;
+  const S = {
+    k:0, tick:0, now:firstArr+wait0, offset:firstArr+wait0,
+    arrIdx:0, received:new Map(),
+    dec:Array.from({length:N},()=>({status:'pending',arr:null,play:null,dup:0,dupTimes:[]})),
+    ticks:[], pcms:[], gaps:[], events:[], delays:[],
+    curGap:null, done:false, lastPcm:null, changelog:[], stats:null,
+  };
+  function absorb(){ // 收下所有到达时刻 <= now 的块
+    while(S.arrIdx<arrivals.length && arrivals[S.arrIdx].t<=S.now+1e-9){
+      const a=arrivals[S.arrIdx++];
+      const d=S.dec[a.seq];
+      if(S.received.has(a.seq)){
+        d.dup++; d.dupTimes.push(a.t);
+        S.events.push({t:r1(a.t), text:`第 ${a.seq} 块重复收到，忽略`});
+      }else{
+        S.received.set(a.seq,a.t); d.arr=a.t;
+        S.delays.push(a.t - a.seq*D); // 所有首次到达都喂给延迟估计（含晚到）
+        if(a.seq<S.k){ // 播放位置已走过，不回头补
+          d.status='late';
+          S.events.push({t:r1(a.t), text:`第 ${a.seq} 块晚到（播放位置已走过），丢弃`});
+        }
+      }
+    }
+  }
+  function emitPlay(){
+    const pcm=chunks[S.k];
+    S.ticks.push({tick:S.tick, time:r1(S.now), seq:S.k, type:'play'});
+    S.pcms.push(pcm); S.lastPcm=pcm; S.curGap=null;
+    const d=S.dec[S.k]; d.status='played'; d.play=r1(S.now);
+    S.tick++;
+  }
+  function emitConceal(kind,c){
+    let pcm, type;
+    if(c.conceal==='repeat' && S.lastPcm){ pcm=faded(S.lastPcm); }
+    else pcm=new Float32Array(CHUNK);
+    type = kind==='stall' ? 'stall' : (c.conceal==='repeat' ? 'conceal-repeat' : 'conceal-silence');
+    S.ticks.push({tick:S.tick, time:r1(S.now), seq:S.k, type});
+    S.pcms.push(pcm);
+    if(S.curGap){ S.curGap.ticks++; S.curGap.ms+=D; }
+    else{ S.curGap={startTick:S.tick, startTime:r1(S.now), ticks:1, ms:D, type}; S.gaps.push(S.curGap); }
+    const how = kind==='stall' ? '自适应主动拉长等待' :
+                '未赶上，补空(' + (c.conceal==='repeat'?'重复上一块':'静音') + ')';
+    S.events.push({t:r1(S.now), text:`第 ${S.k} 块${how}，缺 100ms`});
+    S.tick++;
+  }
+  function step(){
+    if(S.done) return false;
+    if(S.k>=N){ finish(); return false; }
+    const c=getCfg();
+    if(c.mode==='adaptive' && S.delays.length>=5){
+      const target=pct95(S.delays.slice(-15))+c.margin;
+      const diff=target-S.offset;
+      if(diff>D/2){          // 需要大幅拉长：插入一个主动等待拍
+        S.offset+=D; S.now+=D;
+        absorb();
+        emitConceal('stall',c);
+        return true;         // k 不动，下拍重试同一块
+      }
+      const delta=Math.max(-5,Math.min(5,diff)); // 小幅平滑漂移
+      S.offset+=delta; S.now+=delta;
+    }
+    absorb();
+    const at=S.received.get(S.k);
+    if(at!==undefined && at<=S.now+1e-9){
+      emitPlay();
+    }else{
+      const d=S.dec[S.k];
+      if(d.status==='pending') d.status='missing'; // 本拍补空，之后若到达记晚到
+      emitConceal('underrun',c);
+    }
+    S.k++;
+    S.now+=D;
+    if(S.k>=N) finish();
+    return true;
+  }
+  function finish(){
+    const save=S.now; S.now=1e12; absorb(); S.now=save; // 收完剩余到达（记晚到/重复）
+    for(const d of S.dec) if(d.status==='missing'||d.status==='pending') d.status='lost';
+    S.done=true;
+    const played=S.dec.filter(d=>d.status==='played').length;
+    const sum=S.delays.reduce((a,b)=>a+b,0);
+    S.stats={
+      played,
+      late:S.dec.filter(d=>d.status==='late').length,
+      lost:S.dec.filter(d=>d.status==='lost').length,
+      dup:S.dec.reduce((s,d)=>s+d.dup,0),
+      concealTicks:S.ticks.filter(t=>t.type.startsWith('conceal')).length,
+      stallTicks:S.ticks.filter(t=>t.type==='stall').length,
+      breaks:S.gaps.length,
+      concealMs:S.gaps.reduce((s,g)=>s+g.ms,0),
+      maxGapMs:S.gaps.reduce((m,g)=>Math.max(m,g.ms),0),
+      delayAvg:S.delays.length?r1(sum/S.delays.length):0,
+      delayMax:S.delays.length?r1(Math.max(...S.delays)):0,
+      offsetEnd:r1(S.offset),
+    };
+  }
+  return {S, step};
+}
+
+/* ================= 全局运行状态 ================= */
+let sim=null, playing=false, timer=null, actx=null, sources=[], nextTime=0;
+function resetSim(){
+  stopAudio();
+  sim=createSim(()=>cfg);
+  playing=false;
+}
+function simStep(){ return sim.step(); }
+
+/* ================= 音频播放 ================= */
+function ensureAudio(){
+  if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:SR});
+  if(actx.state==='suspended') return actx.resume();
+  return Promise.resolve();
+}
+function schedule(pcm,when){
+  const buf=actx.createBuffer(1,pcm.length,SR);
+  buf.getChannelData(0).set(pcm);
+  const src=actx.createBufferSource();
+  src.buffer=buf; src.connect(actx.destination); src.start(when);
+  sources.push(src);
+}
+function stopAudio(){
+  if(timer){ clearInterval(timer); timer=null; }
+  for(const s of sources){ try{s.stop();}catch(e){} }
+  sources=[];
+}
+function pump(){ // 前瞻调度，保证块间无缝
+  while(nextTime < actx.currentTime+0.25){
+    if(sim.done){ pausePlay(); return; }
+    simStep();
+    schedule(sim.S.pcms[sim.S.pcms.length-1], nextTime);
+    nextTime += D/1000;
+  }
+  renderAll();
+}
+function pausePlay(){
+  if(timer){ clearInterval(timer); timer=null; }
+  playing=false;
+  if(actx) actx.suspend();
+  setPlayLabel();
+}
+function setPlayLabel(){
+  document.getElementById('btnPlay').textContent = playing ? '⏸ 暂停' : '▶ 播放';
+}
+
+/* ================= 渲染 ================= */
+const STATUS_TEXT={
+  played:['播放','ok'], late:['晚到丢弃','bad'], lost:['丢失','bad'],
+  missing:['补空中','warn'], pending:['等待到达','mut'],
+};
+function renderAll(){
+  if(typeof document==='undefined') return;
+  renderChart(); renderStats(); renderTable(); renderEvents();
+}
+function renderChart(){
+  const cv=document.getElementById('chart'), ctx=cv.getContext('2d');
+  const W=cv.width,H=cv.height, ml=64,mr=16;
+  const rows={send:70,recv:150,play:230};
+  ctx.clearRect(0,0,W,H);
+  let maxT=N*D+300;
+  for(const a of arrivals) maxT=Math.max(maxT,a.t+100);
+  for(const t of sim.S.ticks) maxT=Math.max(maxT,t.time+100);
+  const x=t=>ml+(W-ml-mr)*t/maxT;
+  // 网格
+  ctx.strokeStyle='#e5e7eb'; ctx.fillStyle='#6b7280';
+  ctx.font='11px sans-serif'; ctx.textAlign='center'; ctx.lineWidth=1;
+  for(let t=0;t<=maxT;t+=500){
+    ctx.beginPath(); ctx.moveTo(x(t),20); ctx.lineTo(x(t),H-24); ctx.stroke();
+    ctx.fillText(String(t),x(t),H-10);
+  }
+  ctx.fillText('时间 ms',W-40,H-10);
+  // 行标签与基线
+  ctx.textAlign='right'; ctx.fillStyle='#374151';
+  ctx.fillText('发送',ml-8,rows.send+4);
+  ctx.fillText('收到',ml-8,rows.recv+4);
+  ctx.fillText('播放',ml-8,rows.play+4);
+  ctx.strokeStyle='#f3f4f6';
+  for(const k of ['send','recv','play']){
+    ctx.beginPath(); ctx.moveTo(ml,rows[k]); ctx.lineTo(W-mr,rows[k]); ctx.stroke();
+  }
+  // 参数改动生效段（橙色虚线）
+  for(const c of sim.S.changelog){
+    ctx.strokeStyle='#f59e0b'; ctx.setLineDash([4,3]);
+    ctx.beginPath(); ctx.moveTo(x(c.time),24); ctx.lineTo(x(c.time),H-24); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle='#b45309'; ctx.textAlign='left';
+    ctx.fillText('⚙ '+c.text, x(c.time)+3, 34);
+  }
+  const dot=(px,py,color)=>{ctx.fillStyle=color;ctx.beginPath();ctx.arc(px,py,3.5,0,7);ctx.fill();};
+  const cross=(px,py,color)=>{ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();
+    ctx.moveTo(px-4,py-4);ctx.lineTo(px+4,py+4);ctx.moveTo(px+4,py-4);ctx.lineTo(px-4,py+4);ctx.stroke();ctx.lineWidth=1;};
+  const tri=(px,py,color)=>{ctx.fillStyle=color;ctx.beginPath();
+    ctx.moveTo(px,py);ctx.lineTo(px-5,py-9);ctx.lineTo(px+5,py-9);ctx.closePath();ctx.fill();};
+  const line=(x1,y1,x2,y2,color)=>{ctx.strokeStyle=color;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();};
+  // 每块：发送→收到→播放
+  for(let i=0;i<N;i++){
+    const d=sim.S.dec[i], sx=x(i*D);
+    dot(sx,rows.send,'#9ca3af');
+    if(d.arr!=null){
+      const ax=x(d.arr);
+      line(sx,rows.send,ax,rows.recv, d.status==='late'?'#fca5a5':'#e5e7eb');
+      if(d.status==='late') cross(ax,rows.recv,'#dc2626');
+      else dot(ax,rows.recv,'#2563eb');
+      for(const dt of d.dupTimes) dot(x(dt),rows.recv+8,'#f97316');
+      if(d.status==='played'){
+        const px=x(d.play);
+        line(ax,rows.recv,px,rows.play,'#e5e7eb');
+        dot(px,rows.play,'#16a34a');
+      }
+    }else if(d.status==='lost'){
+      cross(sx,rows.send,'#dc2626');
+    }
+  }
+  // 补空 / 主动等待
+  for(const t of sim.S.ticks){
+    if(t.type==='play') continue;
+    tri(x(t.time), rows.play+12, t.type==='stall' ? '#7c3aed' : '#d97706');
+  }
+  // 播放位置游标
+  if(!sim.S.done && sim.S.tick>0){
+    ctx.strokeStyle='#ef4444'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(x(sim.S.now),24); ctx.lineTo(x(sim.S.now),H-24); ctx.stroke();
+    ctx.lineWidth=1;
+  }
+}
+function renderStats(){
+  const s=sim.S.stats, el=document.getElementById('stats');
+  const modeDesc = cfg.mode==='fixed' ? `固定等待 ${cfg.fixedWait}ms`
+                 : `自适应(初始${cfg.adaptInit}ms 余量${cfg.margin}ms)`;
+  let txt=`模式: ${modeDesc}   补声: ${cfg.conceal==='repeat'?'重复上一块':'补静音'}
+进度: 第 ${sim.S.tick} 拍 / 已规划到第 ${sim.S.k} 块 (共 ${N} 块)
+当前缓冲等待 offset: ${r1(sim.S.offset)} ms`;
+  if(s){
+    txt+=`
+──────── 跑完统计 ────────
+播放 ${s.played} 块, 晚到丢弃 ${s.late}, 丢失 ${s.lost}, 重复收到 ${s.dup}
+打断次数(连续补空段): ${s.breaks}
+补空 ${s.concealTicks} 拍 + 主动等待 ${s.stallTicks} 拍, 共 ${s.concealMs} ms, 最长单段 ${s.maxGapMs} ms
+网络延迟(所有到达块): 平均 ${s.delayAvg} ms, 最大 ${s.delayMax} ms
+最终缓冲等待 offset: ${s.offsetEnd} ms`;
+  }
+  el.textContent=txt;
+}
+function renderTable(){
+  const tb=document.querySelector('#decTable tbody');
+  let html='';
+  for(let i=0;i<N;i++){
+    const d=sim.S.dec[i];
+    const [txt,cls]=STATUS_TEXT[d.status];
+    const arr=d.arr==null?'—':r1(d.arr)+(d.dup?` (+${d.dup}重复)`:'');
+    const play=d.play==null?'—':d.play;
+    const delay=(d.arr==null)?'—':r1(d.arr-i*D);
+    html+=`<tr><td>${i}</td><td>${i*D}</td><td>${arr}</td><td>${play}</td><td class="${cls}">${txt}</td><td>${delay}</td></tr>`;
+  }
+  tb.innerHTML=html;
+}
+function renderEvents(){
+  const el=document.getElementById('events');
+  const items=[...sim.S.events];
+  for(const c of sim.S.changelog) items.push({t:c.time,text:'⚙ 参数改动生效：'+c.text});
+  items.sort((a,b)=>a.t-b.t);
+  el.innerHTML=items.length? items.map(e=>`<div>[${e.t}ms] ${e.text}</div>`).join('') : '<span class="mut">（暂无）</span>';
+  el.scrollTop=el.scrollHeight;
+}
+function setStatus(msg,cls){
+  const el=document.getElementById('status');
+  el.textContent=msg; el.className=cls||'mut';
+}
+
+/* ================= 导出 ================= */
+function encodeWav(pcm){
+  const n=pcm.length, buf=new ArrayBuffer(44+n*2), v=new DataView(buf);
+  const ws=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+  ws(0,'RIFF'); v.setUint32(4,36+n*2,true); ws(8,'WAVE'); ws(12,'fmt ');
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,SR,true); v.setUint32(28,SR*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true);
+  ws(36,'data'); v.setUint32(40,n*2,true);
+  for(let i=0;i<n;i++){
+    const s=Math.max(-1,Math.min(1,pcm[i]));
+    v.setInt16(44+i*2, s<0?s*0x8000:s*0x7FFF, true);
+  }
+  return buf;
+}
+function download(blob,name){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+}
+
+/* ================= 界面绑定 ================= */
+function readCfgFromUI(){
+  cfg.mode=document.getElementById('mode').value;
+  cfg.fixedWait=+document.getElementById('fixedWait').value||0;
+  cfg.adaptInit=+document.getElementById('adaptInit').value||0;
+  cfg.margin=+document.getElementById('margin').value||0;
+  cfg.conceal=document.getElementById('conceal').value;
+}
+function onCfgChange(what){
+  const oldWait=cfg.fixedWait, oldMode=cfg.mode;
+  readCfgFromUI();
+  if(sim && !sim.S.done && sim.S.tick>0){
+    // 固定等待在播放中被改：等效地平移播放期限
+    if(cfg.mode==='fixed' && oldMode==='fixed' && cfg.fixedWait!==oldWait){
+      const d=cfg.fixedWait-oldWait;
+      sim.S.offset+=d; sim.S.now+=d;
+    }
+    sim.S.changelog.push({tick:sim.S.tick, time:r1(sim.S.now), text:what});
+  }else if(sim && sim.S.done){
+    setStatus('已跑完，参数改动将在「重置」后生效','warn');
+  }
+  renderAll();
+}
+function applyArrivals(){
+  arrivals=parseArrivals(document.getElementById('arrText').value);
+  document.getElementById('arrInfo').textContent=
+    `共 ${arrivals.length} 条到达记录（含重复），覆盖 ${new Set(arrivals.map(a=>a.seq)).size} / ${N} 块`;
+  resetSim(); renderAll();
+  setStatus('到达表已应用，模拟器已重置');
+}
+function init(){
+  document.getElementById('srcInfo').textContent=`小星星旋律，${N} 块 × ${D}ms，${SR}Hz 单声道`;
+  document.getElementById('btnGen').onclick=()=>{
+    const p=PRESETS[document.getElementById('preset').value];
+    const seed=+document.getElementById('seed').value||0;
+    const arr=genArrivals(seed,p);
+    document.getElementById('arrText').value=
+      '# 序号 到达时刻ms（同一块多行=重复；缺行=丢失）\n'+
+      arr.map(a=>`${a.seq} ${a.t}`).join('\n');
+    applyArrivals();
+  };
+  document.getElementById('btnApply').onclick=applyArrivals;
+  document.getElementById('btnOrig').onclick=async()=>{
+    await ensureAudio(); schedule(MELODY, actx.currentTime+0.05);
+  };
+  for(const [id,what] of [['mode','等待模式'],['fixedWait','固定等待'],['adaptInit','自适应初始等待'],['margin','自适应余量'],['conceal','补声方式']]){
+    document.getElementById(id).addEventListener('change',()=>onCfgChange(what));
+  }
+  document.getElementById('btnPlay').onclick=async()=>{
+    if(playing){ pausePlay(); setStatus('已暂停'); return; }
+    if(sim.S.done) resetSim();
+    readCfgFromUI();
+    await ensureAudio();
+    playing=true; setPlayLabel();
+    nextTime=actx.currentTime+0.08;
+    timer=setInterval(pump,30);
+    setStatus('播放中…');
+  };
+  document.getElementById('btnStep').onclick=async()=>{
+    if(playing) pausePlay();
+    if(sim.S.done){ setStatus('已跑完，请重置','warn'); return; }
+    readCfgFromUI();
+    await ensureAudio();
+    simStep();
+    schedule(sim.S.pcms[sim.S.pcms.length-1], actx.currentTime+0.03);
+    renderAll();
+    setStatus(`单步：第 ${sim.S.tick} 拍`);
+  };
+  document.getElementById('btnRun').onclick=async()=>{
+    if(playing) pausePlay();
+    readCfgFromUI();
+    while(simStep()){}
+    renderAll();
+    await ensureAudio();
+    schedule(concatPcm(sim.S.pcms), actx.currentTime+0.05);
+    setStatus('已跑完，正在播放整段结果');
+  };
+  document.getElementById('btnReset').onclick=()=>{
+    readCfgFromUI(); resetSim(); renderAll();
+    setPlayLabel(); setStatus('已重置');
+  };
+  document.getElementById('btnCheck').onclick=()=>{
+    const frozen={...cfg};
+    const s2=createSim(()=>frozen);
+    while(s2.step()){}
+    const p1=concatPcm(sim.S.pcms), p2=concatPcm(s2.S.pcms);
+    let maxDiff=0;
+    if(p1.length===p2.length){
+      for(let i=0;i<p1.length;i++) maxDiff=Math.max(maxDiff,Math.abs(p1[i]-p2[i]));
+    }else maxDiff=Infinity;
+    const sameDec=JSON.stringify(sim.S.dec)===JSON.stringify(s2.S.dec);
+    if(sim.S.changelog.length){
+      setStatus(`播放中改过 ${sim.S.changelog.length} 次参数，与从头跑不同属预期（改动点见时间图橙色虚线）`,'warn');
+    }else if(sameDec && maxDiff===0){
+      setStatus('✓ 校验通过：与从头跑一遍的每块决定和输出音频逐样本一致','ok');
+    }else{
+      setStatus(`✗ 不一致：决定${sameDec?'相同':'不同'}，音频最大差 ${maxDiff}`,'bad');
+    }
+  };
+  document.getElementById('btnWav').onclick=()=>{
+    if(!sim.S.pcms.length){ setStatus('还没有输出，请先运行','warn'); return; }
+    download(new Blob([encodeWav(concatPcm(sim.S.pcms))],{type:'audio/wav'}),'jitter_output.wav');
+    setStatus('已导出 WAV（与界面试听同一条 PCM）','ok');
+  };
+  document.getElementById('btnJson').onclick=()=>{
+    const out={
+      config:{...cfg}, chunkMs:D, sampleRate:SR, chunks:N,
+      arrivals,
+      decisions:sim.S.dec.map((d,i)=>({seq:i, sendMs:i*D, arrivalMs:d.arr, dupTimes:d.dupTimes, playMs:d.play, status:d.status})),
+      ticks:sim.S.ticks, gaps:sim.S.gaps, changelog:sim.S.changelog,
+      stats:sim.S.stats,
+    };
+    download(new Blob([JSON.stringify(out,null,2)],{type:'application/json'}),'jitter_decisions.json');
+    setStatus('已导出每块决定 JSON','ok');
+  };
+  // 初始样例
+  document.getElementById('btnGen').click();
+  setPlayLabel();
+}
+if(typeof document!=='undefined') init();
+</script>
+</body>
+</html>
