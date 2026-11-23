@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>sebalign 分段对齐与切换预览</title>
+<style>
+  :root {
+    --bg: #14181f; --panel: #1d232d; --line: #2c3542;
+    --txt: #e6eaf0; --dim: #93a0b0; --accent: #5db4ff;
+    --ok: #4cc38a; --warn: #e8b34b; --bad: #ef6b6b; --purple: #b58cff;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--txt);
+    font: 13px/1.5 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  header { padding: 10px 16px; border-bottom: 1px solid var(--line);
+    display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; }
+  header h1 { font-size: 15px; margin: 0; }
+  header .meta { color: var(--dim); font-size: 12px; }
+  main { padding: 14px 16px; max-width: 1180px; margin: 0 auto; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .tier { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px; position: relative; }
+  .tier.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .tier h2 { font-size: 13px; margin: 2px 4px 8px; display: flex; justify-content: space-between; }
+  .tier video { width: 100%; background: #000; border-radius: 4px; display: block; }
+  .badge { font-weight: 400; color: var(--dim); }
+  .badge.live { color: var(--accent); }
+  .controls { display: flex; gap: 8px; align-items: center; margin: 12px 0; flex-wrap: wrap; }
+  button { background: #26303d; color: var(--txt); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 12px; cursor: pointer; font-size: 13px; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #0b1622; border-color: var(--accent); font-weight: 600; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  select { background: #26303d; color: var(--txt); border: 1px solid var(--line);
+    border-radius: 6px; padding: 6px 8px; }
+  .timeline { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px 12px; margin-top: 12px; }
+  .track { position: relative; height: 58px; margin: 6px 0 2px; }
+  .seg { position: absolute; top: 0; height: 42px; border: 1px solid #3a4656;
+    background: #2a3441; border-radius: 4px; font-size: 11px; padding: 3px 5px;
+    overflow: hidden; color: var(--dim); cursor: pointer; }
+  .seg.readable { background: #2c3a47; color: #c8d4e0; }
+  .seg.current { border-color: var(--accent); background: #31475c; color: #fff; }
+  .seg.badseg { border-color: var(--bad); background: #4a2b2f; }
+  .boundary { position: absolute; top: -2px; width: 2px; height: 46px; background: var(--purple); }
+  .boundary.shared { background: var(--ok); }
+  .beat { position: absolute; top: 48px; width: 1px; height: 8px; background: #44505f; }
+  .beat.major { background: var(--warn); height: 10px; }
+  .playhead { position: absolute; top: -4px; width: 2px; height: 58px;
+    background: var(--accent); z-index: 5; pointer-events: none; }
+  .legend { display: flex; gap: 14px; color: var(--dim); font-size: 11px; margin-top: 4px; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+    margin-right: 4px; vertical-align: -1px; }
+  .hud { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px 12px; margin-top: 12px; display: grid;
+    grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .hud .cell .k { color: var(--dim); font-size: 11px; }
+  .hud .cell .v { font-size: 15px; font-variant-numeric: tabular-nums; }
+  .toast { margin-top: 12px; border-radius: 8px; padding: 10px 12px; display: none;
+    border: 1px solid var(--line); background: var(--panel); }
+  .toast.show { display: block; }
+  .toast.switch_now { border-color: var(--ok); }
+  .toast.wait { border-color: var(--warn); }
+  .toast.abort { border-color: var(--bad); }
+  .toast .title { font-weight: 600; margin-bottom: 2px; }
+  .toast.wait .title { color: var(--warn); }
+  .toast.abort .title { color: var(--bad); }
+  .toast.switch_now .title { color: var(--ok); }
+  table.log { width: 100%; border-collapse: collapse; margin-top: 6px; font-size: 12px; }
+  table.log th, table.log td { border: 1px solid var(--line); padding: 4px 8px; text-align: left; }
+  table.log th { color: var(--dim); font-weight: 500; }
+  .v-switch_now { color: var(--ok); } .v-wait { color: var(--warn); } .v-abort { color: var(--bad); }
+  .verify { font-size: 12px; color: var(--dim); }
+  .verify .err { color: var(--bad); }
+  h3 { font-size: 13px; margin: 16px 0 6px; }
+  .planrow { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<header>
+  <h1>sebalign 分段对齐与切换预览</h1>
+  <span class="meta" id="meta"></span>
+  <span class="verify" id="verify"></span>
+</header>
+<main>
+  <div class="controls">
+    <button class="primary" id="playBtn">▶ 播放</button>
+    <button id="stopBtn">■ 停止</button>
+    <label>当前档
+      <select id="tierSelect"></select>
+    </label>
+    <label>目标档
+      <select id="targetSelect"></select>
+    </label>
+    <button id="switchBtn">立即换档</button>
+    <span class="meta" style="color:var(--dim)">快捷键：空格 播放/暂停，S 换档，1/2 切档</span>
+  </div>
+
+  <div class="grid" id="tierGrid"></div>
+
+  <div class="hud">
+    <div class="cell"><div class="k">源时间</div><div class="v" id="hudTime">0.000s</div></div>
+    <div class="cell"><div class="k">全局帧 / 画面编号</div><div class="v" id="hudFrame">—</div></div>
+    <div class="cell"><div class="k">拍点</div><div class="v" id="hudBeat">—</div></div>
+    <div class="cell"><div class="k">当前分段</div><div class="v" id="hudSeg">—</div></div>
+  </div>
+
+  <div class="timeline">
+    <div id="tracks"></div>
+    <div class="legend">
+      <span><i style="background:#2c3a47;border:1px solid #3a4656"></i>可读分段</span>
+      <span><i style="background:#4a2b2f;border:1px solid var(--bad)"></i>不可读/缺失</span>
+      <span><i style="background:var(--ok)"></i>共享边界（可换档）</span>
+      <span><i style="background:var(--purple)"></i>单档边界（不可换）</span>
+      <span><i style="background:var(--warn)"></i>拍点</span>
+    </div>
+    <div class="planrow">
+      <span style="color:var(--dim)">计划换档：</span>
+      <select id="planTier"></select>
+      <input id="planTime" type="number" step="0.1" min="0" placeholder="源时间(秒)"
+        style="background:#26303d;color:var(--txt);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:120px">
+      <button id="planAdd">加入计划</button>
+      <span id="planList" style="color:var(--dim)"></span>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"><div class="title"></div><div class="body"></div></div>
+
+  <h3>切换尝试日志（失败/等待也完整记录，不静默）</h3>
+  <table class="log">
+    <thead><tr><th>时间</th><th>方向</th><th>源位置</th><th>结论</th><th>说明 / 最近可换点</th></tr></thead>
+    <tbody id="logBody"><tr><td colspan="5" style="color:var(--dim)">尚无切换尝试</td></tr></tbody>
+  </table>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let manifest = null, markers = {beats: [], frames: []};
+const tiers = [];           // {name, el(video), segs, current}
+let activeTier = 0;
+const audio = new Audio();
+let playing = false, rafId = null;
+let pendingSwitch = null;   // wait 决策：到 candidate_time 自动重试
+const plans = [];           // {time, toTier}
+const logRows = [];
+
+async function getJSON(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`${url} -> ${r.status}`);
+  return r.json();
+}
+
+function fmt(t) { return t.toFixed(3) + "s"; }
+
+function sharedBoundarySet() {
+  const sets = manifest.tiers.map(t => new Set(
+    t.segments.filter(s => s.source_start > 0).map(s => Math.round(s.source_start * 1000))
+  ));
+  const out = new Set();
+  for (const ms of sets[0]) if (sets.every(s => s.has(ms))) out.add(ms / 1000);
+  return out;
+}
+
+function segAt(tierIdx, t) {
+  const tol = 1.5 / manifest.source_fps;
+  return manifest.tiers[tierIdx].segments.find(
+    s => t >= s.source_start - tol && t < s.source_end - tol
+  ) || manifest.tiers[tierIdx].segments.find(
+    s => Math.abs(t - s.source_start) <= tol
+  ) || null;
+}
+
+function sourceTime() {
+  // 音频是唯一主时钟；没有音轨时退化为 performance 时钟
+  if (manifest.audio_track) return Math.min(audio.currentTime, manifest.source_duration);
+  return Math.min(perfClock, manifest.source_duration);
+}
+let perfClock = 0, perfLast = 0;
+
+async function init() {
+  manifest = await getJSON("/api/manifest");
+  try { markers = await getJSON("/api/markers"); } catch { markers = manifest.markers; }
+
+  $("meta").textContent =
+    `源时长 ${manifest.source_duration.toFixed(2)}s · ${manifest.source_fps}fps · 档位 ${manifest.tiers.length} 个`;
+  getJSON("/api/verify").then(v => {
+    const errs = v.checks.filter(c => c.status !== "ok").length;
+    $("verify").innerHTML = errs
+      ? `<span class="err">实读核验发现 ${errs} 项异常（见日志/报告）</span>`
+      : "实读核验：全部片段与音轨可读";
+  });
+
+  const grid = $("tierGrid");
+  manifest.tiers.forEach((t, idx) => {
+    const card = document.createElement("div");
+    card.className = "tier" + (idx === 0 ? " active" : "");
+    card.innerHTML =
+      `<h2><span>${t.name} <span class="badge">${t.width}×${t.height}</span></span>
+       <span class="badge" id="badge-${idx}"></span></h2>
+       <video muted playsinline preload="auto"></video>`;
+    grid.appendChild(card);
+    const video = card.querySelector("video");
+    tiers.push({ name: t.name, el: video, card, segs: t.segments, current: null });
+    video.addEventListener("error", () => {
+      showToast("abort", "分段解码失败", `${t.name} 的 ${video.dataset.file || "?"} 无法播放`);
+    });
+
+    const opt1 = new Option(`${t.name}`, idx);
+    $("tierSelect").add(opt1);
+    const opt2 = new Option(`→ ${t.name}`, idx);
+    $("targetSelect").add(opt2);
+    const opt3 = new Option(`${t.name}`, idx);
+    $("planTier").add(opt3);
+  });
+  $("targetSelect").value = String(Math.min(1, tiers.length - 1));
+
+  buildTracks();
+  if (manifest.audio_track) {
+    audio.src = "/media/" + manifest.audio_track;
+    audio.preload = "auto";
+  }
+  bindEvents();
+  loadSwitchLog();
+  seekAll(0);
+  requestAnimationFrame(tick);
+}
+
+function buildTracks() {
+  const wrap = $("tracks");
+  const shared = sharedBoundarySet();
+  const total = manifest.source_duration;
+  manifest.tiers.forEach((t, idx) => {
+    const row = document.createElement("div");
+    row.innerHTML = `<div style="color:var(--dim);font-size:11px">${t.name}</div>`;
+    const track = document.createElement("div");
+    track.className = "track";
+    t.segments.forEach(s => {
+      const d = document.createElement("div");
+      const pct = (s.source_start / total) * 100;
+      const w = ((s.source_end - s.source_start) / total) * 100;
+      d.className = "seg " + (s.openable ? "readable" : "badseg");
+      d.style.left = pct + "%"; d.style.width = w + "%";
+      d.textContent = `#${s.seq} ${s.frame_label}`;
+      d.title = `${s.file}\n源 ${fmt(s.source_start)}–${fmt(s.source_end)}\n首帧 ${s.frame_label}`;
+      d.onclick = () => userSeek(s.source_start);
+      track.appendChild(d);
+    });
+    t.segments.filter(s => s.source_start > 0).forEach(s => {
+      const b = document.createElement("div");
+      const isShared = [...shared].some(x => Math.abs(x - s.source_start) <= 1.5 / manifest.source_fps);
+      b.className = "boundary " + (isShared ? "shared" : "");
+      b.style.left = (s.source_start / total) * 100 + "%";
+      b.title = (isShared ? "共享边界 " : "单档边界 ") + fmt(s.source_start);
+      track.appendChild(b);
+    });
+    (markers.beats || []).forEach(beat => {
+      const m = document.createElement("div");
+      m.className = "beat" + (beat.index % 4 === 0 ? " major" : "");
+      m.style.left = (beat.time / total) * 100 + "%";
+      m.title = `拍点 ${beat.index} @ ${fmt(beat.time)}`;
+      track.appendChild(m);
+    });
+    const head = document.createElement("div");
+    head.className = "playhead"; head.id = `playhead-${idx}`;
+    track.appendChild(head);
+    row.appendChild(track);
+    wrap.appendChild(row);
+  });
+}
+
+function bindEvents() {
+  $("playBtn").onclick = togglePlay;
+  $("stopBtn").onclick = () => { stopAll(); userSeek(0); };
+  $("tierSelect").onchange = (e) => switchTier(Number(e.target.value), true);
+  $("switchBtn").onclick = () => requestSwitch(Number($("targetSelect").value), false);
+  $("planAdd").onclick = () => {
+    const t = parseFloat($("planTime").value);
+    if (Number.isFinite(t)) {
+      plans.push({ time: t, toTier: Number($("planTier").value) });
+      renderPlans();
+    }
+  };
+  document.addEventListener("keydown", (e) => {
+    if (e.target.tagName === "INPUT") return;
+    if (e.code === "Space") { e.preventDefault(); togglePlay(); }
+    if (e.key === "s" || e.key === "S") requestSwitch(Number($("targetSelect").value), false);
+    if (e.key === "1") switchTier(0, true);
+    if (e.key === "2" && tiers.length > 1) switchTier(1, true);
+  });
+}
+
+function renderPlans() {
+  $("planList").textContent = plans.length
+    ? plans.map((p, i) => `${i + 1}.@${fmt(p.time)}→${tiers[p.toTier].name}`).join("  ")
+    : "无";
+}
+
+function currentVideo() { return tiers[activeTier].el; }
+
+function loadSegment(idx, seg) {
+  const tier = tiers[idx];
+  if (tier.current && tier.current.seq === seg.seq) return;
+  tier.current = seg;
+  // 只换 src；具体 currentTime 由 seekVideoTo 等 loadedmetadata 后再设，
+  // 否则在元数据到达前赋值会被浏览器忽略，表现为“接上了错误的开头”
+  tier.el.src = "/media/" + seg.file;
+  tier.el.dataset.file = seg.file;
+  tier.el.dataset.pendingLocal = "";
+}
+
+function seekVideoTo(tier, local) {
+  const v = tier.el;
+  const apply = () => { v.currentTime = Math.max(0, local); };
+  if (v.readyState >= 1) {
+    apply();
+  } else {
+    v.addEventListener("loadedmetadata", function h() {
+      v.removeEventListener("loadedmetadata", h);
+      apply();
+    });
+  }
+}
+
+function seekAll(t) {
+  perfClock = t;
+  tiers.forEach((tier, idx) => {
+    const seg = segAt(idx, t);
+    if (!seg || !seg.openable) { tier.current = null; tier.el.removeAttribute("src"); return; }
+    loadSegment(idx, seg);
+    seekVideoTo(tier, t - seg.source_start);
+  });
+  if (manifest.audio_track) audio.currentTime = t;
+}
+
+function userSeek(t) {
+  seekAll(t);
+  if (playing) {
+    audio.play().catch(() => {});
+    tiers.forEach(x => x.el.play().catch(() => {}));
+  }
+}
+
+function togglePlay() {
+  if (playing) {
+    audio.pause(); tiers.forEach(x => x.el.pause());
+    playing = false; $("playBtn").textContent = "▶ 播放";
+  } else {
+    playing = true; perfLast = performance.now();
+    audio.play().catch(() => {});
+    tiers.forEach(x => x.el.play().catch(() => {}));
+    $("playBtn").textContent = "⏸ 暂停";
+  }
+}
+
+function stopAll() {
+  playing = false;
+  audio.pause(); tiers.forEach(x => x.el.pause());
+  $("playBtn").textContent = "▶ 播放";
+}
+
+function switchTier(idx, manual) {
+  if (idx === activeTier) return;
+  activeTier = idx;
+  $("tierSelect").value = String(idx);
+  tiers.forEach((t, i) => {
+    t.card.classList.toggle("active", i === idx);
+    $("badge-" + i).textContent = i === idx ? "● 出声画面" : "待机";
+    $("badge-" + i).className = "badge" + (i === idx ? " live" : "");
+    t.el.muted = i !== idx;
+  });
+  const t = sourceTime();
+  const seg = segAt(idx, t);
+  if (seg) {
+    loadSegment(idx, seg);
+    seekVideoTo(tiers[idx], t - seg.source_start);
+  }
+  if (playing) tiers[idx].el.play().catch(() => {});
+}
+
+async function requestSwitch(toIdx, fromPlan) {
+  if (toIdx === activeTier) return;
+  const t = sourceTime();
+  const d = await getJSON(`/api/switch?from=${encodeURIComponent(tiers[activeTier].name)}`
+    + `&to=${encodeURIComponent(tiers[toIdx].name)}&t=${t}`);
+  appendLog(d, tiers[activeTier].name, tiers[toIdx].name);
+
+  if (d.verdict === "switch_now") {
+    // 最后一道闸：严格禁止回退到更早的源画面（重播防护）
+    if (d.candidate_time < t) {
+      showToast("abort", "拒绝重播", d.reason); return;
+    }
+    switchTier(toIdx, false);
+    showToast("switch_now", "换档成功",
+      `${fmt(t)} 处切换到 ${tiers[toIdx].name}，首帧 ${d.target_frame_label}`);
+    pendingSwitch = null;
+  } else if (d.verdict === "wait") {
+    pendingSwitch = { toIdx, candidate: d.candidate_time, reason: d.reason };
+    showToast("wait", "当前点不能准确接过去",
+      `${d.reason}（继续旧档 ${d.wait_seconds.toFixed(2)}s）`);
+  } else {
+    pendingSwitch = null;
+    showToast("abort", "切换中止", d.reason + (d.replay_rejected ? "（不会重播移过去的画面）" : ""));
+  }
+}
+
+function showToast(kind, title, body) {
+  const el = $("toast");
+  el.className = "toast show " + kind;
+  el.querySelector(".title").textContent = title;
+  el.querySelector(".body").textContent = body;
+}
+
+function appendLog(d, fromName, toName) {
+  logRows.push(d);
+  const tb = $("logBody");
+  if (logRows.length === 1) tb.innerHTML = "";
+  const tr = document.createElement("tr");
+  const when = new Date(d.logged_at * 1000).toLocaleTimeString();
+  tr.innerHTML = `<td>${when}</td><td>${fromName} → ${toName}</td>`
+    + `<td>${sourceTime().toFixed(3)}s</td>`
+    + `<td class="v-${d.verdict}">${d.verdict}</td>`
+    + `<td>${d.reason}${d.candidate_time != null ? "（候选 " + d.candidate_time.toFixed(3) + "s）" : ""}</td>`;
+  tb.prepend(tr);
+}
+
+async function loadSwitchLog() {
+  try {
+    const data = await getJSON("/api/switch-log");
+    (data.attempts || []).forEach(d => logRows.push(d));
+  } catch {}
+}
+
+function frameInfo(t) {
+  const fr = (markers.frames || []).find(f => Math.abs(f.time - t) <= 0.5 / manifest.source_fps);
+  if (fr) return { label: fr.label, beat: fr.beat, gframe: fr.global_frame };
+  // 无 markers 文件时按 manifest 分段的 frame_label 推算
+  const seg = segAt(activeTier, t);
+  return { label: seg ? seg.frame_label : "—", beat: Math.round(t / (markers.beat_interval || 0.5)),
+           gframe: Math.round(t * manifest.source_fps) };
+}
+
+function tick(now) {
+  if (playing && !manifest.audio_track) {
+    if (perfLast) perfClock += (now - perfLast) / 1000;
+    perfLast = now;
+  } else if (!playing) {
+    perfLast = now;
+  }
+  const t = sourceTime();
+
+  // 分段跟随：当前档视频按源时间换段并校准 local time
+  tiers.forEach((tier, idx) => {
+    const seg = segAt(idx, t);
+    const v = tier.el;
+    if (!seg || !seg.openable) return;
+    if (!tier.current || tier.current.seq !== seg.seq) {
+      loadSegment(idx, seg);
+      seekVideoTo(tier, t - seg.source_start);
+      if (playing && idx === activeTier) v.play().catch(() => {});
+    } else if (playing && Math.abs(v.currentTime - (t - seg.source_start)) > 0.25) {
+      seekVideoTo(tier, t - seg.source_start);  // 防漂移
+    }
+    v.muted = idx !== activeTier;
+  });
+
+  // 计划换档
+  while (plans.length && plans[0].time <= t + 1e-6) {
+    const p = plans.shift();
+    renderPlans();
+    requestSwitch(p.toTier, true);
+  }
+  // wait 决策到达候选点自动重试
+  if (pendingSwitch && t >= pendingSwitch.candidate - 1.5 / manifest.source_fps) {
+    const target = pendingSwitch.toIdx;
+    pendingSwitch = null;
+    requestSwitch(target, true);
+  }
+
+  // HUD 与播放头
+  const info = frameInfo(t);
+  $("hudTime").textContent = fmt(t);
+  $("hudFrame").textContent = `#${info.gframe} · ${info.label}`;
+  $("hudBeat").textContent = info.beat;
+  const cur = segAt(activeTier, t);
+  $("hudSeg").textContent = cur ? `${tiers[activeTier].name} #${cur.seq}` : "—";
+  const pct = (t / manifest.source_duration) * 100;
+  manifest.tiers.forEach((_, idx) => { $("playhead-" + idx).style.left = pct + "%"; });
+  document.querySelectorAll(".seg").forEach(el => el.classList.remove("current"));
+  if (cur) {
+    const track = document.querySelectorAll(".track")[activeTier];
+    const target = [...track.children].find(el =>
+      el.classList.contains("seg") && el.textContent.startsWith(`#${cur.seq} `));
+    if (target) target.classList.add("current");
+  }
+
+  if (t >= manifest.source_duration - 0.05) stopAll();
+  rafId = requestAnimationFrame(tick);
+}
+
+init().catch(err => {
+  document.body.insertAdjacentHTML("afterbegin",
+    `<div style="padding:20px;color:var(--bad)">初始化失败: ${err.message}</div>`);
+});
+</script>
+</body>
+</html>

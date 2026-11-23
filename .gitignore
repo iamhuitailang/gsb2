@@ -45,3 +45,8 @@ coverage/
 
 # 生成的示例素材(可用 npm run generate:samples 恢复)
 public/samples/
+
+# sebalign 运行期产物：demo 工作区、临时构建与切换日志
+demo_data/
+workspace_*/
+switch_log.json
