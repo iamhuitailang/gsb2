@@ -1,0 +1,20 @@
+{
+  "name": "instanced-picking-sample",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test:logic": "tsx tests/cull-logic.mts",
+    "test:smoke": "node tests/smoke.mjs",
+    "test": "npm run build && npm run test:logic && npm run test:smoke"
+  },
+  "devDependencies": {
+    "playwright": "^1.65.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7"
+  }
+}

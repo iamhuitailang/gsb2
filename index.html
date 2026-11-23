@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>实例化绘制与点选核对 · WebGL2 / TypeScript</title>
+  </head>
+  <body>
+    <div id="app">
+      <main id="stage">
+        <canvas id="gl"></canvas>
+        <div id="label-layer"></div>
+        <div id="crosshair" hidden></div>
+        <div id="hud">
+          <span id="hud-mode" class="hud-chip"></span>
+          <span id="hud-dpr" class="hud-chip"></span>
+          <span id="hud-coord" class="hud-chip"></span>
+        </div>
+      </main>
+
+      <aside id="panel">
+        <header>
+          <h1>实例点选样例</h1>
+          <p class="sub">共享网格 · 实例化绘制 · FBO 深度点选</p>
+        </header>
+
+        <section class="card">
+          <h2>场景</h2>
+          <div class="row">
+            <button id="btn-sparse" class="primary">稀疏场景</button>
+            <button id="btn-dense" class="primary">密集场景</button>
+          </div>
+          <div class="row">
+            <button id="btn-add-batch">再加一批</button>
+            <button id="btn-reset-cam">复位视角</button>
+          </div>
+          <label class="check"><input type="checkbox" id="chk-labels" checked /> 显示编号标签</label>
+          <label class="check"><input type="checkbox" id="chk-frustum" /> 视锥剔除（影响实画数量）</label>
+          <div class="hint">
+            左拖旋转视角 · 右键/Shift+左拖平移 · 滚轮缩放 · 单击点选 ·
+            Delete 删选中 · H 隐藏选中
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>绘制统计</h2>
+          <table class="kv">
+            <tbody>
+              <tr><td>逻辑实例总数</td><td id="st-total">0</td></tr>
+              <tr><td>可见实例数</td><td id="st-visible">0</td></tr>
+              <tr><td>实际绘制实例数</td><td id="st-drawn">0</td></tr>
+              <tr><td>逻辑批次数（同批共享变换）</td><td id="st-batches">0</td></tr>
+              <tr><td>drawElementsInstanced 调用</td><td id="st-calls">0</td></tr>
+              <tr><td>每批最大实例数 / 分块</td><td id="st-cap">0</td></tr>
+              <tr><td>实例缓冲容量 / 重分配次数</td><td id="st-capacity">0</td></tr>
+              <tr><td>视角模式</td><td id="st-frozen">实时</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section class="card">
+          <h2>批量操作</h2>
+          <div class="row">
+            <button id="btn-hide-selected">隐藏选中</button>
+            <button id="btn-show-all">全部显示</button>
+          </div>
+          <div class="row">
+            <button id="btn-delete-selected">删除选中</button>
+            <button id="btn-shuffle">重排顺序</button>
+          </div>
+          <div class="row">
+            <button id="btn-mirror-batch">镜像当前批</button>
+            <button id="btn-random-batch">随机变换当前批</button>
+          </div>
+          <div class="hint">
+            重排只改变绘制 slot，稳定编号（#id）不变；删除的编号永不复用。
+          </div>
+        </section>
+
+        <section class="card" id="selection-card">
+          <h2>选中实例</h2>
+          <div id="selection-empty" class="muted">未选中任何实例</div>
+          <div id="selection-body" hidden>
+            <table class="kv">
+              <tbody>
+                <tr><td>稳定编号</td><td id="sel-id">—</td></tr>
+                <tr><td>所属批次</td><td id="sel-batch">—</td></tr>
+                <tr><td>本次绘制 slot</td><td id="sel-slot">—</td></tr>
+                <tr><td>颜色</td><td id="sel-color">—</td></tr>
+                <tr><td>镜像（负缩放）</td><td id="sel-mirror">—</td></tr>
+              </tbody>
+            </table>
+            <div class="grid3">
+              <label>位置 X<input id="in-tx" type="number" step="0.1" /></label>
+              <label>位置 Y<input id="in-ty" type="number" step="0.1" /></label>
+              <label>位置 Z<input id="in-tz" type="number" step="0.1" /></label>
+            </div>
+            <div class="grid3">
+              <label>旋转 ° X<input id="in-rx" type="number" step="5" /></label>
+              <label>旋转 ° Y<input id="in-ry" type="number" step="5" /></label>
+              <label>旋转 ° Z<input id="in-rz" type="number" step="5" /></label>
+            </div>
+            <div class="grid3">
+              <label>缩放 X<input id="in-sx" type="number" step="0.1" /></label>
+              <label>缩放 Y<input id="in-sy" type="number" step="0.1" /></label>
+              <label>缩放 Z<input id="in-sz" type="number" step="0.1" /></label>
+            </div>
+            <div class="row">
+              <button id="btn-sel-hide">隐藏</button>
+              <button id="btn-sel-delete" class="danger">删除</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>点选核对</h2>
+          <label class="check"><input type="checkbox" id="chk-neighbor" checked /> 5×5 邻域边缘像素核对</label>
+          <div id="neighbor-grid" class="neighbor" hidden></div>
+          <table class="kv" id="pick-table" hidden>
+            <tbody>
+              <tr><td>点选编号</td><td id="pk-id">—</td></tr>
+              <tr><td>命中面（局部 ±X/Y/Z）</td><td id="pk-face">—</td></tr>
+              <tr><td>命中点（世界）</td><td id="pk-world">—</td></tr>
+              <tr><td>命中点（实例局部）</td><td id="pk-local">—</td></tr>
+              <tr><td>深度 gl_FragCoord.z</td><td id="pk-depth">—</td></tr>
+              <tr><td>点击坐标（CSS / 物理像素）</td><td id="pk-px">—</td></tr>
+            </tbody>
+          </table>
+          <div class="row">
+            <button id="btn-repick">按记录坐标重测</button>
+            <button id="btn-clear-pick">清除标记</button>
+          </div>
+          <ol id="pick-log" class="log"></ol>
+        </section>
+
+        <section class="card">
+          <h2>布局与结果</h2>
+          <div class="row">
+            <button id="btn-freeze">冻结布局</button>
+            <button id="btn-restore">恢复当前布局</button>
+          </div>
+          <div class="row">
+            <button id="btn-save">保存到本地</button>
+            <button id="btn-load">读取本地</button>
+          </div>
+          <div class="row">
+            <button id="btn-export-layout">导出布局 JSON</button>
+            <button id="btn-import-layout">导入布局 JSON</button>
+          </div>
+          <div class="row">
+            <button id="btn-export-picks">导出点选记录 JSON</button>
+            <button id="btn-clear-log">清空点选记录</button>
+          </div>
+          <input type="file" id="file-import" accept="application/json" hidden />
+          <div id="save-status" class="hint"></div>
+        </section>
+      </aside>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
