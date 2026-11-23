@@ -1,0 +1,7 @@
+# Required at runtime
+numpy>=1.24
+# ffmpeg and ffprobe must be installed separately and available on PATH
+#
+# Optional: matplotlib enables the `seam --png` waveform plot. Without it the
+# tool still emits ASCII seam tables, CSV and WAV outputs.
+matplotlib>=3.7
