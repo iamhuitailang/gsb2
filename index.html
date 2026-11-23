@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>本地音频频谱分析</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>音频频谱分析 <span class="badge">纯本地处理</span></h1>
+</header>
+
+<main>
+  <!-- 文件与传输控制 -->
+  <section class="panel transport">
+    <div class="row">
+      <label class="file-btn">
+        选择音频文件
+        <input type="file" id="fileInput" accept="audio/*,.wav,.mp3,.ogg,.flac,.m4a,.aac,.opus,.webm">
+      </label>
+      <span id="fileName" class="file-name">未加载文件</span>
+      <span class="spacer"></span>
+      <button id="btnLoadProject" title="加载工程 JSON">打开工程</button>
+      <button id="btnSaveProject" title="保存工程 JSON（不含音频本体）">保存工程</button>
+      <button id="btnExportReport" title="导出 Markdown 分析报告">导出报告</button>
+      <input type="file" id="projectInput" accept=".json,application/json" hidden>
+    </div>
+    <div class="row">
+      <button id="btnPlay" disabled>播放</button>
+      <span id="timeLabel" class="time">00:00.0 / 00:00.0</span>
+      <div class="seek-wrap" id="seekWrap" title="点击 / 拖动跳转">
+        <div class="seek-track" id="seekTrack">
+          <div class="seek-progress" id="seekProgress"></div>
+          <div class="seek-markers" id="seekMarkers"></div>
+          <div class="seek-cursor" id="seekCursor"></div>
+        </div>
+      </div>
+    </div>
+    <audio id="audio" crossorigin="anonymous"></audio>
+  </section>
+
+  <!-- 视图与参数 -->
+  <section class="panel controls">
+    <div class="row">
+      <span class="group-label">视图</span>
+      <div class="seg" id="viewSeg">
+        <button data-view="waveform">波形</button>
+        <button data-view="spectrum" class="active">频谱</button>
+        <button data-view="diff">声道差异</button>
+      </div>
+      <span class="group-label">频率刻度</span>
+      <div class="seg" id="scaleSeg">
+        <button data-scale="linear">线性</button>
+        <button data-scale="log" class="active">对数</button>
+      </div>
+      <label class="ctl">分析窗口
+        <select id="fftSize">
+          <option value="512">512</option>
+          <option value="1024">1024</option>
+          <option value="2048" selected>2048</option>
+          <option value="4096">4096</option>
+          <option value="8192">8192</option>
+          <option value="16384">16384</option>
+          <option value="32768">32768</option>
+        </select>
+      </label>
+      <label class="ctl">峰值保持
+        <select id="peakHold">
+          <option value="0">关闭</option>
+          <option value="0.5">0.5 s</option>
+          <option value="1">1 s</option>
+          <option value="2" selected>2 s</option>
+          <option value="5">5 s</option>
+          <option value="10">10 s</option>
+          <option value="Infinity">无限</option>
+        </select>
+      </label>
+      <span id="fftInfo" class="hint"></span>
+    </div>
+  </section>
+
+  <!-- 图形区 -->
+  <section class="panel canvas-panel">
+    <canvas id="canvas"></canvas>
+    <div id="canvasHint" class="canvas-hint">加载音频后，在频谱视图上横向拖动可选择频段，随后点击「添加标记」</div>
+  </section>
+
+  <!-- 标记 -->
+  <section class="panel markers">
+    <div class="row">
+      <span class="group-label">频段标记</span>
+      <span id="selInfo" class="hint">未选择频段（在频谱图上拖动选择）</span>
+      <button id="btnAddMarker" disabled>添加标记</button>
+      <button id="btnClearMarkers" disabled>清空标记</button>
+    </div>
+    <table id="markerTable" class="marker-table">
+      <thead>
+        <tr>
+          <th>#</th><th>频段 (Hz)</th><th>开始 (s)</th><th>结束 (s)</th><th>备注</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="markerBody"></tbody>
+    </table>
+  </section>
+
+  <!-- 样音 -->
+  <section class="panel samples">
+    <span class="group-label">内置样音</span>
+    <button class="sample" data-sample="samples/sample_lowfreq.wav">低频 (30–200 Hz 扫频)</button>
+    <button class="sample" data-sample="samples/sample_tone.wav">纯音 (1 kHz)</button>
+    <button class="sample" data-sample="samples/sample_stereo.wav">左右声道差异</button>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
