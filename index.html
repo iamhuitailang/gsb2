@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Voicebox · 游戏短音效调度预演台</title>
+    <meta
+      name="description"
+      content="在有限播放通道下预演短音效事件表：哪些保留、哪些延后、哪些被顶掉。"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell" id="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+              <path d="M3 12h2l2-5 3 10 3-13 2 8h6" />
+            </svg>
+          </span>
+          <div class="brand-text">
+            <h1>Voicebox</h1>
+            <p>短音效调度预演台 · 有限通道下谁留下、谁让路</p>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <div class="sample-switch" role="group" aria-label="示例时间表">
+            <span class="switch-label">示例</span>
+            <button class="seg" data-sample="dense" type="button" aria-pressed="true">冲突密集</button>
+            <button class="seg" data-sample="roomy" type="button" aria-pressed="false">全部放完</button>
+          </div>
+          <button class="btn ghost" id="btn-presets" type="button" aria-expanded="false">
+            预设视图
+          </button>
+          <div class="preset-menu" id="preset-menu" hidden>
+            <p class="preset-title">一键对比</p>
+            <button class="preset-item" data-preset="baseline" type="button">
+              <strong>基线</strong><span>默认 3 通道 · 抢占优先</span>
+            </button>
+            <button class="preset-item" data-preset="tight" type="button">
+              <strong>通道吃紧</strong><span>2 通道 · 最大延迟 200ms</span>
+            </button>
+            <button class="preset-item" data-preset="queue" type="button">
+              <strong>只排队</strong><span>延迟优先 · 不顶替</span>
+            </button>
+            <button class="preset-item" data-preset="drop" type="button">
+              <strong>硬舍弃</strong><span>直接舍弃 · 零等待</span>
+            </button>
+            <button class="preset-item" data-preset="wide" type="button">
+              <strong>宽通道</strong><span>6 通道 · 全部放完对照</span>
+            </button>
+          </div>
+          <button class="btn" id="btn-export" type="button">导出本次结果</button>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="panel stage" aria-labelledby="stage-title">
+          <div class="panel-head">
+            <div>
+              <h2 id="stage-title">时间线</h2>
+              <p class="sub" id="stage-sub">按计划时间排列；颜色 = 声音类别，深浅 = 决策结果</p>
+            </div>
+            <div class="digest-chip" id="digest-chip" title="结果指纹：同一配置与事件表必定得到同一结果">
+              <span class="digest-label">结果指纹</span>
+              <code id="digest-value">—</code>
+            </div>
+          </div>
+
+          <div class="stage-controls">
+            <label class="ctl">
+              <span class="ctl-label">播放名额</span>
+              <input type="range" id="ctl-voices" min="1" max="8" step="1" value="3" />
+              <output id="ctl-voices-out" class="ctl-out">3</output>
+            </label>
+            <label class="ctl">
+              <span class="ctl-label">最大延迟</span>
+              <input type="range" id="ctl-delay" min="0" max="1500" step="20" value="420" />
+              <output id="ctl-delay-out" class="ctl-out">420ms</output>
+            </label>
+            <label class="ctl ctl-select">
+              <span class="ctl-label">冲突规则</span>
+              <select id="ctl-policy"></select>
+            </label>
+            <div class="ctl-note" id="ctl-note"></div>
+            <div class="view-switch" role="group" aria-label="时间线分组">
+              <button class="seg tiny" data-view="channel" type="button" aria-pressed="true">按通道</button>
+              <button class="seg tiny" data-view="category" type="button" aria-pressed="false">按类别</button>
+            </div>
+          </div>
+
+          <div class="transport" role="group" aria-label="播放控制">
+            <button class="icon-btn" id="btn-restart" type="button" title="回到开头 (Home)" aria-label="回到开头">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5v14"/><path d="M20 6 10 12l10 6z"/></svg>
+            </button>
+            <button class="icon-btn primary" id="btn-play" type="button" title="播放 / 暂停 (Space)" aria-label="播放或暂停">
+              <svg class="ico-play" viewBox="0 0 24 24" width="19" height="19" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>
+              <svg class="ico-pause" viewBox="0 0 24 24" width="19" height="19" fill="currentColor" hidden><rect x="6" y="4.5" width="4.2" height="15" rx="1"/><rect x="13.8" y="4.5" width="4.2" height="15" rx="1"/></svg>
+            </button>
+            <button class="icon-btn" id="btn-step-back" type="button" title="后退 50 ms (←)" aria-label="后退 50 毫秒">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6 9 12l6 6"/><path d="M19 6v12" opacity=".5"/></svg>
+            </button>
+            <button class="icon-btn" id="btn-step-fwd" type="button" title="前进 50 ms (→)" aria-label="前进 50 毫秒">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"/><path d="M5 6v12" opacity=".5"/></svg>
+            </button>
+            <div class="timecode" aria-live="off">
+              <output id="time-now">0.000</output><span class="timecode-sep">/</span><span id="time-total">0.000</span><span class="unit">s</span>
+            </div>
+            <div class="transport-right">
+              <span class="playing-badge" id="play-state">待机</span>
+              <span class="muted-note" id="mute-note" hidden></span>
+            </div>
+          </div>
+
+          <div class="scrub-wrap">
+            <input
+              class="scrub"
+              id="scrub"
+              type="range"
+              min="0"
+              max="1000"
+              value="0"
+              step="1"
+              aria-label="播放位置"
+            />
+          </div>
+
+          <div class="now-strip-wrap">
+            <span class="now-strip-label">此刻占用</span>
+            <div class="now-strip" id="now-strip"></div>
+            <span class="now-strip-plan" id="now-plan"></span>
+          </div>
+
+          <div class="gantt-wrap">
+            <div class="gantt" id="gantt">
+              <div class="gantt-gutter" id="gantt-gutter" aria-hidden="true"></div>
+              <div class="gantt-plot" id="gantt-plot">
+                <div class="gantt-grid" id="gantt-grid"></div>
+                <div class="gantt-lanes" id="gantt-lanes"></div>
+                <div class="gantt-cursor" id="gantt-cursor" aria-hidden="true"></div>
+                <div class="gantt-now" id="gantt-now" aria-hidden="true"></div>
+              </div>
+            </div>
+            <div class="gantt-axis" id="gantt-axis" aria-hidden="true"></div>
+          </div>
+
+          <div class="legend" id="legend" role="list" aria-label="类别图例"></div>
+
+          <div class="hover-card" id="hover-card" hidden></div>
+        </section>
+
+        <aside class="panel summary" aria-labelledby="summary-title">
+          <div class="panel-head compact">
+            <h2 id="summary-title">本次结果</h2>
+            <span class="policy-chip" id="policy-chip">抢占优先</span>
+          </div>
+          <div class="stat-grid" id="stat-grid">
+            <div class="stat" data-tone="good"><span class="stat-label">保留</span><span class="stat-value" id="stat-kept">0</span><span class="stat-foot" id="stat-kept-foot">按计划开始</span></div>
+            <div class="stat" data-tone="warning"><span class="stat-label">延后</span><span class="stat-value" id="stat-delayed">0</span><span class="stat-foot" id="stat-delayed-foot">仍在延迟内</span></div>
+            <div class="stat" data-tone="serious"><span class="stat-label">顶掉</span><span class="stat-value" id="stat-preempted">0</span><span class="stat-foot" id="stat-preempted-foot">播放中被截断</span></div>
+            <div class="stat" data-tone="critical"><span class="stat-label">舍弃</span><span class="stat-value" id="stat-dropped">0</span><span class="stat-foot" id="stat-dropped-foot">完全不发声</span></div>
+          </div>
+          <dl class="kv-list" id="kv-list">
+            <div><dt>发声事件</dt><dd><span id="kv-sounded">0</span> / <span id="kv-total">0</span></dd></div>
+            <div><dt>完整播完</dt><dd id="kv-full">0</dd></div>
+            <div><dt>通道峰值</dt><dd><span id="kv-peak">0</span> / <span id="kv-voices">3</span></dd></div>
+            <div><dt>平均延迟 / 最大</dt><dd><span id="kv-avg-delay">0</span> / <span id="kv-max-delay">0</span> ms</dd></div>
+            <div><dt>通道占用率</dt><dd id="kv-util">0%</dd></div>
+          </dl>
+          <div class="meter" aria-hidden="true"><span id="util-meter"></span></div>
+          <p class="summary-note" id="summary-note"></p>
+
+          <div class="panel-subhead">
+            <h3>静音对比</h3>
+            <button class="btn tiny ghost" id="btn-compare-clear" type="button" hidden>恢复全部</button>
+          </div>
+          <div class="mute-list" id="mute-list"></div>
+          <div class="compare-box" id="compare-box" hidden>
+            <p class="compare-head" id="compare-head"></p>
+            <div class="compare-grid" id="compare-grid"></div>
+            <ul class="compare-list" id="compare-list"></ul>
+          </div>
+        </aside>
+      </main>
+
+      <section class="panel tables" aria-labelledby="tables-title">
+        <div class="panel-head compact">
+          <div class="table-tabs" role="tablist" aria-label="结果视图">
+            <button role="tab" id="tab-decisions" aria-selected="true" aria-controls="pane-decisions" type="button">决策日志</button>
+            <button role="tab" id="tab-events" aria-selected="false" aria-controls="pane-events" type="button">事件表</button>
+            <button role="tab" id="tab-channels" aria-selected="false" aria-controls="pane-channels" type="button">通道占用</button>
+            <button role="tab" id="tab-categories" aria-selected="false" aria-controls="pane-categories" type="button">音色配置</button>
+          </div>
+          <h2 id="tables-title" class="sr-only">明细</h2>
+          <div class="table-tools">
+            <label class="check"><input type="checkbox" id="filter-changed" /> 只看受静音影响的</label>
+            <button class="btn tiny ghost" id="btn-save" type="button">保存设置与事件表</button>
+            <button class="btn tiny ghost" id="btn-load" type="button">载入</button>
+            <input type="file" id="file-load" accept="application/json,.json" hidden />
+          </div>
+        </div>
+
+        <div class="pane" id="pane-decisions" role="tabpanel" aria-labelledby="tab-decisions">
+          <div class="table-scroll">
+            <table class="data-table" id="decision-table">
+              <thead>
+                <tr>
+                  <th scope="col">#</th>
+                  <th scope="col">事件</th>
+                  <th scope="col">类别</th>
+                  <th scope="col">计划</th>
+                  <th scope="col">实际开始</th>
+                  <th scope="col">结束</th>
+                  <th scope="col">延迟</th>
+                  <th scope="col">通道</th>
+                  <th scope="col">决策</th>
+                  <th scope="col">原因</th>
+                </tr>
+              </thead>
+              <tbody id="decision-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="pane" id="pane-events" role="tabpanel" aria-labelledby="tab-events" hidden>
+          <form class="event-add" id="event-add">
+            <label>类别
+              <select id="add-category" required></select>
+            </label>
+            <label>时间 (ms)
+              <input type="number" id="add-time" min="0" max="120000" step="10" value="0" required />
+            </label>
+            <label class="grow">备注
+              <input type="text" id="add-note" maxlength="80" placeholder="可选，例如 落地 / 金币 +5" />
+            </label>
+            <button class="btn small" type="submit">加入事件</button>
+          </form>
+          <div class="table-scroll">
+            <table class="data-table" id="event-table">
+              <thead>
+                <tr>
+                  <th scope="col">#</th>
+                  <th scope="col">事件</th>
+                  <th scope="col">类别</th>
+                  <th scope="col">计划 (ms)</th>
+                  <th scope="col">备注</th>
+                  <th scope="col">结果</th>
+                  <th scope="col"><span class="sr-only">操作</span></th>
+                </tr>
+              </thead>
+              <tbody id="event-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="pane" id="pane-channels" role="tabpanel" aria-labelledby="tab-channels" hidden>
+          <div class="channel-strip" id="channel-strip"></div>
+          <p class="pane-note">每一行是一条播放通道。色块长度 = 实际发声时长；被顶掉的声音在这里会提前结束。</p>
+        </div>
+
+        <div class="pane" id="pane-categories" role="tabpanel" aria-labelledby="tab-categories" hidden>
+          <div class="cat-grid" id="cat-grid"></div>
+          <p class="pane-note">修改任一参数会立即重算，并作废当前播放位置。静音开关只影响发声与对比，不改变其它类别的时间表基线。</p>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <p>
+          所有样音由 Web Audio 在本地合成，无音频文件；导出包内的 WAV 由同一份调度结果离线渲染。
+        </p>
+        <p class="hint-keys">
+          <kbd>Space</kbd> 播放/暂停 · <kbd>←</kbd><kbd>→</kbd> 单步 50ms · <kbd>Home</kbd> 回到开头
+        </p>
+      </footer>
+    </div>
+
+    <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+    <template id="row-template">
+      <tr>
+        <td class="num"></td>
+        <td class="mono"></td>
+        <td></td>
+        <td class="num"></td>
+        <td class="num"></td>
+        <td class="num"></td>
+        <td class="num"></td>
+        <td class="num"></td>
+        <td></td>
+        <td class="reason"></td>
+      </tr>
+    </template>
+
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>

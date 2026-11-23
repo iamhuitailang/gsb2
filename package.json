@@ -1,0 +1,12 @@
+{
+  "name": "voicebox-audio-scheduler",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "游戏短音效调度预演台 — 有限通道下的保留 / 延迟 / 舍弃 / 顶替",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node server.mjs",
+    "test": "node --test tests/*.test.mjs"
+  }
+}
