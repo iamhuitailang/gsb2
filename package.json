@@ -1,0 +1,13 @@
+{
+  "name": "navmesh-inspector",
+  "version": "1.0.0",
+  "description": "导航网格编辑与寻路检查工具（纯前端，无构建依赖）",
+  "type": "module",
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "test": "node --test test/*.test.js",
+    "smoke": "node tools/browser-smoke.mjs",
+    "generate:samples": "node tools/generate-samples.mjs"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>导航网格编辑与寻路检查工具</title>
+  <link rel="stylesheet" href="src/ui/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">导航网格检查台</div>
+    <div class="toolbar" id="toolbar">
+      <div class="tool-group" data-group="tool">
+        <button data-tool="walk" title="普通可行走 (W)">可行走</button>
+        <button data-tool="block" title="障碍 (B)">障碍</button>
+        <button data-tool="road" title="路面：地形代价 0.6">路面</button>
+        <button data-tool="mud" title="泥泞：地形代价 2.5">泥泞</button>
+        <button data-tool="eraser" title="橡皮：恢复普通可行走">橡皮</button>
+        <button data-tool="start" title="设置起点 (S)">起点</button>
+        <button data-tool="goal" title="设置终点 (G)">终点</button>
+        <button data-tool="note" title="添加标注 (N)">标注</button>
+        <button data-tool="pan" title="平移视图 (H / 空格拖拽)">平移</button>
+      </div>
+      <div class="tool-group">
+        <label class="inline">笔刷
+          <input type="number" id="brushSize" min="0" max="8" value="0" step="1" />
+        </label>
+        <label class="inline">角色半径
+          <input type="number" id="agentRadius" min="0" max="8" value="0.5" step="0.1" />
+        </label>
+      </div>
+      <div class="tool-group">
+        <button id="newMapBtn">新建地图</button>
+        <button id="openFileBtn">打开工程</button>
+        <button id="saveFileBtn">保存工程</button>
+        <button id="exportGridBtn">导出栅格</button>
+        <button id="exportGraphBtn">导出图</button>
+        <input type="file" id="fileInput" accept=".json,application/json" hidden />
+        <input type="file" id="bgInput" accept="image/*" hidden />
+        <button id="bgBtn">底图</button>
+        <label class="inline">底图透明度
+          <input type="range" id="bgOpacity" min="0" max="1" step="0.05" value="0.35" />
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <aside class="panel" id="sidePanel">
+      <section>
+        <h3>寻路权重</h3>
+        <div class="radio-list" id="weightPreset">
+          <label><input type="radio" name="preset" value="shortest" checked /> 最短距离</label>
+          <label><input type="radio" name="preset" value="terrain" /> 地形优先</label>
+          <label><input type="radio" name="preset" value="safe" /> 贴墙规避</label>
+          <label><input type="radio" name="preset" value="custom" /> 自定义</label>
+        </div>
+        <div class="weight-sliders">
+          <label>距离权重 <input type="range" id="wDistance" min="0" max="4" step="0.1" value="1" /><span id="wDistanceVal">1.0</span></label>
+          <label>地形权重 <input type="range" id="wTerrain" min="0" max="4" step="0.1" value="0" /><span id="wTerrainVal">0.0</span></label>
+          <label>贴墙权重 <input type="range" id="wWall" min="0" max="4" step="0.1" value="0" /><span id="wWallVal">0.0</span></label>
+        </div>
+        <label class="check"><input type="checkbox" id="compareToggle" /> 叠加最短距离路线做对比（青色）</label>
+      </section>
+
+      <section>
+        <h3>路径结果</h3>
+        <div id="pathSummary" class="path-summary">尚未计算</div>
+        <div id="pathBreakdown" class="breakdown"></div>
+        <div id="compareSummary" class="compare-summary"></div>
+        <div id="statusBanner" class="banner hidden"></div>
+      </section>
+
+      <section>
+        <h3>连通分量</h3>
+        <div id="componentList" class="component-list"></div>
+      </section>
+
+      <section>
+        <h3>图层</h3>
+        <label class="check"><input type="checkbox" id="layerUnreachable" checked /> 显示不可达区域</label>
+        <label class="check"><input type="checkbox" id="layerExplored" /> 显示 A* 搜索范围</label>
+        <label class="check"><input type="checkbox" id="layerRegions" checked /> 高亮最近修改分区</label>
+        <label class="check"><input type="checkbox" id="layerClearance" /> 显示 clearance 数值</label>
+      </section>
+
+      <section>
+        <h3>标注（局部编辑不会清除）</h3>
+        <ul id="annotationList" class="annotation-list"></ul>
+      </section>
+
+      <section>
+        <h3>本地样例</h3>
+        <div class="sample-list" id="sampleList"></div>
+      </section>
+    </aside>
+
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="mainCanvas"></canvas>
+      <canvas id="minimap" width="200" height="140"></canvas>
+      <div id="tooltip" class="tooltip hidden"></div>
+      <div id="hoverCost" class="hover-cost hidden"></div>
+      <div id="toast" class="toast hidden"></div>
+    </div>
+  </main>
+
+  <script type="module" src="src/ui/app.js"></script>
+</body>
+</html>
