@@ -1,0 +1,12 @@
+{
+  "name": "rhythm-judge-desk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "本地节奏谱面判定调试台：变速、长按尾判、检查点重放、双窗口对照",
+  "scripts": {
+    "test": "node tests/judge.test.mjs",
+    "smoke": "node tests/smoke.mjs",
+    "check": "node --check js/model.js && node --check js/judge.js && node --check js/demo.js && node --check js/audio.js && node --check js/ui-core.js && node --check js/ui-render.js && node --check js/ui-timeline.js && node --check js/ui-app.js",
+    "serve": "python3 -m http.server 8000"
+  }
+}
