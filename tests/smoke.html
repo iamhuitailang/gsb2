@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>smoke</title></head>
+<body>
+<script src="../js/geometry.js"></script>
+<script src="../js/rasterize.js"></script>
+<script src="../js/merge.js"></script>
+<script src="../js/synthetic.js"></script>
+<script>
+// 无 UI 依赖的端到端冒烟：演示罐体 → 双视角展开 → 对齐 → 合并 → 留空/来源校验
+const results = [];
+const ok = (name, cond, extra) => { results.push({ name, pass: !!cond, extra: extra || '' }); };
+
+const demo = CylSynthetic.buildDemo();
+const W = 1440, H = 720;
+function controlsFor(spec, cv) {
+  const w = cv.width, h = cv.height, cx = w / 2, cy = h / 2;
+  const halfW = spec.R * Math.sin(spec.fovDeg * Math.PI / 180);
+  const bulge = spec.R * (1 - Math.cos(spec.fovDeg * Math.PI / 180)) * 0.5;
+  return {
+    LT: [cx - halfW, cy - spec.L], RT: [cx + halfW, cy - spec.L],
+    LB: [cx - halfW, cy + spec.L], RB: [cx + halfW, cy + spec.L],
+    TM: [cx, cy - spec.L + bulge], BM: [cx, cy + spec.L - bulge],
+  };
+}
+function toImageData(cv) {
+  const c = document.createElement('canvas');
+  c.width = cv.width; c.height = cv.height;
+  c.getContext('2d').drawImage(cv, 0, 0);
+  return c.getContext('2d').getImageData(0, 0, cv.width, cv.height);
+}
+const specA = demo.views[0], specB = demo.views[1];
+const cA = controlsFor(specA, specA.canvas), cB = controlsFor(specB, specB.canvas);
+const dataA = toImageData(specA.canvas), dataB = toImageData(specB.canvas);
+
+const lim = 80 * Math.PI / 180;
+const warpA = CylGeo.buildWarp(cA, W, H, lim, specA.canvas.width, specA.canvas.height);
+const warpB = CylGeo.buildWarp(cB, W, H, lim, specB.canvas.width, specB.canvas.height);
+const imgA = CylRaster.renderWarp(warpA, dataA);
+const imgB = CylRaster.renderWarp(warpB, dataB);
+
+// 1. 有效像素数量合理且存在 NO-DATA 列
+const validA = [...warpA.status].filter((s) => s === 0).length;
+ok('A 展开存在有效像素', validA > W * H * 0.5, `valid=${validA}`);
+ok('A 展开存在超角留空列', warpA.status[0] === 1 && warpA.status[W - 1] === 1);
+
+// 2. 对齐：两视角中心差 140°，B 局部列 x 对应 A 列 x + 140°*(W/180)
+const shift = 140 * (W / 180);
+const pairs = [[0.3, 0.4], [0.5, 0.5], [0.7, 0.6]].map(([fx, fy]) => {
+  const bx = fx * W, by = fy * H;
+  return { b: [bx, by], a: [bx + shift, by] };
+});
+const sim = CylGeo.fitSimilarity(pairs);
+ok('对齐拟合为纯平移', Math.abs(sim.M.a - 1) < 1e-6 && Math.abs(sim.M.b) < 1e-6 && Math.abs(sim.M.tx - shift) < 1e-4,
+  `tx=${sim.M.tx.toFixed(2)} expected=${shift.toFixed(2)}`);
+ok('对齐残差≈0', sim.rms < 1e-6, `rms=${sim.rms}`);
+
+// 3. 合并：来源标记 + 背面留空
+const merge = CylMerge.mergeViews({ img: imgA, warp: warpA }, { img: imgB, warp: warpB, M: sim.M }, 'average');
+const counts = { 0: 0, 1: 0, 2: 0, 3: 0 };
+for (const s of merge.source) counts[s]++;
+ok('合并图含 A-only / B-only / 重合 / 无数据 四种来源',
+  counts[1] > 0 && counts[2] > 0 && counts[3] > 0 && counts[0] > 0, JSON.stringify(counts));
+
+// 4. 无数据区不能有颜色（透明度为 0），即没有用一圈数据补背面
+let leaked = 0;
+for (let i = 0; i < W * H; i++) if (merge.source[i] === CylMerge.SRC_NONE && merge.merged.data[i * 4 + 3] !== 0) leaked++;
+ok('背面留空像素完全透明（无数据补全）', leaked === 0, `leaked=${leaked}`);
+
+// 5. 反查：从真实重合像素里取一点，应能追溯到两个视角的局部坐标
+let bothIdx = -1;
+for (let i = 0; i < W * H; i++) if (merge.source[i] === CylMerge.SRC_BOTH) { bothIdx = i; break; }
+const bx0 = bothIdx % W, by0 = Math.floor(bothIdx / W);
+const trace = CylMerge.traceOrigin(merge, { img: imgA }, { img: imgB, M: sim.M }, bx0, by0);
+ok('重合点反查同时含 A/B 来源', trace && trace.source === CylMerge.SRC_BOTH && trace.a && trace.b,
+  trace ? `source=${trace.source} at(${bx0},${by0})` : 'null');
+
+// 6. 亮度分歧：B 被压暗 15%，重合区平均 ΔY 应为正（A 更亮）
+let sum = 0, n = 0;
+for (let i = 0; i < W * H; i++) if (merge.source[i] === CylMerge.SRC_BOTH) { sum += merge.lumaDiff[i]; n++; }
+ok('重合区亮度分歧可测（A>B）', sum / n > 5, `mean ΔY=${(sum / n).toFixed(1)}`);
+
+document.title = 'SMOKE ' + results.filter((r) => r.pass).length + '/' + results.length;
+window.__smoke = results;
+document.body.innerHTML = '<pre id="out">' + results.map((r) => (r.pass ? 'PASS ' : 'FAIL ') + r.name + ' ' + r.extra).join('\n') + '</pre>';
+</script>
+</body>
+</html>

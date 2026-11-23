@@ -45,3 +45,6 @@ coverage/
 
 # 生成的示例素材(可用 npm run generate:samples 恢复)
 public/samples/
+
+# 本工具的合成/验证产物（python3 -I tools/cyl_tool.py generate 生成）
+.generated/

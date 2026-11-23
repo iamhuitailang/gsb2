@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>圆柱标签展开 · 本地工具</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="toolbar">
+  <div class="group">
+    <label class="btn">视角 A 图片<input type="file" id="fileA" accept="image/*" hidden></label>
+    <label class="btn">视角 B 图片（可选）<input type="file" id="fileB" accept="image/*" hidden></label>
+    <button class="btn" id="btnDemo" title="用内置程序纹理生成罐体两个视角（无需外部文件）">生成演示罐体</button>
+  </div>
+  <div class="group">
+    <label class="inline">输出宽 <input type="number" id="outW" value="1440" min="120" max="4096" step="10"></label>
+    <label class="inline">输出高 <input type="number" id="outH" value="720" min="80" max="4096" step="10"></label>
+    <button class="btn" id="btnRebuild">重新展开</button>
+  </div>
+  <div class="group">
+    <button class="btn" id="btnExport">导出…</button>
+    <label class="btn">读回配置<input type="file" id="fileImport" accept=".json" hidden></label>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="panel left">
+    <div class="panel-head">
+      <div class="tabs">
+        <button class="tab active" data-view="A">视角 A 源图</button>
+        <button class="tab" data-view="B">视角 B 源图</button>
+      </div>
+      <span id="srcSize" class="muted"></span>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="srcCanvas"></canvas>
+    </div>
+    <div class="panel-foot">
+      <div class="hint" id="srcHint">先打开一张本地图片。拖动 6 个控制点：四个角点定侧缘，上下中点定轴向与罐口弧。</div>
+      <div id="warnings" class="warnings"></div>
+    </div>
+  </section>
+
+  <section class="panel right">
+    <div class="panel-head">
+      <div class="tabs">
+        <button class="tab active" data-mode="unwarp">展开预览</button>
+        <button class="tab" data-mode="merge">双视角合并</button>
+        <button class="tab" data-mode="align">对齐点</button>
+      </div>
+      <div class="legend" id="legendUnwarp">
+        <span><i class="swatch ok"></i>有效</span>
+        <span><i class="swatch limit"></i>超取用角（留空）</span>
+        <span><i class="swatch edge"></i>源图外（留空）</span>
+      </div>
+      <div class="legend hidden" id="legendMerge">
+        <span><i class="swatch a"></i>仅 A</span>
+        <span><i class="swatch b"></i>仅 B</span>
+        <span><i class="swatch both"></i>重合</span>
+        <span><i class="swatch none"></i>无数据</span>
+        <span><i class="swatch conflict"></i>亮度分歧</span>
+      </div>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="outCanvas"></canvas>
+    </div>
+    <div class="controls">
+      <fieldset id="fsUnwarp">
+        <legend>展开参数（当前视角）</legend>
+        <label class="inline">取用角 |θ|≤
+          <input type="range" id="thetaLimit" min="20" max="90" value="90" step="1">
+          <b id="thetaVal">90°</b>
+        </label>
+        <label class="inline">高拉伸提示 ≥
+          <input type="range" id="stretchWarn" min="1.2" max="6" value="2.5" step="0.1">
+          <b id="stretchVal">2.5×</b>
+        </label>
+        <label class="chk"><input type="checkbox" id="showHatch" checked> 显示留空/拉伸标记</label>
+        <label class="chk"><input type="checkbox" id="showStretch"> 叠加拉伸热力</label>
+      </fieldset>
+
+      <fieldset id="fsAlign" class="hidden">
+        <legend>对齐点对（在两侧展开图上分别点相同图案位置）</legend>
+        <div class="row">
+          <button class="btn small" id="btnAddPair">新增点对</button>
+          <button class="btn small" id="btnDelPair">删除最后一对</button>
+          <button class="btn small" id="btnClearPairs">清空</button>
+          <span id="alignInfo" class="muted"></span>
+        </div>
+        <div class="row">
+          <label class="inline">当前打点 <select id="pairSide"></select></label>
+          <span id="pairList" class="pairlist"></span>
+        </div>
+      </fieldset>
+
+      <fieldset id="fsMerge" class="hidden">
+        <legend>重合区处理</legend>
+        <label class="inline">融合
+          <select id="blendMode">
+            <option value="A">只用 A</option>
+            <option value="B">只用 B</option>
+            <option value="average">平均</option>
+            <option value="brighter">取较亮</option>
+          </select>
+        </label>
+        <label class="inline">亮度分歧阈值
+          <input type="range" id="lumaThr" min="5" max="80" value="25" step="1">
+          <b id="lumaVal">25</b>
+        </label>
+        <label class="chk"><input type="checkbox" id="showCoverage"> 显示覆盖范围层</label>
+        <label class="chk"><input type="checkbox" id="showLuma"> 显示亮度分歧</label>
+      </fieldset>
+
+      <fieldset>
+        <legend>点查询（展开图上点击 → 源图位置）</legend>
+        <div id="queryInfo" class="query">在展开图或合并图上点击任意像素。</div>
+      </fieldset>
+    </div>
+  </section>
+</main>
+
+<script src="js/geometry.js"></script>
+<script src="js/rasterize.js"></script>
+<script src="js/merge.js"></script>
+<script src="js/synthetic.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
