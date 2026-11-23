@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>检查点重生规则 · 本地预演</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <h1>检查点重生规则 · 本地预演</h1>
+  <div class="topbar-meta">
+    <span id="stepLabel">步数 0</span>
+    <span id="deathLabel">死亡 0</span>
+    <span id="cpLabel">有效检查点：起点</span>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="stage">
+    <div class="canvas-wrap">
+      <canvas id="board" width="680" height="400"></canvas>
+      <div id="deathOverlay" class="death-overlay hidden">
+        <div class="death-card">
+          <h2>角色死亡，等待重生决策</h2>
+          <p id="deathReason" class="death-reason"></p>
+          <div id="candidateList" class="candidate-list"></div>
+          <div class="death-actions">
+            <button id="btnRespawn" class="primary">按规则在备选点重生</button>
+            <button id="btnResetMech">只重置永久机关后重试</button>
+            <button id="btnResetInit">整局重置后从起点重生</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="dpad">
+        <button data-dir="up" class="dbtn up">▲</button>
+        <button data-dir="left" class="dbtn left">◀</button>
+        <button data-dir="act" class="dbtn act">操作</button>
+        <button data-dir="right" class="dbtn right">▶</button>
+        <button data-dir="down" class="dbtn down">▼</button>
+      </div>
+      <div class="control-actions">
+        <button id="btnRouteA">跑路线 A</button>
+        <button id="btnRouteB">跑路线 B</button>
+        <button id="btnEmergency">演练：制造全不安全</button>
+        <button id="btnPause" disabled>暂停</button>
+        <button id="btnRestart">重新开局</button>
+      </div>
+      <p class="hint">键盘：方向键 / WASD 移动，空格操作身边开关。内置路线可暂停后单步接管。</p>
+    </div>
+  </section>
+
+  <aside class="sidebar">
+    <div class="panel">
+      <h3>对象保留策略（可随时修改）</h3>
+      <div id="policyList" class="policy-list"></div>
+      <p class="panel-note">检查点本身无策略：只前进启用、回踩不倒退。</p>
+    </div>
+
+    <div class="panel">
+      <h3>当前状态</h3>
+      <div id="stateGrid" class="state-grid"></div>
+    </div>
+
+    <div class="panel">
+      <h3>事件流
+        <span class="filter-group">
+          <label><input type="checkbox" data-filter="state" checked />状态</label>
+          <label><input type="checkbox" data-filter="checkpoint" checked />检查点</label>
+          <label><input type="checkbox" data-filter="respawn" checked />重生</label>
+          <label><input type="checkbox" data-filter="death" checked />死亡</label>
+          <label><input type="checkbox" data-filter="all" />全部</label>
+        </span>
+      </h3>
+      <div id="eventLog" class="event-log"></div>
+    </div>
+
+    <div class="panel">
+      <h3>存档与重放</h3>
+      <div class="save-actions">
+        <button id="btnSave">保存规则与过程</button>
+        <button id="btnVerify">从起点重放核对</button>
+        <label class="file-btn">导入存档
+          <input type="file" id="fileImport" accept="application/json" hidden />
+        </label>
+      </div>
+      <pre id="verifyReport" class="verify-report"></pre>
+    </div>
+  </aside>
+</main>
+
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
