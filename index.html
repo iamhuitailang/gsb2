@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>据点补给与占领规则 · 策略试验页</title>
+<style>
+  :root {
+    --cA: #2563eb; --cB: #dc2626; --cN: #9ca3af;
+    --ink: #1f2937; --muted: #6b7280; --line: #e5e7eb;
+    --supply: #16a34a; --brk: #ea580c;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.5 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; color: var(--ink); background: #f8fafc; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 16px; margin: 0 12px 0 0; }
+  button { font: inherit; padding: 4px 10px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; cursor: pointer; }
+  button:hover { background: #f1f5f9; }
+  button.primary { background: var(--cA); border-color: var(--cA); color: #fff; }
+  button.primary:hover { filter: brightness(1.1); }
+  button:disabled { opacity: .4; cursor: default; }
+  label.chk { display: inline-flex; align-items: center; gap: 4px; color: var(--muted); cursor: pointer; }
+  main { display: grid; grid-template-columns: minmax(480px, 1fr) 420px; gap: 12px; padding: 12px 16px; align-items: start; }
+  #mapWrap { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 8px; }
+  #map { width: 100%; height: auto; display: block; }
+  aside { display: flex; flex-direction: column; gap: 10px; }
+  section.card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  section.card h2 { font-size: 13px; margin: 0 0 8px; color: var(--muted); font-weight: 600; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  textarea { width: 100%; font: 12px/1.5 ui-monospace, Menlo, monospace; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px 8px; resize: vertical; }
+  #orderInput { height: 64px; }
+  #ioText { height: 110px; }
+  .edge { stroke: #cbd5e1; stroke-width: 3; }
+  .edge.blocked { stroke: #ef4444; stroke-dasharray: 6 4; }
+  .edge.supply { stroke: var(--supply); stroke-width: 6; opacity: .55; }
+  .edgehit { stroke: transparent; stroke-width: 16; cursor: pointer; }
+  .node { cursor: pointer; }
+  .node .shape { stroke-width: 2.5; }
+  .node.selected .shape { stroke: #f59e0b; stroke-width: 5; }
+  .node.changed .shape { stroke: #f59e0b; stroke-width: 4; stroke-dasharray: 5 3; }
+  .nlabel { font-size: 13px; font-weight: 700; text-anchor: middle; fill: #111827; pointer-events: none; }
+  .units { font-size: 11px; text-anchor: middle; pointer-events: none; }
+  .badge { font-size: 11px; font-weight: 700; text-anchor: middle; fill: #dc2626; pointer-events: none; }
+  .xmark { font-size: 14px; font-weight: 700; text-anchor: middle; fill: #ef4444; pointer-events: none; }
+  .bmark { font-size: 15px; font-weight: 700; text-anchor: middle; fill: var(--brk); pointer-events: none; }
+  .ev { padding: 3px 0; border-bottom: 1px dashed #f1f5f9; font-size: 13px; }
+  .ev:last-child { border-bottom: 0; }
+  .tag { display: inline-block; min-width: 34px; text-align: center; font-size: 11px; border-radius: 4px; padding: 0 5px; margin-right: 6px; color: #fff; }
+  .tag.工程 { background: #7c3aed; } .tag.移动 { background: #2563eb; } .tag.争夺 { background: #dc2626; }
+  .tag.归属 { background: #16a34a; } .tag.补给 { background: #ea580c; } .tag.系统 { background: #6b7280; }
+  .roundrow { padding: 3px 6px; border-radius: 6px; cursor: pointer; font-size: 12.5px; }
+  .roundrow:hover { background: #f1f5f9; }
+  .roundrow.cur { background: #dbeafe; }
+  .roundrow code { color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 4px; margin-right: 12px; font-size: 12px; color: var(--muted); }
+  .sw { width: 12px; height: 12px; display: inline-block; border-radius: 3px; }
+  .kv { font-size: 13px; }
+  .kv b { color: var(--muted); font-weight: 600; margin-right: 4px; }
+  .path { font: 12px ui-monospace, Menlo, monospace; color: var(--supply); }
+  .brk { color: var(--brk); font-size: 12.5px; }
+  #verifyResult { font-size: 13px; }
+  footer { padding: 8px 16px 24px; color: var(--muted); font-size: 12.5px; }
+  footer code { background: #eef2f7; padding: 1px 5px; border-radius: 4px; }
+  @media (max-width: 980px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>据点补给与占领规则 · 策略试验页</h1>
+  <span id="sampleBtns"></span>
+  <label class="chk"><input type="checkbox" id="editMode"> 编辑初始地图</label>
+  <label class="chk"><input type="checkbox" id="showSupply" checked> 显示补给路线/断点</label>
+</header>
+
+<main>
+  <div id="mapWrap">
+    <svg id="map" viewBox="0 0 700 400"></svg>
+    <div class="legend" style="padding:6px 4px 2px">
+      <span><i class="sw" style="background:var(--cA)"></i>A方</span>
+      <span><i class="sw" style="background:var(--cB)"></i>B方</span>
+      <span><i class="sw" style="background:var(--cN)"></i>中立</span>
+      <span>■ 基地　● 据点　◆ 普通区域</span>
+      <span><i class="sw" style="background:var(--supply)"></i>补给路线</span>
+      <span style="color:var(--brk)">✕ 断点</span>
+      <span style="color:#ef4444">╌ 封锁路段</span>
+      <span>金色描边 = 本轮发生变化的格</span>
+    </div>
+  </div>
+
+  <aside>
+    <section class="card">
+      <h2>回合控制 <span id="roundLabel" style="color:var(--ink)"></span></h2>
+      <div class="row">
+        <button id="btnFirst">⏮ 初始</button>
+        <button id="btnPrev">← 上一轮</button>
+        <button id="btnNext">下一轮 →</button>
+        <button id="btnLast">末轮 ⏭</button>
+        <button id="btnBranch" title="丢弃当前轮之后的所有指令，从这里重新推演">在此轮后分支</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>下一回合指令（每行一条；先删后加请用“在此轮后分支”）</h2>
+      <textarea id="orderInput" placeholder="A move a0 m1 2&#10;A capture s&#10;B retreat g&#10;B block m1 s"></textarea>
+      <div class="row" style="margin-top:6px">
+        <button class="primary" id="btnExec">执行这一回合</button>
+        <button id="btnIdle">空转一轮</button>
+        <span id="orderErr" style="color:#dc2626;font-size:12.5px"></span>
+      </div>
+    </section>
+
+    <section class="card" id="detailCard">
+      <h2>选中区域（点击图上节点）</h2>
+      <div id="detail" class="kv">未选中。点击据点可查看补给路线与断点。</div>
+    </section>
+
+    <section class="card">
+      <h2>本轮结算记录（按阶段顺序）</h2>
+      <div id="events"></div>
+    </section>
+
+    <section class="card">
+      <h2>指令序列（点击跳转查看任一轮）</h2>
+      <div id="rounds"></div>
+    </section>
+
+    <section class="card">
+      <h2>导出 / 读入 / 重放校验</h2>
+      <div class="row" style="margin-bottom:6px">
+        <button id="btnExport">导出地图+指令</button>
+        <button id="btnImport">读入并重跑</button>
+        <button id="btnVerify">验证重放一致</button>
+        <span id="verifyResult"></span>
+      </div>
+      <textarea id="ioText" placeholder="导出的 JSON 会显示在这里；粘贴 JSON 后点“读入并重跑”"></textarea>
+    </section>
+  </aside>
+</main>
+
+<footer>
+  <b>指令语法</b>（每行一条，<code>#</code> 开头为注释）：
+  <code>A move 起点 终点 [数量]</code> 移动 ·
+  <code>A capture 节点</code> 占领据点/基地 ·
+  <code>A retreat 节点</code> 向己方基地撤离一步 ·
+  <code>A block 节点1 节点2</code> / <code>A unblock …</code> 封锁/修复路段。
+  <b>结算顺序</b>：工程 → 移动（先撤离）→ 同格争夺 → 归属（普通区域驻军即易主，据点/基地需占领指令）→ 补给。
+  据点断供保留归属并倒计时，连续断供达阈值才失效（归属转中立、守军撤离）；同轮内归属变化先于补给结算，所以“夺回通路当轮即可恢复补给”。
+  编辑模式下：点边切换封锁、点节点轮换归属（改动的是初始地图，会自动从头重放）。
+</footer>
+
+<script src="engine.js"></script>
+<script src="samples.js"></script>
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+const NS = 'http://www.w3.org/2000/svg';
+const COLORS = { A: '#2563eb', B: '#dc2626', N: '#9ca3af' };
+const OWNER_NAME = { A: 'A方', B: 'B方', N: '中立' };
+const KIND_NAME = { base: '基地', strong: '据点', plain: '普通区域' };
+
+let scenario, rounds, history, viewRound = 0, selected = null;
+
+/* ---------- 状态管理：任何改动都从头重放，保证确定性 ---------- */
+function load(sc, rds) {
+  scenario = Engine.deepClone(sc);
+  rounds = rds.map(r => r.slice());
+  selected = null;
+  replayAll();
+  viewRound = 0;
+  render();
+}
+function replayAll() {
+  history = Engine.replay(scenario, rounds);
+  if (viewRound > rounds.length) viewRound = rounds.length;
+}
+function cur() { return history[viewRound]; }
+
+/* ---------- 地图渲染 ---------- */
+function el(name, attrs) {
+  const e = document.createElementNS(NS, name);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+const edgeKey = (a, b) => [a, b].sort().join('|');
+
+function renderMap() {
+  const st = cur().state;
+  const svg = $('map');
+  svg.innerHTML = '';
+
+  const changed = new Set();
+  for (const ev of cur().events) for (const n of ev.nodes || []) changed.add(n);
+
+  // 选中据点的补给路径 / 断点
+  const sup = Engine.computeSupply(st);
+  const pathEdges = new Set();
+  let breaks = [];
+  const sel = selected && st.nodes[selected];
+  if ($('showSupply').checked && sel && sel.kind === 'strong' && sel.owner !== 'N') {
+    const S = sup[sel.owner];
+    if (S.supplied.has(sel.id)) {
+      const p = Engine.supplyPath(sup, sel.owner, sel.id);
+      for (let i = 0; i + 1 < p.length; i++) pathEdges.add(edgeKey(p[i], p[i + 1]));
+    } else {
+      breaks = S.breaks;
+    }
+  }
+
+  // 边
+  for (const e of st.edges) {
+    const a = st.nodes[e.a], b = st.nodes[e.b];
+    const cls = 'edge' + (e.blocked ? ' blocked' : '') + (pathEdges.has(edgeKey(e.a, e.b)) ? ' supply' : '');
+    svg.appendChild(el('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: cls }));
+    if ($('editMode').checked) {
+      const hit = el('line', { x1: a.x, y1: a.y, x2: b.x, y2: b.y, class: 'edgehit' });
+      hit.addEventListener('click', () => {
+        const se = scenario.edges.find(x => edgeKey(x.a, x.b) === edgeKey(e.a, e.b));
+        se.blocked = !se.blocked;
+        replayAll(); render();
+      });
+      svg.appendChild(hit);
+    }
+    if (e.blocked) {
+      svg.appendChild(el('text', { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 - 6, class: 'xmark' })).textContent = '✕';
+    }
+  }
+
+  // 断点标记（选中断供据点时）
+  for (const br of breaks) {
+    const a = st.nodes[br.from], b = st.nodes[br.to];
+    const t = el('text', { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 + 14, class: 'bmark' });
+    t.textContent = '✕';
+    const tip = el('title', {});
+    tip.textContent = `断点 ${br.from}-${br.to}：${breakReason(br)}`;
+    t.appendChild(tip);
+    svg.appendChild(t);
+  }
+
+  // 节点
+  for (const n of Object.values(st.nodes)) {
+    const g = el('g', {
+      class: 'node' + (n.id === selected ? ' selected' : '') + (changed.has(n.id) ? ' changed' : ''),
+    });
+    const color = COLORS[n.owner];
+    let shape;
+    if (n.kind === 'base') {
+      shape = el('rect', { x: n.x - 18, y: n.y - 18, width: 36, height: 36, rx: 6, class: 'shape' });
+    } else if (n.kind === 'strong') {
+      shape = el('circle', { cx: n.x, cy: n.y, r: 19, class: 'shape' });
+    } else {
+      shape = el('polygon', { points: `${n.x},${n.y - 15} ${n.x + 15},${n.y} ${n.x},${n.y + 15} ${n.x - 15},${n.y}`, class: 'shape' });
+    }
+    shape.setAttribute('fill', color);
+    shape.setAttribute('fill-opacity', n.kind === 'plain' ? 0.35 : 0.75);
+    shape.setAttribute('stroke', color);
+    g.appendChild(shape);
+
+    const label = el('text', { x: n.x, y: n.y + 4.5, class: 'nlabel' });
+    label.textContent = n.id;
+    if (n.kind !== 'plain') label.style.fill = '#fff'; // CSS 类优先级高于 fill 属性，需用内联样式
+    g.appendChild(label);
+
+    // 单位数
+    const parts = [];
+    if (n.units.A > 0) parts.push(['A×' + n.units.A, COLORS.A]);
+    if (n.units.B > 0) parts.push(['B×' + n.units.B, COLORS.B]);
+    parts.forEach(([txt, c], i) => {
+      const u = el('text', { x: n.x + (parts.length === 2 ? (i === 0 ? -18 : 18) : 0), y: n.y + (n.kind === 'plain' ? 30 : 36), class: 'units' });
+      u.setAttribute('fill', c);
+      u.textContent = txt;
+      g.appendChild(u);
+    });
+
+    // 断供倒计时
+    if (n.kind === 'strong' && n.unsupplied > 0) {
+      const bd = el('text', { x: n.x, y: n.y - 26, class: 'badge' });
+      bd.textContent = `断供 ${n.unsupplied}/${st.config.supplyThreshold}`;
+      g.appendChild(bd);
+    }
+
+    g.addEventListener('click', () => {
+      if ($('editMode').checked) {
+        const sn = scenario.nodes.find(x => x.id === n.id);
+        sn.owner = { N: 'A', A: 'B', B: 'N' }[sn.owner || 'N'];
+        replayAll(); render();
+      } else {
+        selected = selected === n.id ? null : n.id;
+        render();
+      }
+    });
+    svg.appendChild(g);
+  }
+}
+
+function breakReason(br) {
+  if (br.reason === 'blocked') return '路段被封锁';
+  const o = br.reason.split(':')[1];
+  return o === 'N' ? '被中立区域隔断' : `被${o}方控制`;
+}
+
+/* ---------- 侧栏渲染 ---------- */
+function renderDetail() {
+  const box = $('detail');
+  const st = cur().state;
+  const n = selected && st.nodes[selected];
+  if (!n) { box.innerHTML = '未选中。点击据点可查看补给路线与断点。'; return; }
+  const rows = [
+    `<div><b>区域</b>${n.id}（${KIND_NAME[n.kind]}）</div>`,
+    `<div><b>归属</b><span style="color:${COLORS[n.owner]}">${OWNER_NAME[n.owner]}</span></div>`,
+    `<div><b>驻军</b>A×${n.units.A}　B×${n.units.B}</div>`,
+  ];
+  if (n.kind === 'strong') {
+    if (n.owner === 'N') {
+      rows.push('<div><b>补给</b>中立据点，不涉及补给</div>');
+    } else {
+      const sup = Engine.computeSupply(st);
+      const S = sup[n.owner];
+      if (!S.hasBase) {
+        rows.push('<div><b>补给</b><span class="brk">己方基地已失守，无补给来源</span></div>');
+      } else if (S.supplied.has(n.id)) {
+        const p = Engine.supplyPath(sup, n.owner, n.id);
+        rows.push(`<div><b>补给</b><span style="color:var(--supply)">在线</span></div>`);
+        rows.push(`<div><b>路线</b><span class="path">${p.join(' → ')}</span></div>`);
+      } else {
+        rows.push(`<div><b>补给</b><span class="brk">断供 ${n.unsupplied}/${st.config.supplyThreshold}（归属保留，达阈值失效）</span></div>`);
+        if (S.breaks.length) {
+          rows.push('<div><b>断点</b></div>' + S.breaks.map(br =>
+            `<div class="brk">　✕ ${br.from} — ${br.to}：${breakReason(br)}</div>`).join(''));
+        }
+      }
+    }
+  }
+  box.innerHTML = rows.join('');
+}
+
+function renderEvents() {
+  const box = $('events');
+  if (viewRound === 0) { box.innerHTML = '<div class="ev">初始布局（第 0 轮）</div>'; return; }
+  const evs = cur().events;
+  box.innerHTML = evs.length
+    ? evs.map(e => `<div class="ev"><span class="tag ${e.phase}">${e.phase}</span>${e.text}</div>`).join('')
+    : '<div class="ev" style="color:var(--muted)">本轮无事发生（空转）</div>';
+}
+
+function renderRounds() {
+  const box = $('rounds');
+  let html = `<div class="roundrow${viewRound === 0 ? ' cur' : ''}" data-r="0">R0 <code>初始布局</code></div>`;
+  rounds.forEach((r, i) => {
+    const txt = r.length ? r.join('；') : '（空转）';
+    html += `<div class="roundrow${viewRound === i + 1 ? ' cur' : ''}" data-r="${i + 1}">R${i + 1} <code>${txt.replace(/</g, '&lt;')}</code></div>`;
+  });
+  box.innerHTML = html;
+  box.querySelectorAll('.roundrow').forEach(row =>
+    row.addEventListener('click', () => { viewRound = +row.dataset.r; render(); }));
+}
+
+function render() {
+  $('roundLabel').textContent = `第 ${viewRound} / ${rounds.length} 轮`;
+  $('btnPrev').disabled = viewRound === 0;
+  $('btnNext').disabled = viewRound === rounds.length;
+  renderMap(); renderDetail(); renderEvents(); renderRounds();
+}
+
+/* ---------- 交互 ---------- */
+function execRound(lines) {
+  $('orderErr').textContent = '';
+  try { Engine.parseRound(lines); } catch (err) { $('orderErr').textContent = err.message; return; }
+  if (viewRound < rounds.length) rounds = rounds.slice(0, viewRound); // 在历史中间执行：自动截断分支
+  rounds.push(lines);
+  replayAll();
+  viewRound = rounds.length;
+  render();
+}
+
+$('btnExec').addEventListener('click', () => {
+  const lines = $('orderInput').value.split('\n');
+  execRound(lines);
+  $('orderInput').value = '';
+});
+$('btnIdle').addEventListener('click', () => execRound([]));
+$('btnFirst').addEventListener('click', () => { viewRound = 0; render(); });
+$('btnPrev').addEventListener('click', () => { if (viewRound > 0) { viewRound--; render(); } });
+$('btnNext').addEventListener('click', () => { if (viewRound < rounds.length) { viewRound++; render(); } });
+$('btnLast').addEventListener('click', () => { viewRound = rounds.length; render(); });
+$('btnBranch').addEventListener('click', () => {
+  rounds = rounds.slice(0, viewRound);
+  replayAll(); render();
+});
+$('editMode').addEventListener('change', render);
+$('showSupply').addEventListener('change', render);
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+  if (e.key === 'ArrowLeft' && viewRound > 0) { viewRound--; render(); }
+  if (e.key === 'ArrowRight' && viewRound < rounds.length) { viewRound++; render(); }
+});
+
+$('btnExport').addEventListener('click', () => {
+  $('ioText').value = JSON.stringify({ scenario, rounds }, null, 2);
+});
+$('btnImport').addEventListener('click', () => {
+  try {
+    const data = JSON.parse($('ioText').value);
+    if (!data.scenario || !Array.isArray(data.rounds)) throw new Error('需要 { scenario, rounds }');
+    load(data.scenario, data.rounds);
+    $('verifyResult').textContent = '✓ 已读入并重跑';
+    $('verifyResult').style.color = 'var(--supply)';
+  } catch (err) {
+    $('verifyResult').textContent = '✗ ' + err.message;
+    $('verifyResult').style.color = '#dc2626';
+  }
+});
+$('btnVerify').addEventListener('click', () => {
+  const again = Engine.replay(scenario, rounds);
+  const same = Engine.stableStringify(again) === Engine.stableStringify(history);
+  $('verifyResult').textContent = same ? `✓ 重放一致（${rounds.length} 轮）` : '✗ 重放结果不一致！';
+  $('verifyResult').style.color = same ? 'var(--supply)' : '#dc2626';
+});
+
+/* ---------- 样例按钮 ---------- */
+Samples.list.forEach((s, i) => {
+  const b = document.createElement('button');
+  b.textContent = `样例${i + 1}：${s.name}`;
+  b.title = s.desc;
+  b.addEventListener('click', () => load(s.scenario, s.rounds));
+  $('sampleBtns').appendChild(b);
+});
+
+load(Samples.list[0].scenario, Samples.list[0].rounds);
+</script>
+</body>
+</html>
