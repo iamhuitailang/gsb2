@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>轻量矢量路径编辑器</title>
+  <link rel="stylesheet" href="src/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <!-- 顶部菜单条 -->
+    <header class="topbar">
+      <div class="brand">✒️ 矢量路径编辑器</div>
+      <div class="top-group">
+        <button id="btn-new" class="menu-btn">新建</button>
+        <button id="btn-save" class="menu-btn" title="保存工程 JSON（⌘/Ctrl+S）">保存工程</button>
+        <label class="menu-btn file-label">
+          打开工程
+          <input id="open-project" type="file" accept=".json,application/json" hidden />
+        </label>
+        <label class="menu-btn file-label">
+          导入 SVG
+          <input id="import-svg" type="file" accept=".svg,image/svg+xml" hidden />
+        </label>
+      </div>
+      <div class="top-group">
+        <button id="btn-undo" class="menu-btn" title="撤销 ⌘/Ctrl+Z">↶ 撤销</button>
+        <button id="btn-redo" class="menu-btn" title="重做 ⌘/Ctrl+⇧+Z">↷ 重做</button>
+      </div>
+      <div class="top-group">
+        <button id="btn-export-svg" class="menu-btn primary">导出 SVG</button>
+        <button id="btn-export-png" class="menu-btn primary">导出 PNG</button>
+      </div>
+      <div class="top-group rel">
+        <button id="btn-samples" class="menu-btn">图标样例 ▾</button>
+        <div id="sample-menu" class="popup-menu" hidden></div>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <!-- 左侧工具栏 -->
+      <aside class="toolbar">
+        <button data-tool="select" class="tool active" title="选择/直接选择 (V)">🖆<span>选择</span></button>
+        <button data-tool="pen" class="tool" title="钢笔：点击加点，拖拽出控制柄，点回起点闭合 (P)">✒️<span>钢笔</span></button>
+        <button data-tool="line" class="tool" title="直线，Shift 锁定 45° (L)">╱<span>直线</span></button>
+        <button data-tool="rect" class="tool" title="矩形，Shift 画正方形 (R)">▭<span>矩形</span></button>
+        <div class="toolbar-sep"></div>
+        <button id="zoom-out" class="tool" title="缩小">−<span>缩小</span></button>
+        <button id="zoom-in" class="tool" title="放大">＋<span>放大</span></button>
+        <button id="zoom-fit" class="tool" title="适配画布">⛶<span>适配</span></button>
+        <div id="zoom-label" class="zoom-label">100%</div>
+      </aside>
+
+      <!-- 画布 -->
+      <main class="canvas-area" id="canvas-mount"></main>
+
+      <!-- 右侧面板 -->
+      <aside class="right-panel">
+        <section class="panel layers-panel">
+          <h2 class="panel-title">图层</h2>
+          <div id="layers-panel" class="panel-body layers"></div>
+        </section>
+        <section class="panel props">
+          <h2 class="panel-title">属性</h2>
+          <div id="properties-panel" class="panel-body"></div>
+        </section>
+      </aside>
+    </div>
+  </div>
+
+  <!-- 新建文档弹窗 -->
+  <div class="modal" id="modal-new">
+    <div class="modal-box">
+      <h3>新建画布</h3>
+      <div class="form-row"><label>宽度</label><input id="new-width" type="number" value="800" min="16" max="4096" /></div>
+      <div class="form-row"><label>高度</label><input id="new-height" type="number" value="600" min="16" max="4096" /></div>
+      <div class="modal-actions">
+        <button class="menu-btn modal-close">取消</button>
+        <button id="new-confirm" class="menu-btn primary">创建</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PNG 导出弹窗 -->
+  <div class="modal" id="modal-png">
+    <div class="modal-box">
+      <h3>导出 PNG</h3>
+      <p id="png-size-info" class="modal-tip"></p>
+      <div class="form-row"><label>导出宽度 (px)</label><input id="png-width" type="number" min="1" max="8192" /></div>
+      <div class="form-row"><label>背景色</label><input id="png-bg" type="color" /><span class="hint">留空为透明背景</span></div>
+      <div class="modal-actions">
+        <button class="menu-btn modal-close">取消</button>
+        <button id="png-confirm" class="menu-btn primary">导出</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 导入警告 -->
+  <div class="modal" id="modal-warnings">
+    <div class="modal-box">
+      <h3>导入提示</h3>
+      <ul id="warnings-list" class="warning-list"></ul>
+      <div class="modal-actions">
+        <button class="menu-btn primary modal-close">知道了</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
