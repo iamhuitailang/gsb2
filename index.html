@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>三维面朝向检查与修复</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; font:13px/1.5 -apple-system, "PingFang SC", sans-serif;
+         background:#1b1e24; color:#cfd3da; height:100vh; display:flex; flex-direction:column; }
+  header { padding:6px 12px; background:#23272f; border-bottom:1px solid #333;
+           display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  header h1 { font-size:14px; margin:0; font-weight:600; }
+  main { flex:1; display:flex; min-height:0; }
+  #view { flex:1; position:relative; min-width:0; }
+  canvas { position:absolute; inset:0; width:100%; height:100%; display:block; }
+  #hint { position:absolute; left:10px; bottom:8px; color:#7a818e; font-size:12px;
+          pointer-events:none; white-space:pre; }
+  #panel { width:340px; overflow-y:auto; background:#20242b; border-left:1px solid #333;
+           padding:10px 12px; }
+  section { margin-bottom:14px; }
+  h2 { font-size:12px; color:#8b93a1; margin:0 0 6px; text-transform:uppercase; letter-spacing:.5px; }
+  button { background:#2e3440; color:#cfd3da; border:1px solid #3c4351; border-radius:4px;
+           padding:3px 9px; cursor:pointer; font-size:12px; margin:2px 2px 2px 0; }
+  button:hover { background:#3a4150; }
+  button.primary { background:#2f5f8f; border-color:#3f77ab; color:#fff; }
+  button.warn { background:#7a4a2a; border-color:#9a6038; color:#fff; }
+  button.active { outline:2px solid #6cb2eb; }
+  button:disabled { opacity:.4; cursor:default; }
+  label { display:inline-block; margin-right:10px; cursor:pointer; }
+  .row { margin:3px 0; }
+  .list { max-height:180px; overflow-y:auto; border:1px solid #333; border-radius:4px; }
+  .item { padding:3px 8px; cursor:pointer; border-bottom:1px solid #2a2e36; }
+  .item:hover { background:#2a2f39; }
+  .item.sel { background:#31435c; }
+  .item .tag { float:right; font-size:11px; }
+  .ok { color:#7fc97f; } .bad { color:#e07a6a; } .warn-t { color:#d8a94e; }
+  #info { background:#191c21; border:1px solid #333; border-radius:4px; padding:6px 8px;
+          min-height:40px; white-space:pre-wrap; font-family:Menlo,monospace; font-size:12px; }
+  #log { background:#191c21; border:1px solid #333; border-radius:4px; padding:6px 8px;
+         max-height:150px; overflow-y:auto; white-space:pre-wrap; font-family:Menlo,monospace; font-size:12px; }
+  .stat { color:#8b93a1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>面朝向检查与修复</h1>
+  <input type="file" id="file" accept=".obj" style="font-size:12px">
+  <span id="examples"></span>
+  <span class="stat" id="stat"></span>
+</header>
+<main>
+  <div id="view">
+    <canvas id="gl"></canvas>
+    <div id="hint">左键拖动旋转 / 右键或Shift拖动平移 / 滚轮缩放
+单击拾取边（或面）查看详情</div>
+  </div>
+  <div id="panel">
+    <section>
+      <h2>显示</h2>
+      <div class="row">
+        <label><input type="radio" name="cmode" value="facing" checked> 正反面着色</label>
+        <label><input type="radio" name="cmode" value="component"> 连通块着色</label>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="showBoundary" checked> 开口边</label>
+        <label><input type="checkbox" id="showNM" checked> 非流形边</label>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="showCoincident" checked> 重合顶点</label>
+        <label><input type="checkbox" id="showZero" checked> 零面积面</label>
+      </div>
+      <div class="row">
+        单击拾取：<label><input type="radio" name="pick" value="edge" checked> 边</label>
+        <label><input type="radio" name="pick" value="face"> 面</label>
+      </div>
+    </section>
+    <section>
+      <h2>连通块</h2>
+      <div class="list" id="comps"></div>
+    </section>
+    <section>
+      <h2>问题（修复后仍保留供检查）</h2>
+      <div class="list" id="issues"></div>
+    </section>
+    <section>
+      <h2>选中信息</h2>
+      <div id="info">未选中</div>
+    </section>
+    <section>
+      <h2>修复</h2>
+      <div class="row">
+        <button id="btnFix" class="primary">统一并修复选中块</button>
+        <button id="btnRef">为选中块选参考面</button>
+      </div>
+      <div class="row">
+        <button id="btnViewOrig">查看原始</button>
+        <button id="btnViewFixed" disabled>查看修复后</button>
+        <button id="btnUndo" class="warn" disabled>取消修复</button>
+      </div>
+      <div class="row">
+        <button id="btnExport">导出 OBJ</button>
+        <button id="btnReport">导出报告 JSON</button>
+        <button id="btnSelfCheck">读回自检</button>
+      </div>
+    </section>
+    <section>
+      <h2>日志</h2>
+      <div id="log"></div>
+    </section>
+  </div>
+</main>
+<script src="js/mesh-core.js"></script>
+<script src="js/examples-data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
