@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>三维路线辅助线对照页（屏幕等宽 / 拐角 / 虚线）</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; font: 13px/1.5 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #1b1e24; color: #d8dce3; }
+  #app { display: flex; height: 100%; }
+  #view-wrap { flex: 1; position: relative; min-width: 0; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #hud { position: absolute; left: 10px; top: 8px; background: rgba(20,22,28,.78); padding: 6px 10px; border-radius: 6px; font-size: 12px; pointer-events: none; white-space: pre; }
+  #panel { width: 340px; overflow-y: auto; background: #23262e; border-left: 1px solid #333; padding: 10px 12px 40px; }
+  h1 { font-size: 15px; margin: 4px 0 10px; }
+  h2 { font-size: 13px; margin: 16px 0 6px; color: #8ab4f8; border-bottom: 1px solid #3a3f4a; padding-bottom: 3px; }
+  .row { display: flex; align-items: center; gap: 6px; margin: 5px 0; }
+  .row label { flex: 0 0 96px; color: #aab; }
+  .row input[type=number], .row select { width: 70px; background: #14161b; color: #dde; border: 1px solid #444; border-radius: 4px; padding: 2px 4px; }
+  .row input[type=range] { flex: 1; }
+  .row input[type=color] { width: 40px; height: 22px; border: none; background: none; padding: 0; }
+  .val { width: 56px; text-align: right; color: #9fd; font-variant-numeric: tabular-nums; }
+  button { background: #2f6fed; color: #fff; border: none; border-radius: 5px; padding: 5px 10px; cursor: pointer; font-size: 12px; }
+  button.ghost { background: #3a3f4a; }
+  button:hover { filter: brightness(1.15); }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  td, th { padding: 2px 3px; text-align: center; }
+  td input { width: 62px; background: #14161b; color: #dde; border: 1px solid #444; border-radius: 4px; padding: 1px 3px; font-size: 12px; }
+  .del { background: #5a2c2c; padding: 1px 7px; }
+  .hint { color: #77808f; font-size: 11.5px; margin: 4px 0; }
+  .btns { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="view-wrap">
+    <canvas id="gl"></canvas>
+    <div id="hud"></div>
+  </div>
+  <div id="panel">
+    <h1>路线辅助线对照页</h1>
+    <div class="hint">拖动旋转 · 滚轮推拉 · 右键/Shift+拖动平移。线宽按屏幕像素计算，镜头推近、线段穿过近裁面时观察拐角与虚线表现。</div>
+
+    <h2>预设路线</h2>
+    <div class="btns">
+      <button data-preset="cross">① 跨可见边界</button>
+      <button data-preset="sharp">② 急折角</button>
+      <button data-preset="orbit">③ 绕物体</button>
+    </div>
+
+    <h2>路线点（世界坐标）</h2>
+    <table id="pts">
+      <thead><tr><th>#</th><th>X</th><th>Y</th><th>Z</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="btns"><button id="addPt" class="ghost">+ 添加点</button></div>
+
+    <h2>线样式</h2>
+    <div class="row"><label>线宽 (CSS px)</label><input id="width" type="range" min="1" max="40" step="0.5"><span class="val" id="widthV"></span></div>
+    <div class="row"><label>颜色</label><input id="color" type="color"><label style="flex:0 0 auto">不透明</label><input id="alpha" type="range" min="0.1" max="1" step="0.05"><span class="val" id="alphaV"></span></div>
+    <div class="row"><label>拐角处理</label>
+      <select id="join">
+        <option value="miter">尖接 (miter)</option>
+        <option value="bevel">平接 (bevel)</option>
+        <option value="round">圆接 (round)</option>
+      </select>
+    </div>
+    <div class="row"><label>尖角限制倍数</label><input id="miterLimit" type="range" min="1" max="10" step="0.5"><span class="val" id="miterLimitV"></span></div>
+
+    <h2>虚线</h2>
+    <div class="row"><label>启用虚线</label><input id="dashOn" type="checkbox"></div>
+    <div class="row"><label>计数方式</label>
+      <select id="dashMode">
+        <option value="world">世界距离</option>
+        <option value="screen">屏幕距离 (px)</option>
+      </select>
+    </div>
+    <div class="row"><label>实段长 <span id="dashUnit" class="hint"></span></label><input id="dashLen" type="range" min="0.05" max="3" step="0.05"><span class="val" id="dashLenV"></span></div>
+    <div class="row"><label>间隔长</label><input id="gapLen" type="range" min="0.05" max="3" step="0.05"><span class="val" id="gapLenV"></span></div>
+
+    <h2>视图 / 像素密度</h2>
+    <div class="row"><label>渲染分辨率</label>
+      <select id="scaleMode">
+        <option value="device">跟随设备 (devicePixelRatio)</option>
+        <option value="1">普通 1x</option>
+        <option value="2">高密 2x</option>
+        <option value="0.5">低清 0.5x</option>
+      </select>
+    </div>
+    <div class="btns">
+      <button id="exportPng" class="ghost">导出 PNG 对照图</button>
+    </div>
+
+    <h2>保存 / 打开</h2>
+    <div class="btns">
+      <button id="saveLocal">保存镜头+路线</button>
+      <button id="loadLocal" class="ghost">打开已保存</button>
+      <button id="exportJson" class="ghost">导出 JSON</button>
+      <button id="importJson" class="ghost">导入 JSON</button>
+      <input id="fileInput" type="file" accept=".json" style="display:none">
+    </div>
+    <div class="hint" id="saveHint"></div>
+
+    <h2>说明</h2>
+    <div class="hint">
+      · 深度与场景方块一致：线被方块挡住的部分不显示，虚线计数不被遮挡打断。<br>
+      · 屏幕距离虚线：移动相机时图案按当前投影重排；世界距离虚线：图案钉在路线上。<br>
+      · 急折角预设内含近 180° 掉头、重合点、极短线段，可切换三种拐角观察。<br>
+      · 切换渲染分辨率后，HUD 显示实际设备像素线宽，导出 PNG 可与屏幕对比。
+    </div>
+  </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
