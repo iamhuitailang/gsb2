@@ -1,0 +1,11 @@
+{
+  "name": "keyframe-cut-inspector",
+  "version": "1.0.0",
+  "private": true,
+  "description": "关键帧裁切检查工具：快速/精确裁切范围预览与成品读回核对",
+  "scripts": {
+    "serve": "python3 -I run_tool.py serve",
+    "generate:samples": "python3 -I run_tool.py generate",
+    "selftest": "python3 -I run_tool.py selftest"
+  }
+}

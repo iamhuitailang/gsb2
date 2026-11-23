@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>关键帧裁切检查工具</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>关键帧裁切检查工具</h1>
+  <div class="load-row">
+    <input id="srcPath" type="text" placeholder="本机视频绝对路径，例如 /Users/xxx/clip.mp4">
+    <button id="btnLoad">载入素材</button>
+    <button id="btnGen" class="secondary" title="生成带帧号、长短 GOP、提示音的测试素材">生成测试素材</button>
+  </div>
+  <div id="genStatus" class="hint"></div>
+</header>
+
+<main>
+  <section id="infoPanel" class="panel hidden">
+    <h2>素材信息</h2>
+    <div id="infoGrid" class="grid"></div>
+    <div id="warnings"></div>
+  </section>
+
+  <section id="timelinePanel" class="panel hidden">
+    <h2>时间线（显示时间，已扣除轨道起点）</h2>
+    <div class="tl-meta">
+      <span id="tlCursor"></span>
+      <span class="hint">竖线为关键帧；拖动滑块或输入时间后会吸附到最近帧</span>
+    </div>
+    <div id="timeline"></div>
+    <div class="range-row">
+      <label>入点 <input id="inTime" type="number" step="0.001" min="0"> 秒
+        <button id="prevFrame" class="tiny">-1帧</button><button id="nextFrame" class="tiny">+1帧</button></label>
+      <label>出点 <input id="outTime" type="number" step="0.001" min="0"> 秒
+        <button id="outPrevFrame" class="tiny">-1帧</button><button id="outNextFrame" class="tiny">+1帧</button></label>
+      <button id="btnMidCut" class="secondary tiny" title="自动把入点放到两个关键帧正中间">设为关键帧中间</button>
+      <button id="btnKeyCut" class="secondary tiny" title="自动把入点放到关键帧上">设到关键帧上</button>
+    </div>
+    <div id="nearestBox" class="nearest"></div>
+  </section>
+
+  <section id="thumbsPanel" class="panel hidden">
+    <h2>入点核对：指定帧 / 快速裁切首帧 / 精确裁切首帧</h2>
+    <div class="thumbs">
+      <figure>
+        <figcaption>① 用户指定帧（入点）</figcaption>
+        <img id="thumbTarget" alt="指定帧">
+        <div id="capTarget" class="cap"></div>
+      </figure>
+      <figure>
+        <figcaption>② 快速裁切实际首帧（流复制，回退到关键帧）</figcaption>
+        <img id="thumbFast" alt="快速裁切首帧">
+        <div id="capFast" class="cap"></div>
+      </figure>
+      <figure>
+        <figcaption>③ 精确裁切首帧（重编码，应为指定帧）</figcaption>
+        <img id="thumbAcc" alt="精确裁切首帧">
+        <div id="capAcc" class="cap"></div>
+      </figure>
+    </div>
+    <div id="deltaBox" class="delta"></div>
+  </section>
+
+  <section id="planPanel" class="panel hidden">
+    <h2>执行前：两种模式可能取到的范围</h2>
+    <div class="plans">
+      <div class="plan-card" id="planFastCard">
+        <h3>快速裁切（-c copy，不重编码）</h3>
+        <div id="planFast"></div>
+        <button class="cut-btn" data-mode="fast">执行快速裁切</button>
+      </div>
+      <div class="plan-card" id="planAccCard">
+        <h3>逐帧精确裁切（重编码）</h3>
+        <div id="planAcc"></div>
+        <button class="cut-btn" data-mode="accurate">执行精确裁切</button>
+      </div>
+    </div>
+    <div id="planError" class="error"></div>
+  </section>
+
+  <section id="resultPanel" class="panel hidden">
+    <h2>执行后读回结果（以成品文件重新读取为准）</h2>
+    <div id="resultBox"></div>
+    <div id="reportLinks"></div>
+  </section>
+</main>
+
+<div id="toast" class="toast hidden"></div>
+<script src="app.js"></script>
+</body>
+</html>
