@@ -1,0 +1,61 @@
+{
+  "name": "示例：新手池（含保底/互斥/重复转化）",
+  "rules": { "expectedWeightTotal": 100 },
+  "items": [
+    {
+      "id": "legend_sword",
+      "name": "传说之剑",
+      "weight": 1,
+      "rare": true,
+      "pity": 80,
+      "mutexGroup": "legend_weapon",
+      "maxOwn": 1,
+      "convertTo": { "item": "stardust", "count": 20 }
+    },
+    {
+      "id": "legend_bow",
+      "name": "传说之弓",
+      "weight": 1,
+      "rare": true,
+      "pity": 80,
+      "mutexGroup": "legend_weapon",
+      "maxOwn": 1,
+      "convertTo": { "item": "stardust", "count": 20 }
+    },
+    {
+      "id": "epic_armor",
+      "name": "史诗护甲",
+      "weight": 4,
+      "rare": true,
+      "pity": 20,
+      "maxOwn": 3,
+      "convertTo": { "item": "stardust", "count": 5 }
+    },
+    {
+      "id": "arcane_scroll",
+      "name": "秘法卷轴",
+      "weight": 14,
+      "requires": ["epic_armor"]
+    },
+    {
+      "id": "iron_sword",
+      "name": "精铁剑",
+      "weight": 30
+    },
+    {
+      "id": "iron_shield",
+      "name": "精铁盾",
+      "weight": 30
+    },
+    {
+      "id": "heal_potion",
+      "name": "治疗药水",
+      "weight": 20
+    },
+    {
+      "id": "stardust",
+      "name": "星尘（转化货币）",
+      "weight": 0
+    }
+  ]
+}

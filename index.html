@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>游戏掉落与奖励平衡分析器</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <h1>游戏掉落与奖励平衡分析器</h1>
+    <p class="sub">编辑掉落表 · 种子化蒙特卡洛模拟 · 版本对比 · 本地运行，数据保存在浏览器本地</p>
+  </header>
+
+  <div class="layout">
+    <aside>
+      <div class="aside-head">
+        <h2>方案</h2>
+        <button id="btn-new-scheme" title="新建空方案">＋新建</button>
+      </div>
+      <ul id="scheme-list"></ul>
+      <div class="aside-foot">
+        <button id="btn-load-sample">载入示例表</button>
+        <label class="file-btn" for="import-file">导入配置…</label>
+        <input type="file" id="import-file" accept=".json,application/json" hidden>
+      </div>
+    </aside>
+
+    <main>
+      <nav class="tabs">
+        <button class="tab-btn" data-tab="edit">配置编辑</button>
+        <button class="tab-btn" data-tab="sim">模拟</button>
+        <button class="tab-btn" data-tab="cmp">版本对比</button>
+        <button class="tab-btn" data-tab="export">导出</button>
+      </nav>
+
+      <!-- 配置编辑 -->
+      <section id="tab-edit" class="tab-page">
+        <div class="row">
+          <label>方案名称 <input type="text" id="scheme-name"></label>
+          <label>权重合计应为 <input type="number" id="expected-total" step="any" min="1"></label>
+        </div>
+        <table class="editor">
+          <thead>
+            <tr>
+              <th>ID</th><th>名称</th><th>权重</th><th>稀有</th><th>保底</th>
+              <th>互斥组</th><th>持有上限</th><th>前置(逗号分隔)</th>
+              <th>转化目标</th><th>转化数量</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="items-tbody"></tbody>
+        </table>
+        <button id="btn-add-item">＋ 添加物品</button>
+        <div id="validation" class="validation"></div>
+        <details class="help">
+          <summary>字段说明</summary>
+          <ul>
+            <li><b>权重</b>：相对抽取权重，全部物品的权重合计须等于「权重合计应为」的值（默认 100），否则下方会显示具体原因。</li>
+            <li><b>保底</b>：连续未抽中该物品达到此次数后，下一次抽取必中（留空表示无保底）。</li>
+            <li><b>互斥组</b>：同组物品玩家至多持有一个；已拥有组内物品时，组内其他物品不再进入候选池。</li>
+            <li><b>持有上限</b>：达到上限后再次抽中按「重复转化」处理；留空时，设置了转化的物品默认上限 1，其余不限。</li>
+            <li><b>前置</b>：需先拥有这些物品（填 id），该物品才会进入候选池（前置解锁）。</li>
+            <li><b>重复转化</b>：达到持有上限后再抽中，转化为目标物品 × 数量（如重复传说转化为星尘）。</li>
+          </ul>
+        </details>
+      </section>
+
+      <!-- 模拟 -->
+      <section id="tab-sim" class="tab-page">
+        <div class="row">
+          <label>玩家数 <input type="number" id="sim-players" min="1" max="1000000"></label>
+          <label>局数 <input type="number" id="sim-rounds" min="1" max="10000"></label>
+          <label>随机种子 <input type="text" id="sim-seed"></label>
+          <button id="btn-run-sim" class="primary">运行模拟</button>
+        </div>
+        <p class="hint">相同种子 + 相同参数 + 相同配置 ⇒ 完全相同的模拟结果，可用于复现与回归校验。</p>
+        <div id="sim-result"></div>
+      </section>
+
+      <!-- 版本对比 -->
+      <section id="tab-cmp" class="tab-page">
+        <div class="row">
+          <label>版本 A <select id="cmp-a"></select></label>
+          <label>版本 B <select id="cmp-b"></select></label>
+          <button id="btn-run-cmp" class="primary">运行对比</button>
+        </div>
+        <p class="hint">使用「模拟」页当前的玩家数 / 局数 / 种子，对两个版本各跑一次模拟并逐项对比。</p>
+        <div id="cmp-result"></div>
+      </section>
+
+      <!-- 导出 -->
+      <section id="tab-export" class="tab-page">
+        <div class="export-grid">
+          <div>
+            <h3>配置</h3>
+            <button id="btn-export-config">导出当前方案配置 (JSON)</button>
+            <button id="btn-export-all">导出全部方案 (JSON)</button>
+          </div>
+          <div>
+            <h3>分析结果</h3>
+            <button id="btn-export-json">导出模拟结果 (JSON)</button>
+            <button id="btn-export-csv">导出模拟结果 (CSV)</button>
+          </div>
+        </div>
+        <p class="hint">方案、模拟参数与图表设置（图表类型、选中物品、对数轴等）自动保存在浏览器 localStorage，重开页面后自动恢复。</p>
+      </section>
+    </main>
+  </div>
+
+  <script src="js/rng.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
