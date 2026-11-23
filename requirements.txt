@@ -1,0 +1,7 @@
+# 运行依赖（Python 3.10+，开发验证于 3.13）
+numpy>=1.24
+opencv-python>=4.8
+Pillow>=10.0
+
+# 测试
+pytest>=7.0
