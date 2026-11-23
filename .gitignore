@@ -20,6 +20,13 @@ data.json
 *.sqlite3
 tmp/
 
+# 平场检查器的运行产物(样例图、导出图、自检报告)
+flatfield_demo/
+flatfield_out/
+*_flatfield*.tif
+flatfield_manifest.json
+demo_report.json
+
 # ---- 依赖与构建产物 ----
 node_modules/
 __pycache__/

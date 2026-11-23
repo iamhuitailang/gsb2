@@ -1,0 +1,1 @@
+"""Flat-field correction inspector."""
