@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>俯视游戏视野规则演示 · Fog of War Sandbox</title>
+<style>
+  :root {
+    --bg: #10131a; --panel: #181d27; --panel2: #1f2632; --line: #2b3444;
+    --text: #e6ebf4; --muted: #8b96a8;
+    --teamA: #4da3ff; --teamB: #ff6b6b;
+    --visible: #f2e9c8; --remembered: #5a6373; --unknown: #0a0c11;
+    --wall: #39435a; --door: #c9a85a;
+    --move: #57d9a3; --vision: #b39ddb; --door-evt: #ffb74d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 13px/1.5 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  header {
+    padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line);
+    display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center;
+  }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; }
+  header .sub { color: var(--muted); font-size: 12px; }
+  .ctl { display: flex; align-items: center; gap: 6px; }
+  select, button, input[type=range] { accent-color: var(--teamA); }
+  select, button {
+    background: var(--panel2); color: var(--text); border: 1px solid var(--line);
+    border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer;
+  }
+  button:hover { border-color: #4a5875; }
+  button.primary { background: #25405f; border-color: #35598a; }
+  button:disabled { opacity: .4; cursor: default; }
+  label.chk { display: flex; align-items: center; gap: 5px; color: var(--muted); cursor: pointer; }
+  main {
+    display: grid; grid-template-columns: minmax(520px, 1fr) 330px;
+    gap: 14px; padding: 14px 16px; align-items: start;
+  }
+  .stage { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .stage-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap: 10px; flex-wrap: wrap; }
+  .view-tabs { display: flex; gap: 6px; }
+  .view-tabs button.active { outline: 2px solid #7aa7e8; }
+  #canvas-wrap { overflow: auto; border-radius: 8px; background: #07090d; }
+  canvas { display: block; cursor: crosshair; }
+  .transport { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  .transport input[type=range] { flex: 1; }
+  .step-label { min-width: 110px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .side { display: flex; flex-direction: column; gap: 12px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  .card h2 { font-size: 12.5px; margin: 0 0 8px; color: #c6d2e4; letter-spacing: .5px; }
+  .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; color: var(--muted); font-size: 12px; }
+  .legend .sw { display: inline-block; width: 14px; height: 14px; border-radius: 3px; vertical-align: -2px; margin-right: 5px; border: 1px solid #0006; }
+  #inspector { font-size: 12px; min-height: 120px; }
+  #inspector .kv { display: flex; justify-content: space-between; gap: 8px; padding: 2px 0; border-bottom: 1px dashed #232c3c; }
+  #inspector .kv span:first-child { color: var(--muted); }
+  .tag { display: inline-block; padding: 0 6px; border-radius: 9px; font-size: 11px; line-height: 18px; }
+  .tag.visible { background: #4b4422; color: #ffe9a3; }
+  .tag.remembered { background: #333b4a; color: #b9c3d4; }
+  .tag.unknown { background: #11141b; color: #6b7688; border: 1px solid var(--line); }
+  .tag.move { background: #173f34; color: var(--move); }
+  .tag.vision { background: #2e2547; color: var(--vision); }
+  .tag.door { background: #463417; color: var(--door-evt); }
+  .diag-row { padding: 4px 0; border-bottom: 1px dashed #232c3c; font-size: 11.5px; }
+  .diag-row.bad { color: #ff9c9c; }
+  .diag-row.good { color: #9fe0b6; }
+  .log { max-height: 250px; overflow: auto; font-size: 12px; }
+  .log .step-head { color: #9fb4d4; font-weight: 600; margin: 8px 0 4px; }
+  .log .evt { padding: 3px 0 3px 10px; border-left: 3px solid var(--line); margin: 3px 0; color: #c2ccdb; }
+  .log .evt.move { border-left-color: var(--move); }
+  .log .evt.vision { border-left-color: var(--vision); }
+  .log .evt.door { border-left-color: var(--door-evt); }
+  .scn-desc { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+  .export-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .hash-result { margin-top: 8px; font-size: 12px; color: var(--muted); word-break: break-all; }
+  .hash-result.ok { color: var(--move); }
+  .hash-result.fail { color: var(--teamB); }
+  .ghost-note { color: var(--muted); font-size: 11.5px; margin-top: 6px; }
+  footer { color: #55607a; font-size: 11.5px; padding: 0 16px 18px; }
+  code { background: var(--panel2); padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>俯视视野规则演示</h1>
+    <div class="sub">方格色块 · 双阵营视野/记忆/遮挡 · 纯浏览器运行，无依赖</div>
+  </div>
+  <div class="ctl">
+    <span style="color:var(--muted)">场景</span>
+    <select id="scenario"></select>
+  </div>
+  <div class="ctl">
+    <label class="chk"><input type="checkbox" id="retention" checked> 失去视野后保留最后已知信息（幽灵标记）</label>
+  </div>
+  <div class="ctl export-row">
+    <button id="expA">导出 A 视角 JSON</button>
+    <button id="expB">导出 B 视角 JSON</button>
+    <button id="expLog">导出逐步演示记录</button>
+    <button id="verify">重放确定性校验</button>
+  </div>
+</header>
+
+<main>
+  <section class="stage">
+    <div class="stage-top">
+      <div class="view-tabs">
+        <button data-view="A" class="active">蓝队 A 视角</button>
+        <button data-view="B">红队 B 视角</button>
+        <button data-view="admin">管理员全图</button>
+      </div>
+      <div class="sub" id="scnName"></div>
+    </div>
+    <div id="canvas-wrap"><canvas id="cv"></canvas></div>
+    <div class="transport">
+      <button id="btnReset">⏮ 重置</button>
+      <button id="btnBack">◀ 回退</button>
+      <button id="btnPlay" class="primary">▶ 自动播放</button>
+      <button id="btnNext">前进 ▶</button>
+      <input type="range" id="slider" min="0" max="0" value="0">
+      <span class="step-label" id="stepLabel"></span>
+    </div>
+    <p class="scn-desc" id="scnDesc"></p>
+    <div class="hash-result" id="hashResult"></div>
+  </section>
+
+  <aside class="side">
+    <div class="card">
+      <h2>图例</h2>
+      <div class="legend">
+        <div><span class="sw" style="background:var(--visible)"></span>当前可见</div>
+        <div><span class="sw" style="background:var(--remembered)"></span>以前见过</div>
+        <div><span class="sw" style="background:var(--unknown)"></span>从未见过</div>
+        <div><span class="sw" style="background:var(--wall)"></span>墙（挡视线）</div>
+        <div><span class="sw" style="background:var(--door)"></span>全开的门</div>
+        <div><span class="sw" style="background:#8a6d3b"></span>半开/关闭门</div>
+        <div><span class="sw" style="background:var(--teamA)"></span>蓝队单位</div>
+        <div><span class="sw" style="background:var(--teamB)"></span>红队单位</div>
+        <div><span class="sw" style="background:#b8923f"></span>可搬运箱子</div>
+        <div><span class="sw" style="background:#000;border:1px dashed #ffd27d"></span>过期幽灵标记</div>
+      </div>
+      <div class="ghost-note">
+        格子角标：数字 = 最后刷新的步；<b style="color:var(--move)">M</b> = 移动阶段途经刷新；
+        无 M 的数字来自视野阶段。点任意格可追查遮挡来源。
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>选格追查 <span style="color:var(--muted);font-weight:400">（点击地图）</span></h2>
+      <div id="inspector"><span style="color:var(--muted)">尚未选择格子。</span></div>
+    </div>
+
+    <div class="card">
+      <h2>逐步演示记录</h2>
+      <div class="log" id="log"></div>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  结算顺序固定为 <code>移动 → 门 → 视野</code>；敌人与箱子只在所在格进入本队合并视野时更新，暗处移动不会同步到敌方地图。
+  方向键 ← → 可回退/前进，空格播放/暂停。
+</footer>
+
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
