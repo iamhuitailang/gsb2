@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TrackWeave · 双语教学片装配台</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+          <div>
+            <h1>TrackWeave</h1>
+            <p>本地双语教学片 · 音轨与字幕装配核对台</p>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <span id="ffmpeg-badge" class="badge badge-muted" title="ffmpeg 状态">检测中…</span>
+          <button id="btn-sample" class="btn btn-ghost" type="button">载入示例</button>
+          <button id="btn-load-config" class="btn btn-ghost" type="button">载入配置</button>
+          <button id="btn-open-picker" class="btn btn-ghost" type="button">添加文件</button>
+          <button id="btn-export" class="btn btn-primary" type="button" disabled>导出成品</button>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="stage" aria-label="预览">
+          <div class="video-frame" id="video-frame">
+            <video id="player" playsinline preload="metadata"></video>
+            <div class="video-placeholder" id="video-placeholder">
+              <div class="placeholder-icon" aria-hidden="true">▣</div>
+              <p>先添加一个本地视频，或载入内置示例</p>
+              <div class="placeholder-actions">
+                <button class="btn btn-ghost" type="button" data-action="greet-sample">载入示例素材</button>
+                <button class="btn btn-ghost" type="button" data-action="greet-picker">浏览本地文件</button>
+              </div>
+            </div>
+            <!-- 字幕预览：位置、时间与规则都来自计划，和导出完全同一套 -->
+            <div class="subtitle-overlay" id="subtitle-overlay" aria-live="polite"></div>
+            <div class="video-topline">
+              <span class="chip" id="video-meta">未载入视频</span>
+              <span class="chip chip-lang" id="active-subtitle-lang">字幕 —</span>
+            </div>
+            <div class="video-toolbar">
+              <button class="icon-btn" id="btn-play" type="button" title="播放 / 暂停（空格）">▶</button>
+              <div class="timecode" id="timecode">00:00.000 / 00:00.000</div>
+              <div class="scrub" id="scrub">
+                <div class="scrub-track">
+                  <div class="scrub-buffer" id="scrub-buffer"></div>
+                  <div class="scrub-playhead" id="scrub-playhead"></div>
+                  <div class="scrub-markers" id="scrub-markers"></div>
+                </div>
+              </div>
+              <button class="icon-btn small" id="btn-back-1" type="button" title="后退 1 秒">−1s</button>
+              <button class="icon-btn small" id="btn-fwd-1" type="button" title="前进 1 秒">+1s</button>
+              <div class="speed">
+                <button class="speed-btn" data-speed="0.5" type="button">0.5×</button>
+                <button class="speed-btn is-active" data-speed="1" type="button">1×</button>
+                <button class="speed-btn" data-speed="1.5" type="button">1.5×</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="bench">
+            <div class="bench-head">
+              <h2>时点核对</h2>
+              <p>拖动进度条到任一时点，切换字幕不会移动画面；两种语言的音调标记会在同一行对齐。</p>
+            </div>
+            <div class="bench-grid">
+              <div class="bench-card">
+                <div class="bench-card-head">
+                  <span>当前时点</span>
+                  <strong id="bench-time">—</strong>
+                </div>
+                <div class="cue-pair">
+                  <div class="cue-lane" id="lane-primary">
+                    <span class="lane-tag" id="lane-primary-tag">字幕 A</span>
+                    <p id="lane-primary-text">—</p>
+                  </div>
+                  <div class="cue-lane" id="lane-secondary">
+                    <span class="lane-tag" id="lane-secondary-tag">字幕 B</span>
+                    <p id="lane-secondary-text">—</p>
+                  </div>
+                </div>
+                <div class="cue-actions">
+                  <button class="btn btn-mini" id="btn-swap-subtitle" type="button" disabled>切换到另一条字幕</button>
+                  <button class="btn btn-mini" id="btn-jump-next" type="button" disabled>跳到下一条</button>
+                  <button class="btn btn-mini" id="btn-jump-prev" type="button" disabled>上一条</button>
+                </div>
+                <p class="hint" id="switch-hint">切换前后画面位置保持不变，可反复核对同一时点。</p>
+              </div>
+              <div class="bench-card">
+                <div class="bench-card-head">
+                  <span>示例音调核对</span>
+                  <strong id="sample-status">未运行</strong>
+                </div>
+                <p class="hint">读取导出前后每段音调的实际起音时刻，与字幕时点及另一种语言逐条比对。</p>
+                <div class="cue-actions">
+                  <button class="btn btn-mini" id="btn-check-samples" type="button">核对示例素材</button>
+                  <button class="btn btn-mini" id="btn-verify-output" type="button" disabled>读回成品</button>
+                </div>
+                <div class="sample-report" id="sample-report"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="timeline-panel">
+            <div class="timeline-head">
+              <h2>轨道时间线</h2>
+              <span class="muted" id="timeline-scale">—</span>
+            </div>
+            <div class="timeline" id="timeline">
+              <div class="timeline-empty">添加素材后显示每条轨道在视频中的落点</div>
+            </div>
+            <div class="timeline-legend">
+              <span><i class="swatch swatch-audio"></i>音轨有效区间</span>
+              <span><i class="swatch swatch-sub"></i>字幕覆盖区间</span>
+              <span><i class="swatch swatch-overflow"></i>超出视频末尾（预览静音 / 导出截断）</span>
+              <span><i class="swatch swatch-pad"></i>补静音 / 无字幕</span>
+            </div>
+          </div>
+        </section>
+
+        <aside class="rail" aria-label="轨道">
+          <div class="rail-head">
+            <div>
+              <h2 id="project-name">未命名项目</h2>
+              <p class="muted" id="project-video">尚未载入视频</p>
+            </div>
+            <button class="btn btn-mini" id="btn-rename" type="button">重命名</button>
+          </div>
+
+          <div class="rail-summary" id="rail-summary">
+            <div><span>音频轨</span><strong id="sum-audio">0</strong></div>
+            <div><span>字幕轨</span><strong id="sum-subtitle">0</strong></div>
+            <div><span>提醒</span><strong id="sum-warnings">0</strong></div>
+          </div>
+
+          <section class="track-section" data-kind="audio">
+            <div class="section-head">
+              <h3>音频轨</h3>
+              <button class="btn btn-mini" type="button" data-add="audio">＋ 音频</button>
+            </div>
+            <div class="track-list" id="audio-list">
+              <p class="empty">还没有音轨。添加独立音频文件，或载入示例。</p>
+            </div>
+          </section>
+
+          <section class="track-section" data-kind="subtitle">
+            <div class="section-head">
+              <h3>字幕轨</h3>
+              <button class="btn btn-mini" type="button" data-add="subtitle">＋ 字幕</button>
+            </div>
+            <div class="track-list" id="subtitle-list">
+              <p class="empty">还没有字幕。支持 SRT / VTT / ASS / SSA。</p>
+            </div>
+          </section>
+
+          <section class="export-card">
+            <div class="section-head">
+              <h3>导出</h3>
+              <span class="badge" id="export-state">未就绪</span>
+            </div>
+            <label class="field">
+              <span>输出路径</span>
+              <input id="output-path" type="text" spellcheck="false" placeholder="与视频同目录的 .trackweave.mkv" />
+            </label>
+            <div class="export-meta" id="export-meta">所有启用的音轨与字幕都会写入同一个 MKV；切换默认轨不会删除副轨。</div>
+            <div class="progress-wrap" id="progress-wrap" hidden>
+              <div class="progress-head">
+                <span id="progress-label">准备中…</span>
+                <strong id="progress-value">0%</strong>
+              </div>
+              <div class="progress"><div class="progress-bar" id="progress-bar"></div></div>
+            </div>
+            <button class="btn btn-primary btn-block" id="btn-export-2" type="button" disabled>导出并读回校验</button>
+            <div class="result" id="export-result" hidden></div>
+          </section>
+        </aside>
+      </main>
+
+      <section class="issues" id="issues" aria-label="提醒与错误">
+        <div class="issues-head">
+          <h2>提醒与错误</h2>
+          <div class="issues-filters" id="issues-filters">
+            <button class="filter is-active" data-filter="all" type="button">全部</button>
+            <button class="filter" data-filter="error" type="button">错误</button>
+            <button class="filter" data-filter="warning" type="button">提醒</button>
+            <button class="filter" data-filter="info" type="button">说明</button>
+          </div>
+        </div>
+        <ul class="issue-list" id="issue-list">
+          <li class="issue-empty">没有发现问题。</li>
+        </ul>
+      </section>
+    </div>
+
+    <!-- 文件选择器：由本地服务列出目录，不把路径权限交给浏览器 -->
+    <dialog id="picker" class="picker">
+      <form method="dialog" class="picker-inner">
+        <header class="picker-head">
+          <div>
+            <h2>选择本地文件</h2>
+            <p class="muted" id="picker-purpose">添加到项目</p>
+          </div>
+          <button class="icon-btn" value="cancel" aria-label="关闭">✕</button>
+        </header>
+        <div class="picker-toolbar">
+          <button class="btn btn-mini" type="button" id="picker-up">↑ 上一级</button>
+          <span class="picker-path" id="picker-path">—</span>
+          <label class="btn btn-mini picker-upload">
+            上传文件
+            <input id="picker-upload" type="file" multiple hidden />
+          </label>
+        </div>
+        <div class="picker-roots" id="picker-roots"></div>
+        <ul class="picker-list" id="picker-list"></ul>
+        <footer class="picker-foot">
+          <p class="muted" id="picker-note">音频与字幕可多选；视频单选。</p>
+          <div>
+            <button class="btn btn-ghost" value="cancel" type="button" id="picker-cancel">取消</button>
+            <button class="btn btn-primary" value="default" type="button" id="picker-confirm" disabled>添加所选</button>
+          </div>
+        </footer>
+      </form>
+    </dialog>
+
+    <dialog id="rename-dialog" class="picker small">
+      <form method="dialog" class="picker-inner">
+        <header class="picker-head">
+          <div>
+            <h2>项目名称</h2>
+            <p class="muted">仅用于显示与成品标题</p>
+          </div>
+          <button class="icon-btn" value="cancel" aria-label="关闭">✕</button>
+        </header>
+        <label class="field">
+          <span>名称</span>
+          <input id="rename-input" type="text" maxlength="120" />
+        </label>
+        <footer class="picker-foot">
+          <span></span>
+          <div>
+            <button class="btn btn-ghost" value="cancel" type="button" id="rename-cancel">取消</button>
+            <button class="btn btn-primary" value="default" type="button" id="rename-confirm">保存</button>
+          </div>
+        </footer>
+      </form>
+    </dialog>
+
+    <div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

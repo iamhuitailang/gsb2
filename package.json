@@ -1,0 +1,17 @@
+{
+  "name": "gsb2-trackweave",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "本地双语教学片音轨 / 字幕装配与核对工具",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "generate:samples": "node scripts/generate-samples.js",
+    "test": "node --test test/*.test.js",
+    "verify": "node scripts/verify.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
