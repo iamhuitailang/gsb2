@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>CubeCore 自检</title>
+<style>
+  body { font: 14px/1.6 ui-monospace, Menlo, Consolas, monospace; background:#0d1016; color:#e6ecf5; margin:0; padding:24px; }
+  h1 { font-size:16px; }
+  .ok { color:#4fd08a; }
+  .bad { color:#ff6b78; }
+  .group { margin-top:14px; color:#ffbe55; font-weight:600; }
+  .line { padding-left:18px; }
+  #summary { margin-top:20px; padding:10px 14px; border-radius:8px; background:#161d2a; border:1px solid #263041; }
+</style>
+</head>
+<body>
+<h1>CubeCore 自检（浏览器内运行）</h1>
+<p style="color:#8b98ab">与 <code>node test/core.test.js</code> 同一套断言，用于在无 Node shell 时验证几何/投影/接缝逻辑。</p>
+<div id="out"></div>
+<div id="summary">运行中…</div>
+<script src="/src/cube.js"></script>
+<script src="/src/samples.js"></script>
+<script>
+(function () {
+  const C = window.CubeCore;
+  const Samples = window.Samples;
+  const out = document.getElementById('out');
+  const summary = document.getElementById('summary');
+  let passed = 0, failed = 0;
+  const fails = [];
+  function line(cls, text) { const d = document.createElement('div'); d.className = 'line ' + cls; d.textContent = text; out.appendChild(d); }
+  function group(t) { const d = document.createElement('div'); d.className = 'group'; d.textContent = t; out.appendChild(d); }
+  function eqv(a, b, msg) { if (a !== b) throw new Error((msg || '') + ' expected ' + JSON.stringify(b) + ' got ' + JSON.stringify(a)); }
+  function approx(a, b, eps, msg) { if (Math.abs(a - b) > (eps == null ? 1e-9 : eps)) throw new Error((msg || '') + ' expected ' + a + ' ≈ ' + b); }
+  function test(name, fn) { try { fn(); passed++; line('ok', '✓ ' + name); } catch (e) { failed++; fails.push(name + ': ' + e.message); line('bad', '✗ ' + name + ' — ' + e.message); } }
+  function cross(a, b) { return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+  function solidTex(r, g, b, size) { const n = size || 48; const data = new Uint8ClampedArray(n*n*4); for (let i=0;i<n*n;i++){data[i*4]=r;data[i*4+1]=g;data[i*4+2]=b;data[i*4+3]=255;} return { data, width:n, height:n }; }
+  function dirTex(faceId, size) { const n = size || 64; const data = new Uint8ClampedArray(n*n*4); for (let y=0;y<n;y++){const v=1-(y+0.5)/n; for(let x=0;x<n;x++){const u=(x+0.5)/n; const P=C.facePoint3(faceId,u,v); const i=(y*n+x)*4; data[i]=Math.round((P[0]*0.5+0.5)*255); data[i+1]=Math.round((P[1]*0.5+0.5)*255); data[i+2]=Math.round((P[2]*0.5+0.5)*255); data[i+3]=255;}} return { data, width:n, height:n }; }
+  function contFaces(size) { const f={}; for (const face of C.FACES) f[face.id]={ tex: dirTex(face.id, size||64), rot:0, flipH:false }; return f; }
+
+  group('1. 面基向量');
+  for (const f of C.FACES) {
+    test('面 ' + f.id + ' r × u = n', () => { const c = cross(f.r, f.u); for (let i=0;i<3;i++) eqv(c[i], f.n[i], 'axis'+i); });
+    test('面 ' + f.id + ' 两两正交', () => { eqv(C.dot(f.n,f.r),0); eqv(C.dot(f.n,f.u),0); eqv(C.dot(f.r,f.u),0); });
+  }
+
+  group('2. 邻接');
+  test('12 条接缝', () => eqv(C.SEAMS.length, 12));
+  test('每面 4 邻居', () => { for (const f of C.FACES) eqv(C.neighbors(f.id).length, 4, 'face'+f.id); });
+
+  group('3. 采样互逆');
+  for (let rot=0; rot<4; rot++) for (const flip of [false,true]) {
+    test('rot='+rot+' flip='+flip, () => {
+      for (const [u,v] of [[0.1,0.2],[0.8,0.15],[0.25,0.9],[0.5,0.5]]) {
+        const P = C.uvToSourcePixel(rot, flip, u, v, 128, 128);
+        const b = C.sourcePixelToUV(rot, flip, P.x, P.y, 128, 128);
+        approx(b.u, u, 1e-12, 'u'); approx(b.v, v, 1e-12, 'v');
+      }
+    });
+  }
+
+  group('4. 经纬');
+  test('lon0/lat0 → +Z', () => { const d=C.dirFromLonLat(0,0); approx(d[0],0,1e-12); approx(d[2],1,1e-12); });
+  test('方向往返', () => { for (const d of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1],[0.5,0.3,-0.8]]) { const ll=C.lonLatFromDir(d); const b=C.dirFromLonLat(ll.lon,ll.lat); const n=C.norm(d); for(let i=0;i<3;i++) approx(b[i],n[i],1e-9); } });
+  test('右面 +X 在 u=0.75', () => { const c=C.dirToEquirectPixel([1,0,0],360,180); approx((c.x+0.5)/360,0.75,1e-9); });
+  test('dirToFace ↔ facePoint3', () => { for (const f of C.FACES) for (const uv of [[0.5,0.5],[0.2,0.35],[0.9,0.1]]) { const P=C.facePoint3(f.id,uv[0],uv[1]); const hit=C.dirToFace(P); eqv(hit.faceId,f.id); approx(hit.u,uv[0],1e-9); approx(hit.v,uv[1],1e-9); } });
+
+  group('5. 展开图');
+  test('六格无重叠', () => { const s=new Set(); for (const c of C.NET_LAYOUT) { const k=c.col+','+c.row; if (s.has(k)) throw new Error('overlap '+k); s.add(k); } eqv(s.size,6); });
+  test('横带首尾 左1/后5', () => { const p=[C.BAND_WRAP_SEAM.faceA,C.BAND_WRAP_SEAM.faceB].sort((a,b)=>a-b); eqv(p[0],1); eqv(p[1],5); });
+  test('物理相邻 5 条', () => eqv(C.SEAMS.filter(s=>C.netPhysical(s)).length, 5));
+
+  group('6. 接缝判定');
+  const cont = contFaces(96);
+  test('正确朝向全 aligned', () => { const res=C.classifyAllSeams(cont); for (const r of res) eqv(r.kind,'aligned', r.seam.key); });
+  test('转错一面 → 可修正', () => { const b={}; for (const f of C.FACES) b[f.id]=Object.assign({},cont[f.id]); b[0]=Object.assign({},cont[0],{rot:1}); const res=C.classifyAllSeams(b).filter(r=>r.seam.faceA===0||r.seam.faceB===0); if (res.some(r=>r.kind==='aligned')) throw new Error('转错的面不应 aligned'); if (!res.some(r=>['turnable','reversed','paired'].indexOf(r.kind)>=0)) throw new Error('应至少给出一个修法'); });
+  test('suggestOrientations 找回 rot=0', () => { const b={}; for (const f of C.FACES) b[f.id]=Object.assign({},cont[f.id]); b[2]=Object.assign({},cont[2],{rot:1}); const res=C.suggestOrientations(b); eqv(res.configs[2].rot,0); eqv(res.configs[2].flipH,false); });
+  test('纯色差异 → content', () => { const a=solidTex(255,0,0), bb=solidTex(0,0,255); const f={}; for (const face of C.FACES) f[face.id]={tex:a,rot:0,flipH:false}; f[4]={tex:bb,rot:0,flipH:false}; const res=C.classifyAllSeams(f).filter(r=>r.seam.faceA===4||r.seam.faceB===4); for (const r of res) eqv(r.kind,'content', r.seam.key); });
+
+  group('7. 经纬往返');
+  test('六面→经纬→六面 中心误差<6', () => { const eq=C.renderEquirectFromFaces({width:512,height:256,faces:cont,bilinear:true}); const back=C.extractFacesFromEquirect({equirect:eq,size:96,bilinear:true}); for (const f of C.FACES) { let sum=0,cnt=0; for (let y=24;y<72;y++) for (let x=24;x<72;x++) { const i=(y*96+x)*4; for (let c=0;c<3;c++){ sum+=Math.abs(back[f.id].data[i+c]-cont[f.id].tex.data[i+c]); cnt++; } } const mean=sum/cnt; if (mean>=6) throw new Error('face '+f.id+' mean '+mean.toFixed(2)); } });
+  test('±180° 是后面', () => { eqv(C.dirToFace(C.dirFromLonLat(-Math.PI+1e-6,0)).faceId,5); eqv(C.dirToFace(C.dirFromLonLat(Math.PI-1e-6,0)).faceId,5); });
+
+  group('8. 诊断');
+  test('缺面点名', () => { const f=contFaces(64); delete f[1]; delete f[3]; const d=C.diagnose(f); eqv(d.ok,false); eqv(d.missing.sort((a,b)=>a-b).join(','),'1,3'); });
+  test('尺寸不一致点名 2', () => { const f=contFaces(64); f[2]={tex:solidTex(1,2,3,128),rot:0,flipH:false}; const d=C.diagnose(f); const m=d.messages.find(x=>x.kind==='mixed'); if (!m || m.faces.indexOf(2)<0) throw new Error('应点名 2'); });
+
+  group('9. 文件名');
+  test('识别面号', () => { const cs={'front.png':4,'px.jpg':0,'negz.png':5,'cube_top.png':2,'Bottom.png':3,'back.webp':5}; for (const k of Object.keys(cs)) eqv(C.guessFaceFromName(k),cs[k],k); });
+
+  group('10. 样例');
+  test('六面齐全 + 0 号 rot=1', () => { const s=Samples.makeSampleFaces({size:96,equirectWidth:288}); for (const f of C.FACES) { if (!s.faces[f.id]||!s.faces[f.id].tex) throw new Error('face'+f.id); eqv(s.faces[f.id].tex.width,96); } eqv(s.configs[0].rot,1); });
+  test('样例修正后 0 号面全 aligned', () => { const s=Samples.makeSampleFaces({size:96,equirectWidth:288}); const f={}; for (const face of C.FACES) f[face.id]={tex:s.faces[face.id].tex,rot:face.id===0?0:s.configs[face.id].rot,flipH:false}; const face0=C.classifyAllSeams(f).filter(r=>r.seam.faceA===0||r.seam.faceB===0); const bad=face0.filter(r=>r.kind!=='aligned'); if (bad.length) throw new Error(bad.map(r=>r.seam.key+'='+r.kind).join(',')); });
+
+  summary.innerHTML = failed
+    ? '<span class="bad">失败 ' + failed + ' / 通过 ' + passed + '</span><br>' + fails.map(f => '· ' + f).join('<br>')
+    : '<span class="ok">全部通过：' + passed + ' 项</span>';
+})();
+</script>
+</body>
+</html>

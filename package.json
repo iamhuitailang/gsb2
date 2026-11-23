@@ -1,0 +1,11 @@
+{
+  "name": "cube-env-checker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "本地立方体环境图（六面图 / 经纬展开图）检查与转换工具",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test/core.test.js",
+    "generate:samples": "node tools/generate-samples.js"
+  }
+}

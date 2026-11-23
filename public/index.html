@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>立方体环境图检查器</title>
+<link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="logo" aria-hidden="true">◧</span>
+    <div>
+      <h1>立方体环境图检查器</h1>
+      <p id="subtitle">六面图 ⇄ 立方体 ⇄ 经纬图 · 接缝诊断与方向修正</p>
+    </div>
+  </div>
+  <div class="toolbar">
+    <button id="btn-samples" class="primary" title="载入六张内置方向图（其中一面故意转错）">载入内置样例</button>
+    <div class="menu">
+      <button id="btn-import-menu" class="ghost">导入 ▾</button>
+      <div class="menu-panel" id="import-menu">
+        <button data-act="faces">六张面图…</button>
+        <button data-act="equirect">单张经纬图…</button>
+        <button data-act="project">项目文件 (.json)…</button>
+        <button data-act="manifest">样例目录…</button>
+      </div>
+    </div>
+    <div class="menu">
+      <button id="btn-export-menu" class="ghost">导出 ▾</button>
+      <div class="menu-panel" id="export-menu">
+        <button data-act="equirect">经纬展开图 PNG</button>
+        <button data-act="net">十字展开图 PNG</button>
+        <button data-act="faces-corrected">六面（已按当前朝向摆正）</button>
+        <button data-act="project">项目文件 JSON</button>
+        <button data-act="config">方向配置 (轻量 JSON)</button>
+        <button data-act="cube-shot">当前立方体视图 PNG</button>
+      </div>
+    </div>
+    <button id="btn-help" class="ghost" title="说明">?</button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="stage" aria-label="主视图">
+    <div class="stage-head">
+      <nav class="tabs" role="tablist">
+        <button role="tab" data-tab="cube" class="active">立方体内部</button>
+        <button role="tab" data-tab="net">十字展开图</button>
+        <button role="tab" data-tab="equirect">经纬展开图</button>
+      </nav>
+      <div class="stage-tools">
+        <label class="switch"><input type="checkbox" id="opt-seams" checked /> 显示棱线</label>
+        <label class="switch"><input type="checkbox" id="opt-labels" checked /> 显示面号</label>
+        <label class="switch" id="wrap-poles" style="display:none"><input type="checkbox" id="opt-poles" checked /> 极区标记</label>
+        <span class="sep"></span>
+        <button id="btn-extract" class="ghost small" style="display:none" title="把当前经纬图抽回六张面图">抽取六面</button>
+        <button id="btn-save-eq" class="ghost small" style="display:none" title="导出当前经纬图">导出经纬图</button>
+        <button id="btn-fit" class="ghost small" title="重置视角">重置视角</button>
+        <button id="btn-refresh" class="ghost small" title="重新计算">刷新</button>
+      </div>
+    </div>
+
+    <div class="canvas-wrap" id="canvas-wrap">
+      <canvas id="view"></canvas>
+      <div class="hint" id="view-hint">拖动旋转 · 滚轮缩放 · 点击取样 · 双击重置</div>
+      <div class="badge" id="view-badge"></div>
+      <div class="loading" id="loading" hidden><span></span>正在计算…</div>
+    </div>
+
+    <div class="statusbar" id="statusbar">
+      <span class="status-empty">点击视图任意位置，这里会显示所属面编号与原图像素位置。</span>
+    </div>
+  </section>
+
+  <aside class="sidebar" aria-label="面与诊断">
+    <section class="panel diag">
+      <h2>项目诊断 <span class="pill" id="diag-pill">—</span></h2>
+      <div id="diag-list" class="diag-list"></div>
+    </section>
+
+    <section class="panel faces">
+      <h2>六个面 <span class="hint-inline">按文件名自动对号</span></h2>
+      <div id="face-list" class="face-list"></div>
+      <div class="face-actions">
+        <button id="btn-suggest" class="ghost small">自动修正朝向</button>
+        <button id="btn-clear" class="ghost small danger">清空全部</button>
+      </div>
+    </section>
+
+    <section class="panel probe" id="probe-panel">
+      <h2>取样预览</h2>
+      <div class="probe-body">
+        <canvas id="probe-canvas" width="180" height="180"></canvas>
+        <dl id="probe-info" class="kv">
+          <div><dt>位置</dt><dd class="status-empty">尚未取样</dd></div>
+        </dl>
+      </div>
+    </section>
+  </aside>
+</main>
+
+<section class="seams-section">
+  <div class="seams-head">
+    <h2>相邻面共用边 <span class="hint-inline">12 条真实棱 · 点击查看角点对应</span></h2>
+    <div class="legend">
+      <span class="lg lg-aligned">已吻合</span>
+      <span class="lg lg-turnable">只需转向 / 顺序反</span>
+      <span class="lg lg-paired">两面配合</span>
+      <span class="lg lg-content">颜色接不上</span>
+      <span class="lg lg-missing">缺图</span>
+    </div>
+  </div>
+  <div class="seams-body">
+    <div id="seam-list" class="seam-list"></div>
+    <div id="seam-detail" class="seam-detail">
+      <p class="status-empty">选择左侧任意一条棱，查看两面的逐点色带、结论与角点对应表。</p>
+    </div>
+  </div>
+</section>
+
+<footer class="footer">
+  <span>纯本地运行 · 不上传任何图片</span>
+  <span id="build-info"></span>
+</footer>
+
+<input type="file" id="file-faces" accept="image/*" multiple hidden />
+<input type="file" id="file-equirect" accept="image/*" hidden />
+<input type="file" id="file-project" accept=".json,application/json" hidden />
+
+<dialog id="help-dialog">
+  <form method="dialog" class="help-body">
+    <h2>使用说明与朝向约定</h2>
+    <h3>主视图是“站在立方体内部”</h3>
+    <p>每张图默认 <code>旋转 0° / 不镜像</code> 时，从立方体中心看这面墙，图里的文字应当正读。
+       这是环境贴图的常规约定；从外面看整个立方体会镜像。</p>
+    <h3>判断“转反”</h3>
+    <p>相邻两面共用一条棱。工具沿这条棱在两面各取一条色带比较：</p>
+    <ul>
+      <li><b>已吻合</b>：颜色逐点对得上。</li>
+      <li><b>顺序反了 / 只需转向</b>：颜色其实一致，只是某面被转了或镜像了，点“修正”即可。</li>
+      <li><b>颜色确实接不上</b>：试过两面所有 64 种朝向仍对不上，是真内容问题，不是转向。</li>
+    </ul>
+    <h3>经纬图</h3>
+    <p>经纬图中央是前面(+Z)，向左依次是左、后、右；右边缘与左边缘是同一条首尾接缝。
+       靠近上下两极为顶/底面覆盖区域。</p>
+    <h3>快捷键</h3>
+    <p><kbd>1</kbd>–<kbd>6</kbd> 选面 · <kbd>[</kbd>/<kbd>]</kbd> 逆/顺时针转 90° ·
+       <kbd>F</kbd> 水平镜像 · <kbd>方向键</kbd> 转视角 · <kbd>R</kbd> 重置视角</p>
+    <div class="dialog-actions"><button class="primary" value="close">知道了</button></div>
+  </form>
+</dialog>
+
+<script src="/src/cube.js"></script>
+<script src="/src/samples.js"></script>
+<script src="/app.js"></script>
+</body>
+</html>
