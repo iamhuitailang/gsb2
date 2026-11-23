@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>黑白零件图轮廓测量工具</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1>黑白零件图轮廓测量</h1>
+  <div class="header-actions">
+    <label class="btn">导入扫描图
+      <input type="file" id="file-input" accept="image/*" hidden>
+    </label>
+    <button class="btn" id="btn-export">导出工程 JSON</button>
+    <label class="btn">读回工程
+      <input type="file" id="project-input" accept=".json" hidden>
+    </label>
+    <button class="btn" id="btn-annotate">生成描边图</button>
+  </div>
+</header>
+
+<main>
+  <!-- 左侧控制面板 -->
+  <aside id="panel">
+    <section class="card" id="card-demo">
+      <h2>① 演示数据（程序绘制，含已知真值）</h2>
+      <div class="row">
+        <button class="btn small" data-demo="a">A 正放+平行标尺</button>
+        <button class="btn small" data-demo="b">B 旋转+斜标尺</button>
+        <button class="btn small" data-demo="c">C 贴边+开口孔</button>
+      </div>
+      <button class="btn small wide" id="btn-demo-calib">用演示标尺一键标定</button>
+      <div id="demo-gt" class="muted small-text"></div>
+    </section>
+
+    <section class="card" id="card-calib">
+      <h2>② 标尺标定（可斜置）</h2>
+      <p class="hint">在图上依次点击横尺两个端点，再点击纵尺两个端点；
+        也可直接填像素坐标。黄框为有效测量区域。</p>
+      <div class="row">
+        <span>横尺长度(mm)</span>
+        <input type="number" id="h-length" value="100" step="0.1" min="0.1">
+      </div>
+      <div class="row">
+        <span>纵尺长度(mm)</span>
+        <input type="number" id="v-length" value="70" step="0.1" min="0.1">
+      </div>
+      <div class="row wrap">
+        <button class="btn small" id="btn-pick-h">点选横尺端点(0/2)</button>
+        <button class="btn small" id="btn-pick-v">点选纵尺端点(0/2)</button>
+        <button class="btn small" id="btn-apply-calib">应用标定</button>
+        <button class="btn small" id="btn-clear-calib">清除</button>
+      </div>
+      <div id="calib-quality" class="small-text muted"></div>
+    </section>
+
+    <section class="card" id="card-seg">
+      <h2>③ 分割阈值与轮廓预览</h2>
+      <div class="row">
+        <span>判定阈值 <b id="threshold-val">128</b></span>
+        <input type="range" id="threshold" min="1" max="254" value="128">
+      </div>
+      <div class="row">
+        <span>小黑点门槛(px²) <b id="speck-val">3000</b></span>
+        <input type="range" id="speck" min="0" max="20000" step="50" value="3000">
+      </div>
+      <div class="row">
+        <span>开运算去毛刺</span>
+        <input type="number" id="morph" value="0" min="0" max="15" step="1">
+      </div>
+      <label class="row"><input type="checkbox" id="invert"> 深底浅零件（反色）</label>
+      <div class="row wrap" id="legend">
+        <span class="dot outer"></span>外轮廓
+        <span class="dot hole"></span>孔
+        <span class="dot border"></span>断到图边
+      </div>
+      <div id="seg-counts" class="small-text muted"></div>
+      <div class="row wrap">
+        <button class="btn small" id="btn-snapshot">存为快照 A</button>
+        <select id="snapshot-select"></select>
+        <button class="btn small" id="btn-diff">与快照对比</button>
+      </div>
+    </section>
+
+    <section class="card" id="card-measure">
+      <h2>④ 测量读数（点击图中零件）</h2>
+      <div id="measurement" class="small-text">
+        <p class="muted">先标定并运行分析，再点击零件区域。</p>
+      </div>
+      <div class="row wrap">
+        <button class="btn small" id="btn-pending">标记为待确认</button>
+        <button class="btn small" id="btn-confirm">标记已确认</button>
+      </div>
+    </section>
+  </aside>
+
+  <!-- 中央画布 -->
+  <section id="canvas-wrap">
+    <div id="toolbar" class="small-text">
+      <span id="status" class="muted">未加载图片</span>
+    </div>
+    <div id="stage">
+      <canvas id="canvas"></canvas>
+      <div id="tooltip" class="tooltip hidden"></div>
+    </div>
+    <div id="diff-panel" class="card hidden">
+      <h2>两次结果叠加：孔的去向</h2>
+      <div id="diff-content" class="small-text"></div>
+      <button class="btn small" id="btn-close-diff">关闭对比</button>
+    </div>
+  </section>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

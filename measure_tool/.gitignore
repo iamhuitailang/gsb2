@@ -1,0 +1,8 @@
+# 运行产物
+output/
+__pycache__/
+*.pyc
+.pytest_cache/
+# 演示图可由 run_demo.py 重新生成
+demo/*.png
+demo/ground_truth.json

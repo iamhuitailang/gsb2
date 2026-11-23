@@ -1,0 +1,6 @@
+# 本地依赖（Python 3.11+，均为常见科学计算库）
+flask>=3.0
+opencv-python-headless>=4.8
+numpy>=1.26
+Pillow>=10.0
+pytest>=8.0
