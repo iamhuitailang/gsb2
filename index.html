@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>二维可破坏结构 · 规则试验页</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>二维可破坏结构 · 规则试验页</h1>
+    <span class="sub">格子内规则：锚 / 砖 / 可断连接 · 批量移除统一结算 · 团块保形下落 · 可单步撤回重跑</span>
+    <span id="mode-badge" class="mode-badge edit">编辑模式</span>
+  </header>
+
+  <div class="layout">
+    <!-- 左：工具与样例 -->
+    <aside class="panel-left">
+      <section class="panel">
+        <h2>编辑工具</h2>
+        <div class="tool-grid">
+          <button data-tool="anchor">固定锚</button>
+          <button data-tool="brick" class="active">普通砖</button>
+          <button data-tool="edge">可断连接</button>
+          <button data-tool="erase" class="danger">擦除</button>
+        </div>
+        <div class="swatches" id="color-row" title="砖的颜色（仅区分，不参与规则）"></div>
+        <p class="mode-note" id="mode-note"></p>
+        <hr class="sep" />
+        <div class="tool-grid">
+          <button id="btn-destroy" class="primary wide">进入破坏 / 运行模式</button>
+          <button id="btn-edit" disabled>返回编辑（重置运行）</button>
+          <button id="btn-new">新建空白地图</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>内置样例</h2>
+        <div class="tool-grid">
+          <button data-sample="bridge">双锚桥</button>
+          <button data-sample="interlock">相互托住</button>
+          <button data-sample="slot" class="wide">并排落入窄槽</button>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2>存档与校验</h2>
+        <div class="file-row">
+          <button id="btn-export">保存 JSON</button>
+          <button id="btn-import">打开 JSON</button>
+          <button id="btn-export-log">导出逐步记录</button>
+          <button id="btn-verify" class="primary">重跑校验</button>
+        </div>
+        <input type="file" id="file-input" accept="application/json,.json" />
+        <p class="muted" style="margin-bottom:0">布局与破坏操作随存档保存；每次操作自动存入浏览器本地。</p>
+      </section>
+    </aside>
+
+    <!-- 中：画布 -->
+    <main>
+      <section class="stage-wrap">
+        <div class="stage-head">
+          <div>
+            <strong id="sample-title">空白画布</strong>
+            <div class="muted" id="sample-desc"></div>
+          </div>
+          <div class="stats" id="stats"></div>
+        </div>
+        <svg id="board" class="board" role="img" aria-label="结构网格"></svg>
+        <div class="legend">
+          <span><i style="background:#1f2937"></i>固定锚（不可移动）</span>
+          <span><i style="background:#60a5fa"></i>普通砖（颜色仅区分）</span>
+          <span><i style="background:#059669"></i>连接：有路到锚</span>
+          <span><i style="background:#b45309"></i>连接：未连到锚</span>
+          <span><i style="background:rgba(220,38,38,0.35)"></i>红底 = 该砖当前无锚路径</span>
+        </div>
+      </section>
+
+      <section class="panel" style="margin-top:14px">
+        <h2>时间线（暂停后可单步 / 撤回）</h2>
+        <div class="timeline">
+          <input type="range" id="timeline" min="-1" max="0" value="-1" step="1" />
+          <span class="pos" id="timeline-pos">初始布局</span>
+        </div>
+        <div class="run-controls">
+          <button id="btn-start">⏮ 初始</button>
+          <button id="btn-step-back">◀ 上一步</button>
+          <button id="btn-step">下一步 ▶</button>
+          <button id="btn-latest">最新 ⏭</button>
+          <button id="btn-run">自动播放</button>
+        </div>
+        <div class="run-controls">
+          <button id="btn-apply-destroy" class="danger" disabled>结算移除（一批一次）</button>
+          <button id="btn-clear-selection">清空框选</button>
+        </div>
+        <div id="verify-box" class="verify-box idle">加载样例或执行破坏后可重跑校验。</div>
+      </section>
+    </main>
+
+    <!-- 右：事件日志 -->
+    <aside class="panel panel-right">
+      <section class="panel">
+        <h2>事件逐步记录</h2>
+        <div class="event-log" id="event-log"></div>
+        <p class="muted" style="margin-bottom:0">
+          点击任意事件可跳回该时刻；从历史时刻直接进行新破坏，会截断其后的事件并从该时刻重新结算。
+        </p>
+      </section>
+    </aside>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="engine.js"></script>
+  <script src="samples.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

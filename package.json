@@ -1,0 +1,10 @@
+{
+  "name": "destruct-grid-rules",
+  "version": "1.0.0",
+  "private": true,
+  "description": "二维可破坏结构规则试验页：锚/砖/可断连接、统一结算、团块保形下落与可追查的碰撞取舍",
+  "scripts": {
+    "test": "node test/engine.test.js",
+    "serve": "python3 -m http.server 8000"
+  }
+}
