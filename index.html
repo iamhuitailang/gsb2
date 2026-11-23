@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>本地立体声相位检查</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="title-row">
+    <h1>本地立体声相位检查</h1>
+    <span class="privacy-note">全部运算在本机浏览器内完成，音频不会上传</span>
+  </div>
+  <div class="control-row">
+    <label class="btn primary">选择本地双声道 WAV
+      <input type="file" id="fileInput" accept=".wav,audio/wav,audio/wave,audio/x-wav" hidden>
+    </label>
+    <span id="fileInfo" class="file-info">未加载文件</span>
+  </div>
+  <div class="control-row samples-row">
+    <span class="row-label">内置样例（无需自备录音）：</span>
+    <button class="btn sample-btn" data-sample="inphase">同相样例</button>
+    <button class="btn sample-btn" data-sample="antiphase">反相样例</button>
+    <button class="btn sample-btn" data-sample="bandcancel">部分频带抵消样例</button>
+    <button class="btn sample-btn" data-sample="onesided">单边静音样例</button>
+  </div>
+</header>
+
+<main>
+  <!-- 1. 总览 -->
+  <section class="card" id="overviewSection">
+    <div class="card-head">
+      <h2>① 波形总览与折叠风险</h2>
+      <div class="legend">
+        <span class="lg lg-ok">正常</span>
+        <span class="lg lg-cancel">折叠抵消</span>
+        <span class="lg lg-one">单边有声</span>
+        <span class="lg lg-silence">静音</span>
+        <span class="lg lg-sel">选区</span>
+        <span class="lg lg-ref">灰虚线=原始信号参考</span>
+      </div>
+    </div>
+    <canvas id="overviewCanvas" height="280"></canvas>
+    <div class="control-row wrap">
+      <button class="btn" id="playSelectionBtn" disabled>播放选区</button>
+      <button class="btn" id="loopSelectionBtn" disabled>循环选区：关</button>
+      <button class="btn" id="clearSelectionBtn" disabled>清除选区</button>
+      <span id="selectionInfo" class="muted">在波形上拖拽选择一段，单击则移动播放头</span>
+    </div>
+    <div id="hintBanner" class="hint-banner hidden"></div>
+  </section>
+
+  <!-- 2. 试听与实时表桥 -->
+  <section class="card">
+    <div class="card-head"><h2>② 试听模式与实时表桥</h2></div>
+    <div class="control-row wrap">
+      <div class="mode-group" id="modeGroup">
+        <button class="btn mode-btn active" data-mode="stereo">立体声 L+R</button>
+        <button class="btn mode-btn" data-mode="left">仅左声道（双耳）</button>
+        <button class="btn mode-btn" data-mode="right">仅右声道（双耳）</button>
+        <button class="btn mode-btn" data-mode="mono">折叠单声道 (L+R)/2</button>
+      </div>
+      <button class="btn primary" id="playBtn" disabled>播放</button>
+      <button class="btn" id="stopBtn" disabled>停止</button>
+      <span id="timeDisplay" class="time-display">00:00.0 / 00:00.0</span>
+      <label class="check-label">
+        <input type="checkbox" id="compCheck" checked>
+        等响补偿（消除模式间音量差误导）<span id="compValue" class="muted"></span>
+      </label>
+    </div>
+    <div class="meters">
+      <div class="meter-block">
+        <div class="meter-title">左声道 L</div>
+        <canvas id="meterL" height="26" class="meter-canvas"></canvas>
+      </div>
+      <div class="meter-block">
+        <div class="meter-title">右声道 R</div>
+        <canvas id="meterR" height="26" class="meter-canvas"></canvas>
+      </div>
+      <div class="meter-block">
+        <div class="meter-title">折叠单声道 M</div>
+        <canvas id="meterM" height="26" class="meter-canvas"></canvas>
+      </div>
+      <div class="meter-block wide">
+        <div class="meter-title">相关度 <span id="corrText" class="muted">–</span></div>
+        <canvas id="meterCorr" height="26" class="meter-canvas"></canvas>
+        <div class="scale-row"><span>-1 反相</span><span>0</span><span>+1 同相</span></div>
+      </div>
+      <div class="meter-block wide">
+        <div class="meter-title">折叠电平差 <span id="foldText" class="muted">–</span></div>
+        <canvas id="meterFold" height="26" class="meter-canvas"></canvas>
+        <div class="scale-row"><span>-24 dB 严重抵消</span><span>-6 dB</span><span>0 dB 无损</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. 选区频带分析 -->
+  <section class="card">
+    <div class="card-head">
+      <h2>③ 选区低 / 中 / 高频表现</h2>
+      <button class="btn" id="analyzeBtn" disabled>分析当前选区</button>
+    </div>
+    <p class="muted small">分频点：250 Hz / 4000 Hz（零相位 FFT 分频，余弦过渡带 80 Hz；三张频带掩膜在每个频点严格求和为 1，三带相加可精确还原原信号）。电平单位 dBFS，折叠损失 = 单声道 RMS − 立体声参考 RMS。</p>
+    <div class="table-wrap">
+      <table id="bandTable">
+        <thead>
+          <tr><th>频带</th><th>L 电平</th><th>R 电平</th><th>折叠 M 电平</th><th>折叠损失</th><th>相关度</th><th>频带峰值 M</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div id="bandVerdict" class="hint-banner hidden"></div>
+  </section>
+
+  <!-- 4. 折叠风险段落 -->
+  <section class="card">
+    <div class="card-head">
+      <h2>④ 折叠后明显变小的段落</h2>
+      <span id="scanNote" class="muted small"></span>
+    </div>
+    <div class="table-wrap">
+      <table id="segmentTable">
+        <thead>
+          <tr><th>#</th><th>时间段</th><th>类型</th><th>最差相关度</th><th>最大折叠损失</th><th>操作</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="control-row wrap">
+      <span class="muted small">A/B 对比在段落内循环播放，并自动套用等响补偿：A = 立体声，B = 折叠单声道；也可让两者每 2 秒自动轮流。</span>
+      <button class="btn" id="abToggleBtn" disabled>停止 A/B 轮流</button>
+    </div>
+  </section>
+
+  <!-- 5. 调整链 -->
+  <section class="card">
+    <div class="card-head">
+      <h2>⑤ 调整链：极性 / 微延时 / 立体声宽度</h2>
+      <button class="btn" id="resetChainBtn" disabled>全部恢复原始</button>
+    </div>
+    <div class="chain-grid">
+      <div class="chain-item">
+        <div class="chain-label">左声道极性</div>
+        <button class="btn polarity-btn active" id="polLBtn" data-side="L">正常 (+)</button>
+      </div>
+      <div class="chain-item">
+        <div class="chain-label">右声道极性</div>
+        <button class="btn polarity-btn active" id="polRBtn" data-side="R">正常 (+)</button>
+      </div>
+      <div class="chain-item">
+        <div class="chain-label">左声道延时 <b id="delayLVal">0.0 ms</b></div>
+        <input type="range" id="delayL" min="0" max="20" step="0.1" value="0" disabled>
+      </div>
+      <div class="chain-item">
+        <div class="chain-label">右声道延时 <b id="delayRVal">0.0 ms</b></div>
+        <input type="range" id="delayR" min="0" max="20" step="0.1" value="0" disabled>
+      </div>
+      <div class="chain-item wide">
+        <div class="chain-label">立体声宽度（M/S 处理）<b id="widthVal">100%</b></div>
+        <input type="range" id="width" min="0" max="200" step="1" value="100" disabled>
+        <div class="scale-row"><span>0% 单声</span><span>100% 原始</span><span>200% 加阔</span></div>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table id="previewTable">
+        <thead>
+          <tr><th>指标</th><th>原始信号</th><th>当前调整后</th><th>变化</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 6. 导出 -->
+  <section class="card">
+    <div class="card-head"><h2>⑥ 导出 WAV 并回读核对</h2></div>
+    <div class="control-row wrap">
+      <label class="check-label">导出位深：
+        <select id="bitDepth">
+          <option value="16">16-bit PCM</option>
+          <option value="32f">32-bit 浮点</option>
+        </select>
+      </label>
+      <button class="btn primary" id="exportStereoBtn" disabled>导出调整后双声道 WAV</button>
+      <button class="btn primary" id="exportMonoBtn" disabled>导出同设置单声道 WAV</button>
+    </div>
+    <p class="muted small">每次导出都实时读取当前处理链设置并重新编码，不缓存、不继承上一次导出的设置；回读内容与下方日志中的设置快照可交叉核对。</p>
+    <div class="table-wrap">
+      <table id="exportTable">
+        <thead>
+          <tr><th>时间</th><th>文件</th><th>设置快照</th><th>回读核对</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script src="js/wav-codec.js"></script>
+<script src="js/dsp.js"></script>
+<script src="js/samples.js"></script>
+<script src="js/analysis.js"></script>
+<script src="js/audio-engine.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
