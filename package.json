@@ -1,0 +1,16 @@
+{
+  "name": "dissolve-cut-check",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "短片拼接与转场检查页：三段素材入出点、硬切/叠化、统一时间帧检查、音频交叠、导出复检",
+  "scripts": {
+    "start": "node server/index.mjs",
+    "dev": "node server/index.mjs",
+    "generate:samples": "node scripts/generate-samples.mjs",
+    "test": "node test/model.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

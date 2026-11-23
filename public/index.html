@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>短片拼接与转场检查</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true"></span>
+      <div>
+        <h1>短片拼接与转场检查</h1>
+        <p class="sub">截取三类素材 · 硬切 / 叠化 · 统一时间帧核对 · 音画同步试听 · 导出复检</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <div class="stat-strip" id="topStats"></div>
+      <button id="btnExport" class="primary">导出成片并复检</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel sources" aria-labelledby="h-sources">
+      <div class="panel-head">
+        <h2 id="h-sources">素材</h2>
+        <div class="head-actions">
+          <button id="btnAddFiles" class="ghost">添加本地短片…</button>
+          <button id="btnAddSamples" class="ghost">载入演示三连</button>
+        </div>
+      </div>
+      <div class="source-list" id="sourceList"></div>
+      <input type="file" id="fileInput" accept="video/*" multiple hidden />
+      <p class="hint">支持 mp4 / webm / mov。添加后自动读取帧率、时长与音轨。</p>
+    </section>
+
+    <section class="panel viewer" aria-labelledby="h-viewer">
+      <div class="panel-head">
+        <h2 id="h-viewer">统一时间线预览</h2>
+        <div class="viewer-badges" id="viewerBadges"></div>
+      </div>
+      <div class="stage">
+        <div class="stage-frame" id="stageFrame">
+          <canvas id="stageCanvas" width="960" height="540"></canvas>
+          <div class="stage-overlay">
+            <div class="tc" id="stageTc">00:00:00:00</div>
+            <div class="layerinfo" id="stageLayers"></div>
+          </div>
+          <div class="stage-empty" id="stageEmpty">
+            <p>还没有素材</p>
+            <p class="muted">点「载入演示三连」立即看到硬切与叠化，或添加自己的短片</p>
+          </div>
+        </div>
+        <div class="transport">
+          <button id="btnPlay" class="icon" title="播放 / 暂停（空格）">▶</button>
+          <button id="btnPrevFrame" class="icon" title="上一帧（←）">◀</button>
+          <button id="btnNextFrame" class="icon" title="下一帧（→）">▶</button>
+          <button id="btnPrevCut" class="icon wide" title="上一个转场（[）">上一转场</button>
+          <button id="btnNextCut" class="icon wide" title="下一个转场（]）">下一转场</button>
+          <div class="time-readout">
+            <span id="timeNow">0.000</span><span class="muted"> / </span><span id="timeTotal">0.000</span><span class="muted"> s</span>
+          </div>
+          <label class="audio-toggle" title="试听音量">
+            <input type="range" id="volume" min="0" max="1" step="0.01" value="0.9" />
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel timeline-panel" aria-labelledby="h-timeline">
+      <div class="panel-head">
+        <h2 id="h-timeline">时间线</h2>
+        <div class="head-actions">
+          <span class="legend"><i class="swatch hard"></i>硬切</span>
+          <span class="legend"><i class="swatch dissolve"></i>叠化</span>
+          <span class="legend"><i class="swatch lock"></i>已锁定取点</span>
+        </div>
+      </div>
+      <div class="tl-wrap" id="tlWrap">
+        <div class="tl-ruler" id="tlRuler"></div>
+        <div class="tl-tracks" id="tlTracks"></div>
+        <div class="tl-playhead" id="tlPlayhead"></div>
+      </div>
+      <div class="budget" id="budget"></div>
+    </section>
+
+    <section class="panel inspector" aria-labelledby="h-inspector">
+      <div class="panel-head">
+        <h2 id="h-inspector">转场检查</h2>
+        <div class="head-actions">
+          <button id="btnGotoCut" class="ghost" title="把播放头放到该转场中点">定位转场</button>
+        </div>
+      </div>
+      <div class="inspect-body" id="inspectBody"></div>
+    </section>
+
+    <section class="panel audio-panel" aria-labelledby="h-audio">
+      <div class="panel-head">
+        <h2 id="h-audio">声音编排</h2>
+        <div class="head-actions">
+          <button id="btnAudition" class="ghost" title="从当前播放头开始试听">从这里试听</button>
+          <button id="btnStopAudio" class="ghost">停止试听</button>
+        </div>
+      </div>
+      <div class="audio-body" id="audioBody"></div>
+    </section>
+
+    <section class="panel export-panel" aria-labelledby="h-export">
+      <div class="panel-head">
+        <h2 id="h-export">导出与复检</h2>
+        <div class="head-actions">
+          <button id="btnReverify" class="ghost">重新复检最近导出</button>
+        </div>
+      </div>
+      <div class="export-body" id="exportBody"></div>
+    </section>
+  </main>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <div class="modal-backdrop" id="modalBackdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head">
+        <h3 id="modalTitle"></h3>
+        <button id="modalClose" class="icon" aria-label="关闭">✕</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
