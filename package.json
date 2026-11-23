@@ -1,0 +1,15 @@
+{
+  "name": "slow-practice-player",
+  "version": "1.0.0",
+  "description": "浏览器本地音频慢速试听页：保音高变速、循环小节、WAV 导入导出与读回校验",
+  "private": true,
+  "scripts": {
+    "start": "python3 -m http.server 8080 --directory public",
+    "generate:samples": "node scripts/generate-samples.js",
+    "test": "node --test \"test/**/*.test.mjs\"",
+    "test:browser": "node scripts/smoke-browser.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

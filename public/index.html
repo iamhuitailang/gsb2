@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>慢速试听 · 乐器练习</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<header>
+  <h1>慢速试听页</h1>
+  <p class="subtitle">本机 WAV 导入 · 保音高变速 / 原始变速对照 · 小节循环 · 区间导出读回校验（音频不出本机）</p>
+</header>
+
+<main>
+  <!-- 1. 素材载入 -->
+  <section class="card">
+    <h2>1. 载入素材</h2>
+    <div class="row">
+      <label class="file-btn">
+        导入本机 WAV（单声道/立体声）
+        <input type="file" id="fileInput" accept=".wav,audio/wav,audio/wave,audio/x-wav" hidden>
+      </label>
+      <span class="hint">浏览器本地解码，不上传</span>
+    </div>
+    <div class="row">
+      <span class="hint">开箱样例：</span>
+      <button data-sample="practice">练习曲（含过门）</button>
+      <button data-sample="sustain">连续长音</button>
+      <button data-sample="accent">短重音</button>
+    </div>
+    <div id="sourceInfo" class="info">未载入素材</div>
+  </section>
+
+  <!-- 2. 波形与循环区 -->
+  <section class="card">
+    <h2>2. 波形与循环区</h2>
+    <canvas id="wave" width="960" height="200"></canvas>
+    <div class="row wrap">
+      <button id="setStart">把播放头设为区起点</button>
+      <button id="setEnd">把播放头设为区终点</button>
+      <button id="selectAll">全选</button>
+      <span class="hint">在波形上拖动选择区间，单击跳转；绿色区域即循环/导出区间</span>
+    </div>
+    <div class="grid4">
+      <label>区起点（源）
+        <input type="text" id="regionStart" readonly>
+      </label>
+      <label>区终点（源）
+        <input type="text" id="regionEnd" readonly>
+      </label>
+      <label>源区间时长
+        <input type="text" id="regionSrcDur" readonly>
+      </label>
+      <label>实际播放时长
+        <input type="text" id="regionOutDur" readonly>
+      </label>
+    </div>
+  </section>
+
+  <!-- 3. 播放控制 -->
+  <section class="card">
+    <h2>3. 播放控制</h2>
+    <div class="row wrap">
+      <button id="play" class="primary">播放</button>
+      <button id="stop">停止</button>
+      <label class="inline"><input type="checkbox" id="loop" checked> 循环</label>
+      <label class="inline">音量
+        <input type="range" id="volume" min="0" max="1" step="0.01" value="0.8">
+        <span id="volumeVal">0.80</span>
+      </label>
+    </div>
+    <div class="row wrap">
+      <span class="hint">变速方式（共用同一区间与音量，可随时 A/B 对照）：</span>
+      <label class="inline"><input type="radio" name="mode" value="pitch" checked> 保音高（WSOLA）</label>
+      <label class="inline"><input type="radio" name="mode" value="resample"> 原始变速（重采样，音高随速度变化）</label>
+    </div>
+    <div class="row wrap">
+      <label class="inline">速度
+        <input type="range" id="rate" min="0.25" max="4" step="0.01" value="0.5">
+        <span id="rateVal">0.50x</span>
+      </label>
+      <span class="hint">可用范围 0.25x ~ 4.00x；区间短于 1024 采样点或超范围会在下方说明</span>
+    </div>
+    <div class="grid4">
+      <label>当前源时间
+        <input type="text" id="srcNow" readonly>
+      </label>
+      <label>当前播放时间
+        <input type="text" id="outNow" readonly>
+      </label>
+      <label>已循环圈数
+        <input type="text" id="loopCount" readonly value="0">
+      </label>
+      <label>累计循环漂移
+        <input type="text" id="drift" readonly value="0.000 ms">
+      </label>
+    </div>
+    <div id="status" class="status" role="status"></div>
+  </section>
+
+  <!-- 4. 对照样例与核对 -->
+  <section class="card">
+    <h2>4. 对照样例与核对</h2>
+    <p class="hint">
+      载入下方样例后，可分别用两种变速方式处理同一区间，比较音高、时长与重音位置。
+      样例右声道相对左声道固定延迟 30ms，用于核对左右声道的时间关系是否保持。
+    </p>
+    <div class="row wrap">
+      <button data-sample="sustain">连续音：测音高保持</button>
+      <button data-sample="accent">短重音：测重音位置</button>
+      <button data-sample="practice">练习曲：测过门小节循环</button>
+    </div>
+    <div id="sampleMarkers" class="info"></div>
+    <div class="row wrap">
+      <button id="analyzeBtn">分析当前区间（音高/时长/重音/声道延迟）</button>
+    </div>
+    <pre id="analyzeOut" class="analysis"></pre>
+  </section>
+
+  <!-- 5. 导出与读回校验 -->
+  <section class="card">
+    <h2>5. 导出所选区间并读回校验</h2>
+    <div class="row wrap">
+      <button id="exportBtn" class="primary">导出区间 WAV</button>
+      <span class="hint">导出内容 = 当前绿色区间按当前方式/速度渲染的结果，随后自动读回核对</span>
+    </div>
+    <pre id="exportOut" class="analysis"></pre>
+  </section>
+</main>
+
+<footer>
+  <p>快捷键：空格 播放/停止 · ←/→ 跳转 1 秒 · [ / ] 设区起点/终点 · L 循环开关</p>
+</footer>
+
+<script src="js/wav-codec.js"></script>
+<script src="js/time-stretch.js"></script>
+<script src="js/play-math.js"></script>
+<script src="js/samples.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/analyze.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
