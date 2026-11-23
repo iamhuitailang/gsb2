@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>本地 MIDI 编曲器</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="toolbar">
+    <button id="btnPlay" class="primary">▶ 播放</button>
+    <button id="btnStop">⏹ 停止</button>
+    <span class="sep"></span>
+    <button id="btnNew">新建</button>
+    <button id="btnOpen">打开工程</button>
+    <button id="btnSave">保存工程</button>
+    <button id="btnDemo">载入示例曲</button>
+    <span class="sep"></span>
+    <button id="btnImportMidi">导入 MIDI</button>
+    <button id="btnExportMidi">导出 MIDI</button>
+    <span class="sep"></span>
+    <label>工程名 <input id="projectName" type="text"></label>
+    <label>小节数 <input id="inputMeasures" type="number" min="1" max="999" value="8"></label>
+  </div>
+  <div class="toolbar">
+    <label>吸附
+      <select id="selSnap">
+        <option value="1">1/4</option>
+        <option value="2">1/8</option>
+        <option value="4" selected>1/16</option>
+        <option value="8">1/32</option>
+      </select>
+    </label>
+    <button id="btnZoomOut">🔍−</button>
+    <button id="btnZoomIn">🔍＋</button>
+    <span class="sep"></span>
+    <button id="btnQuantize">量化</button>
+    <button id="btnTransUp">+半音</button>
+    <button id="btnTransDown">−半音</button>
+    <button id="btnOctUp">+八度</button>
+    <button id="btnOctDown">−八度</button>
+    <span class="sep"></span>
+    <button id="btnCopy">复制</button>
+    <button id="btnPaste">粘贴</button>
+    <button id="btnDelete">删除</button>
+    <span class="sep"></span>
+    <button id="btnAddTempo">在播放头变速</button>
+    <button id="btnAddSig">在当前小节变拍</button>
+    <button id="btnAllowOverlap">保留所选重叠</button>
+  </div>
+</header>
+
+<main>
+  <aside>
+    <section class="panel">
+      <h3>轨道 <button id="btnAddTrack" class="small">＋</button></h3>
+      <div id="trackList"></div>
+    </section>
+    <section class="panel">
+      <h3>速度变化</h3>
+      <div id="tempoList"></div>
+    </section>
+    <section class="panel">
+      <h3>拍号变化</h3>
+      <div id="sigList"></div>
+    </section>
+    <section class="panel issues-panel">
+      <h3>问题<span id="issueCount"></span></h3>
+      <div id="issuesList"></div>
+    </section>
+  </aside>
+
+  <section class="editor">
+    <div class="editor-top">
+      <div class="corner"></div>
+      <div id="rulerScroll" class="ruler-scroll"><canvas id="ruler"></canvas></div>
+    </div>
+    <div class="editor-body">
+      <div id="keysScroll" class="keys-scroll"><canvas id="keys"></canvas></div>
+      <div id="rollScroll" class="roll-scroll"><canvas id="roll"></canvas></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span id="statusInfo"></span>
+  <span id="statusMsg"></span>
+</footer>
+
+<input type="file" id="fileOpen" accept=".json,application/json" hidden>
+<input type="file" id="fileMidi" accept=".mid,.midi,audio/midi" hidden>
+
+<script src="js/model.js"></script>
+<script src="js/midifile.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/demo.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
