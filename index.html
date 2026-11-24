@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>网格打包精度对比工具</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <h1>网格打包精度对比 <span class="sub">程序生成场景 · 量化裂缝分析 · 版本化二进制</span></h1>
+  <div class="source">
+    <span id="sourceBadge" class="badge">程序生成</span>
+  </div>
+</header>
+
+<section class="toolbar">
+  <div class="ctl">
+    <label>存储精度</label>
+    <select id="bits"></select>
+  </div>
+  <div class="ctl">
+    <label>坐标范围模式</label>
+    <select id="mode"></select>
+  </div>
+  <div class="ctl">
+    <label>裂缝判定阈值</label>
+    <input type="range" id="threshold" min="0.001" max="0.1" step="0.001" value="0.01">
+    <span id="thresholdVal" class="val">0.01 m</span>
+  </div>
+  <div class="ctl">
+    <label>错位夸大（仅预览）</label>
+    <input type="range" id="exaggerate" min="0" max="200" step="5" value="0">
+    <span id="exaggerateVal" class="val">关</span>
+  </div>
+  <div class="ctl">
+    <label>显示模式</label>
+    <select id="viewMode">
+      <option value="block">块着色</option>
+      <option value="heat">位置误差热力图</option>
+      <option value="wire">线框</option>
+    </select>
+  </div>
+  <div class="ctl checks">
+    <label><input type="checkbox" id="showSeams" checked> 接缝高亮</label>
+    <label><input type="checkbox" id="showT" checked> T 接顶点</label>
+  </div>
+  <div class="ctl">
+    <label>场景种子</label>
+    <input type="number" id="seedInput" class="seed">
+    <button id="seedBtn">应用</button>
+    <button id="regenBtn">随机</button>
+  </div>
+</section>
+
+<section class="views">
+  <div class="view">
+    <div class="view-title">原样预览（f32 原始坐标）</div>
+    <canvas id="canvasOrig"></canvas>
+  </div>
+  <div class="view">
+    <div class="view-title">还原后预览（量化 → 反量化）</div>
+    <canvas id="canvasRest"></canvas>
+  </div>
+</section>
+
+<section class="panels">
+  <div class="panel wide">
+    <h2>误差统计（单位：米）</h2>
+    <div id="summaryHead" class="chips"></div>
+    <h3>整体</h3>
+    <table><thead><tr><th>对象</th><th>最大误差</th><th>平均</th><th>RMS</th></tr></thead>
+      <tbody id="overallErrors"></tbody></table>
+    <h3>各块（含使用的范围与步长）</h3>
+    <table><thead><tr><th>块</th><th>顶点数</th><th>最大误差</th><th>RMS</th><th>范围跨度 / 各轴步长</th></tr></thead>
+      <tbody id="blockRows"></tbody></table>
+  </div>
+
+  <div class="panel">
+    <h2>占用字节数</h2>
+    <div id="byteTotal" class="big"></div>
+    <div id="byteSaved" class="muted small"></div>
+    <table><thead><tr><th>组成</th><th>大小</th><th>字节</th></tr></thead>
+      <tbody id="byteRows"></tbody></table>
+  </div>
+
+  <div class="panel wide">
+    <h2>真实接边错位分析</h2>
+    <p class="muted small">只统计生成时登记的几何接缝（相同坐标的跨块顶点对）。黄线为接边，红线为超过阈值的错位连线，青色点为只存在于细网格一侧的 T 接顶点；双击视图中红圈或点"定位"可放大查看。T 接距离含原始地形曲率造成的"基线弦差"，表中同时给出量化真正引入的增量。</p>
+    <table><thead><tr><th>接缝</th><th>点对</th><th>共享顶点最大错位</th><th>T接最大距离 / 基线 / 量化增量</th><th>平均错位</th><th>阈值判定</th><th></th></tr></thead>
+      <tbody id="seamRows"></tbody></table>
+
+    <h3>UV 贴图边界（健康检查，不参与裂缝判定）</h3>
+    <table><thead><tr><th>贴图边界</th><th>复制顶点</th><th>位置差</th><th>结论</th></tr></thead>
+      <tbody id="uvRows"></tbody></table>
+  </div>
+
+  <div class="panel wide">
+    <h2>打包选项说明 —— 各块实际处理</h2>
+    <div id="alignedBanner" class="banner" style="display:none"></div>
+    <div id="modeNotes"></div>
+  </div>
+
+  <div class="panel wide">
+    <h2>二进制导出 / 读回复现</h2>
+    <div class="io-row">
+      <button id="exportBtn" class="primary">导出 .bin（v1，含 CRC32）</button>
+      <label class="file-btn">读回文件
+        <input type="file" id="importFile" accept=".bin,application/octet-stream">
+      </label>
+      <button id="importCorrupt">模拟截断文件（演示错误提示）</button>
+    </div>
+    <div id="fileStatus" class="status idle">当前为程序生成数据，尚未读回文件。</div>
+    <div id="verifyBox"></div>
+    <p class="muted small">导出内容：魔数 + 版本 + f32 参考位置 + 紧凑位打包的量化码 + 范围元数据 + 接缝表 + CRC32。关掉页面后重新打开，读回同一文件应得到完全相同的预览与误差。</p>
+  </div>
+</section>
+
+<div id="toast"></div>
+
+<script src="js/util.js"></script>
+<script src="js/meshgen.js"></script>
+<script src="js/quantize.js"></script>
+<script src="js/binary.js"></script>
+<script src="js/render.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
