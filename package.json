@@ -1,0 +1,12 @@
+{
+  "name": "shift-split-repair-lab",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "同机轮流操作的双人设备维修分摊试验台（TypeScript，零运行时依赖）",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/dev.mjs",
+    "test": "node --test tests/*.test.ts"
+  }
+}
