@@ -1,0 +1,16 @@
+[project]
+name = "popfix"
+version = "0.1.0"
+description = "录音爆点(clip/pop)自动定位与局部修复小工具"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+    "soundfile",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.setuptools]
+packages = ["popfix"]
