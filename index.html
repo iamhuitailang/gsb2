@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>房间分区可见性 · WebGL Portal Culling Demo</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='18' fill='%2317202c'/%3E%3Ctext x='50' y='72' font-size='62' text-anchor='middle' fill='%2358d68d'%3E%E2%96%B1%3C/text%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">▱</span>
+      <div>
+        <h1>房间分区可见性演示</h1>
+        <p>Portal culling · 回路搜索 · 同机位全量/分区核对</p>
+      </div>
+    </div>
+    <div class="mode-switch" role="group" aria-label="渲染模式">
+      <button id="modePartition" class="active" aria-pressed="true">分区模式</button>
+      <button id="modeFull" aria-pressed="false">全量模式</button>
+      <button id="holdFull" class="hold-button" title="按住临时显示全量，松开回到所选模式">按住对比全量</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="viewport">
+      <canvas id="glCanvas" aria-label="三维房间场景"></canvas>
+      <div id="webglFallback" class="webgl-fallback" hidden></div>
+      <div id="hudStats" class="hud-stats"></div>
+      <div class="crosshair" aria-hidden="true"></div>
+      <div id="toast" class="toast" role="status"></div>
+      <div class="controls-hint">
+        <b>WASD</b> 走动 · <b>Shift</b> 加速 · <b>鼠标拖动/点击锁定</b> 环顾 · <b>E</b> 开关最近的门 · <b>Esc</b> 释放鼠标
+      </div>
+    </section>
+
+    <aside class="sidebar">
+      <section class="panel topview-panel">
+        <div class="panel-title-row">
+          <h2>俯视图与本次搜索</h2>
+          <span class="live-dot">实时</span>
+        </div>
+        <div id="topview" class="topview"></div>
+        <div class="topview-legend">
+          <span><i class="line-continue"></i>本次继续查找的门</span>
+          <span><i class="line-reject"></i>屏外/遮挡/关门</span>
+        </div>
+      </section>
+
+      <section id="detailPanel" class="panel detail-panel"></section>
+
+      <section class="panel">
+        <div class="panel-title-row">
+          <h2>固定机位与实际数量</h2>
+          <button id="verifyAll" class="mini primary">逐机位像素核对</button>
+        </div>
+        <p class="muted small">数量按当前窗口水平视锥计算；点击机位后可用顶部模式切换，现场核对 Draw Calls 与画面。</p>
+        <div class="table-wrap">
+          <table class="preset-table">
+            <thead>
+              <tr><th>机位 / 演示点</th><th>全量</th><th>分区 calls</th><th>摆件</th><th>像素</th></tr>
+            </thead>
+            <tbody id="presetRows"></tbody>
+          </table>
+        </div>
+        <div id="pixelResult" class="pixel-result idle">尚未运行像素核对。正确裁剪时，全量与分区画面应完全一致。</div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title-row">
+          <h2>门状态</h2>
+          <div class="button-row">
+            <button id="allDoorsOpen" class="mini">全开</button>
+            <button id="allDoorsClosed" class="mini">全关</button>
+            <button id="resetDoors" class="mini">重置当前机位</button>
+          </div>
+        </div>
+        <div id="doorList" class="door-list"></div>
+      </section>
+
+      <section class="panel explanation">
+        <h2>算法要点</h2>
+        <ul>
+          <li>从相机所在的一个或多个门槛房间同时开始，避免房间交界处闪没。</li>
+          <li>每个门洞投影成 NDC 矩形，和前序门洞的裁剪矩形求交；空集才判定为“被遮住”。</li>
+          <li>相机贴门导致角点越近平面时，先做近平面裁剪并外扩容差，保守保留相邻房间。</li>
+          <li>回路按“不重复房间的简单路径”展开；同一房间可从多条路径保留，但绘制集合按 ID 去重，每个摆件只画一次。</li>
+          <li>墙、地板、门和摆件都带相邻房间 ID；分区模式只提交可见房间集合中的网格。</li>
+        </ul>
+      </section>
+    </aside>
+  </main>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
