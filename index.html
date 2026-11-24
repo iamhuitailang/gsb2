@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>浏览器免提回声消除演示 · 全合成信号</title>
+  <meta name="description" content="不接麦克风的浏览器端免提回声处理演示：合成远端声、近端短音节、回声延时与反射，比较持续自适应和固定参数。" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232a78d6'/%3E%3Cpath d='M7 18c3-8 6 8 9 0s6 8 9 0' stroke='white' stroke-width='2.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <script>
+    try {
+      const params = new URLSearchParams(location.search);
+      const theme = params.get('theme') || localStorage.getItem('aec-demo-theme');
+      if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+    } catch (_) { /* storage unavailable */ }
+  </script>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <div>
+        <p class="eyebrow">Hands-free AEC playground</p>
+        <h1>免提回声处理演示</h1>
+        <p class="lede">远端声、近端短音节、房间反射和麦克风混音全部由程序合成；不请求麦克风，固定种子可复现。</p>
+      </div>
+      <div class="header-actions">
+        <span class="badge" id="seedBadge">seed 16261</span>
+        <button class="btn ghost" id="themeToggle" type="button" aria-pressed="false">切换深色</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap layout">
+    <section class="card controls-card" aria-labelledby="controlsTitle">
+      <div class="card-head">
+        <div>
+          <h2 id="controlsTitle">1. 构造回声场景</h2>
+          <p>调整主延时、衰减和一条稍晚反射；修改后会重新估计延时并跑一遍离线 AEC。</p>
+        </div>
+        <div class="control-actions">
+          <button class="btn primary" id="rebuildBtn" type="button">重新生成并处理</button>
+          <button class="btn" id="fixedPresetBtn" type="button">恢复固定样例</button>
+        </div>
+      </div>
+      <div class="slider-grid">
+        <label class="slider-field">
+          <span class="slider-label"><span>初始主延时</span><output id="delay1Val">145 ms</output></span>
+          <input id="delay1" type="range" min="60" max="340" step="5" value="145" />
+        </label>
+        <label class="slider-field">
+          <span class="slider-label"><span>主回声衰减 / 增益</span><output id="gainVal">0.46 · −6.7 dB</output></span>
+          <input id="gain" type="range" min="0.15" max="0.85" step="0.01" value="0.46" />
+        </label>
+        <label class="slider-field">
+          <span class="slider-label"><span>反射相对延时</span><output id="refDelayVal">48 ms</output></span>
+          <input id="refDelay" type="range" min="15" max="100" step="1" value="48" />
+        </label>
+        <label class="slider-field">
+          <span class="slider-label"><span>反射增益</span><output id="refGainVal">0.18 · −14.9 dB</output></span>
+          <input id="refGain" type="range" min="0" max="0.45" step="0.01" value="0.18" />
+        </label>
+        <label class="slider-field highlight">
+          <span class="slider-label"><span>中途切换到的延时 <em id="changeTimeLabel">8.15s</em></span><output id="delay2Val">285 ms</output></span>
+          <input id="delay2" type="range" min="80" max="360" step="5" value="285" />
+        </label>
+      </div>
+      <div class="build-status" id="buildStatus" role="status" aria-live="polite">就绪：固定样例已生成。</div>
+    </section>
+
+    <section class="card player-card" aria-labelledby="playerTitle">
+      <div class="card-head compact">
+        <div>
+          <h2 id="playerTitle">2. 同一时间轴切换试听</h2>
+          <p>任意声源都从同一个播放位置切换；点击波形或拖动进度条可跳到目标位置。</p>
+        </div>
+      </div>
+
+      <div class="source-tabs" role="tablist" aria-label="选择试听声源">
+        <button class="source-tab" role="tab" aria-selected="false" data-source="far" type="button"><span class="swatch far"></span>远端声</button>
+        <button class="source-tab" role="tab" aria-selected="false" data-source="near" type="button"><span class="swatch near"></span>近端参考</button>
+        <button class="source-tab" role="tab" aria-selected="false" data-source="mic" type="button"><span class="swatch mic"></span>混合录音</button>
+        <button class="source-tab active" role="tab" aria-selected="true" data-source="adaptive" type="button"><span class="swatch adaptive"></span>持续自适应</button>
+        <button class="source-tab" role="tab" aria-selected="false" data-source="fixed" type="button"><span class="swatch fixed"></span>固定参数</button>
+      </div>
+
+      <div class="transport">
+        <button class="btn primary play-btn" id="playBtn" type="button" aria-keyshortcuts="Space">
+          <span class="play-icon" aria-hidden="true">▶</span><span id="playLabel">播放</span>
+        </button>
+        <span class="timecode" id="currentTime">0:00.0</span>
+        <input class="seek" id="seek" type="range" min="0" max="14" step="0.01" value="0" aria-label="播放位置" />
+        <span class="timecode muted" id="durationTime">0:14.0</span>
+      </div>
+
+      <div class="segment-jumps" aria-label="代表性片段跳转">
+        <span class="jump-label">跳到：</span>
+        <button class="chip" data-seek="0.35" type="button">初始学习</button>
+        <button class="chip" data-seek="4.78" type="button">第一次双讲</button>
+        <button class="chip" data-seek="8.15" type="button">延时突变</button>
+        <button class="chip" data-seek="8.35" type="button">检测到新延时</button>
+        <button class="chip" data-seek="8.68" type="button">重新跟上</button>
+        <button class="chip" data-seek="10.9" type="button">新路径双讲</button>
+        <button class="chip accent" id="soloNearBtn" type="button">切开单听近端参考</button>
+      </div>
+
+      <div class="wave-wrap" id="waveWrap" aria-label="五路波形总览，点击或拖动跳转"></div>
+    </section>
+
+    <section class="kpi-grid" aria-label="估计与保留指标">
+      <article class="card kpi">
+        <p class="kpi-label">估计出的初始时间差</p>
+        <p class="kpi-value" id="lagValue">—</p>
+        <p class="kpi-sub" id="lagSub">正在计算…</p>
+      </article>
+      <article class="card kpi">
+        <p class="kpi-label">第二到达 / 反射</p>
+        <p class="kpi-value" id="reflectionValue">—</p>
+        <p class="kpi-sub" id="reflectionSub">—</p>
+      </article>
+      <article class="card kpi">
+        <p class="kpi-label">消掉前学习段音量</p>
+        <p class="kpi-value" id="preVolumeValue">—</p>
+        <p class="kpi-sub" id="preVolumeSub">—</p>
+      </article>
+      <article class="card kpi">
+        <p class="kpi-label">延时改变后重新跟上</p>
+        <p class="kpi-value" id="reacquireValue">—</p>
+        <p class="kpi-sub" id="reacquireSub">—</p>
+      </article>
+      <article class="card kpi">
+        <p class="kpi-label">双讲时近端保留</p>
+        <p class="kpi-value" id="nearKeepValue">—</p>
+        <p class="kpi-sub" id="nearKeepSub">—</p>
+      </article>
+    </section>
+
+    <section class="card status-card">
+      <div class="card-head compact">
+        <div>
+          <h2>3. 算法状态时间线</h2>
+          <p>蓝色为初始学习，紫色为延时切换后的重跟踪，黄色为双讲冻结，绿色为稳定锁定。</p>
+        </div>
+      </div>
+      <div class="status-ribbon" id="statusRibbon" role="img" aria-label="AEC 状态随时间变化"></div>
+      <div class="status-legend">
+        <span><i class="dot learning"></i>学习</span>
+        <span><i class="dot reacquiring"></i>重新跟踪</span>
+        <span><i class="dot hold"></i>双讲保护 / 无远端能量</span>
+        <span><i class="dot locked"></i>锁定</span>
+        <span><i class="marker-line"></i>真实延时切换</span>
+      </div>
+    </section>
+
+    <section class="chart-grid">
+      <article class="card chart-card" id="erleChart"></article>
+      <article class="card chart-card" id="delayChart"></article>
+      <article class="card chart-card wide" id="levelChart"></article>
+    </section>
+
+    <section class="card table-card">
+      <div class="card-head">
+        <div>
+          <h2>4. 代表性比较数据</h2>
+          <p>ERLE 用合成器内部的回声分轨校验；近端增益/相关用于确认短音节没有被一起吞掉。</p>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table id="segmentTable">
+          <thead>
+            <tr>
+              <th>片段</th><th>时间</th><th>混合 RMS</th><th>自适应输出</th><th>固定输出</th>
+              <th>自适应 ERLE</th><th>固定 ERLE</th><th>近端增益</th><th>近端相关</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card export-card" aria-labelledby="exportTitle">
+      <div class="card-head">
+        <div>
+          <h2 id="exportTitle">5. 导出与复现</h2>
+          <p>导出当前参数下的 WAV 和两份 CSV；固定样例使用 seed 16261 与页面所示默认参数。</p>
+        </div>
+      </div>
+      <div class="export-grid">
+        <button class="btn primary" id="exportWavAdaptive" type="button">导出持续自适应 WAV</button>
+        <button class="btn" id="exportWavFixed" type="button">导出固定参数 WAV</button>
+        <button class="btn" id="exportCsvWindows" type="button">导出数据一：逐窗对比 CSV</button>
+        <button class="btn" id="exportCsvSegments" type="button">导出数据二：代表片段 CSV</button>
+        <button class="btn ghost" id="exportJson" type="button">导出复现报告 JSON</button>
+      </div>
+      <pre class="repro" id="reproConfig"></pre>
+    </section>
+
+    <footer class="site-footer">
+      <p>信号链：确定性语音合成 → 延时/双到达反射 → 混音 → GCC/FFT 延时估计 → 双稀疏组 NLMS + 双讲冻结 + 在线延时跟踪。</p>
+      <p>建议用耳机试听原始信号，再用扬声器/免提场景理解回声；本页面不会请求或录制麦克风。</p>
+    </footer>
+  </main>
+
+  <div class="loading-overlay" id="loadingOverlay" hidden>
+    <div class="loading-box"><span class="spinner" aria-hidden="true"></span><p>正在合成固定样例并运行 AEC…</p></div>
+  </div>
+
+  <script src="js/dsp.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

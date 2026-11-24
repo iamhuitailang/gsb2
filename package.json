@@ -1,0 +1,13 @@
+{
+  "name": "browser-aec-synthetic-demo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Deterministic browser demo of hands-free echo cancellation with synthesized speech, no microphone input.",
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "test": "node --test test/dsp.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
