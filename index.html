@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231b1f27'/%3E%3Cpath d='M16 6l9 5v10l-9 5-9-5V11z' fill='none' stroke='%235aa7ff' stroke-width='2'/%3E%3Cpath d='M7 11l9 5 9-5M16 16v10' stroke='%23f23bd9' stroke-width='2' fill='none'/%3E%3C/svg%3E"
+    />
+    <title>法线贴图调试台 · Normal Map Debug Bench</title>
+    <link rel="stylesheet" href="./src/ui/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <strong>法线贴图调试台</strong>
+        <span class="sub">普通 UV / 镜像 UV 对半对照 · WebGL + TypeScript</span>
+      </div>
+      <div class="top-actions" id="topActions"></div>
+    </header>
+
+    <main class="layout">
+      <section class="viewports">
+        <div class="viewport-row">
+          <div class="viewport-card">
+            <div class="viewport-head">
+              <span class="dot dot-normal"></span>
+              <b>普通 UV 半</b>
+              <span class="hint">u 随 +x 递增 · 右手切线基</span>
+            </div>
+            <canvas id="glLeft"></canvas>
+          </div>
+          <div class="viewport-card">
+            <div class="viewport-head">
+              <span class="dot dot-mirror"></span>
+              <b>镜像 UV 半</b>
+              <span class="hint">u 随 +x 递减 · 左手切线基（B 翻向即出错）</span>
+            </div>
+            <canvas id="glRight"></canvas>
+          </div>
+        </div>
+        <div class="viewport-card wide-card">
+          <div class="viewport-head">
+            <span class="dot" style="background:#5aa7ff"></span>
+            <b>整体对照（两半同框，镜象接缝洋红、折痕橙色）</b>
+            <span class="hint">放大检查硬边与镜像接缝</span>
+          </div>
+          <canvas id="glAll"></canvas>
+        </div>
+        <div class="viewport-foot" id="viewportFoot"></div>
+      </section>
+
+      <aside class="panel" id="sidePanel"></aside>
+    </main>
+
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
