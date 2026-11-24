@@ -1,0 +1,201 @@
+[
+  {
+    "color": false,
+    "shape": [
+      513,
+      517
+    ],
+    "detected_peaks": [
+      {
+        "fy": -0.0877,
+        "fx": -0.1412,
+        "angle_deg": -148.1496,
+        "period_px": 6.0158,
+        "mag": 1.0
+      },
+      {
+        "fy": 0.0,
+        "fx": -0.3752,
+        "angle_deg": 180.0,
+        "period_px": 2.6649,
+        "mag": 0.7984
+      },
+      {
+        "fy": -0.1248,
+        "fx": 0.0,
+        "angle_deg": -90.0,
+        "period_px": 8.0156,
+        "mag": 0.7982
+      },
+      {
+        "fy": -0.2495,
+        "fx": 0.0,
+        "angle_deg": -90.0,
+        "period_px": 4.0078,
+        "mag": 0.7746
+      },
+      {
+        "fy": 0.0,
+        "fx": -0.2495,
+        "angle_deg": 180.0,
+        "period_px": 4.0078,
+        "mag": 0.7743
+      },
+      {
+        "fy": -0.3743,
+        "fx": 0.0,
+        "angle_deg": -90.0,
+        "period_px": 2.6719,
+        "mag": 0.7361
+      },
+      {
+        "fy": 0.0,
+        "fx": -0.1257,
+        "angle_deg": 180.0,
+        "period_px": 7.9538,
+        "mag": 0.7358
+      },
+      {
+        "fy": 0.0,
+        "fx": -0.499,
+        "angle_deg": 180.0,
+        "period_px": 2.0039,
+        "mag": 0.6847
+      }
+    ],
+    "truth_peaks": [
+      {
+        "fy": 0.0883,
+        "fx": 0.1413
+      },
+      {
+        "fy": -0.0618,
+        "fx": 0.1902
+      },
+      {
+        "fy": -0.0578,
+        "fx": 0.1778
+      },
+      {
+        "fy": 0.042,
+        "fx": 0.0113
+      }
+    ],
+    "periodic_strength": {
+      "before": 0.26323527097702026,
+      "after": 6.56392949167639e-05
+    },
+    "psnr_vs_clean": {
+      "before": 16.995255828319973,
+      "after": 27.33346162854589
+    },
+    "interference_residual_ratio": 0.046609266422769975,
+    "grid_signal_loss_ratio": 0.051949724835664214,
+    "local_region_outside_untouched": true
+  },
+  {
+    "color": true,
+    "shape": [
+      513,
+      517,
+      3
+    ],
+    "detected_peaks": [
+      {
+        "fy": 0.0,
+        "fx": -0.3752,
+        "angle_deg": 180.0,
+        "period_px": 2.6649,
+        "mag": 1.0
+      },
+      {
+        "fy": -0.1248,
+        "fx": 0.0,
+        "angle_deg": -90.0,
+        "period_px": 8.0156,
+        "mag": 0.9997
+      },
+      {
+        "fy": -0.2495,
+        "fx": 0.0,
+        "angle_deg": -90.0,
+        "period_px": 4.0078,
+        "mag": 0.9703
+      },
+      {
+        "fy": 0.0,
+        "fx": -0.2495,
+        "angle_deg": 180.0,
+        "period_px": 4.0078,
+        "mag": 0.9697
+      },
+      {
+        "fy": -0.3743,
+        "fx": 0.0,
+        "angle_deg": -90.0,
+        "period_px": 2.6719,
+        "mag": 0.9218
+      },
+      {
+        "fy": 0.0,
+        "fx": -0.1257,
+        "angle_deg": 180.0,
+        "period_px": 7.9538,
+        "mag": 0.9217
+      },
+      {
+        "fy": -0.0877,
+        "fx": -0.1412,
+        "angle_deg": -148.1496,
+        "period_px": 6.0158,
+        "mag": 0.8924
+      },
+      {
+        "fy": 0.0,
+        "fx": -0.499,
+        "angle_deg": 180.0,
+        "period_px": 2.0039,
+        "mag": 0.8577
+      }
+    ],
+    "truth_peaks": [
+      {
+        "fy": 0.0883,
+        "fx": 0.1413
+      },
+      {
+        "fy": -0.0618,
+        "fx": 0.1902
+      },
+      {
+        "fy": -0.0578,
+        "fx": 0.1778
+      },
+      {
+        "fy": 0.042,
+        "fx": 0.0113
+      }
+    ],
+    "periodic_strength": {
+      "before": 0.15108004212379456,
+      "after": 3.5146782465744764e-05
+    },
+    "psnr_vs_clean": {
+      "before": 20.398357985547648,
+      "after": 31.97748333773726
+    },
+    "interference_residual_ratio": 0.04895978415970742,
+    "grid_signal_loss_ratio": 0.02995165634269891,
+    "local_region_outside_untouched": true,
+    "color_fringe": {
+      "before": {
+        "max_channel_dev": 0.2957499623298645,
+        "mean_channel_dev": 0.10463022440671921
+      },
+      "after": {
+        "max_channel_dev": 0.25780603289604187,
+        "mean_channel_dev": 0.022801989689469337
+      }
+    }
+  }
+]
