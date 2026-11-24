@@ -45,3 +45,7 @@ coverage/
 
 # 生成的示例素材(可用 npm run generate:samples 恢复)
 public/samples/
+
+# 浏览器冒烟测试产物
+tmp-browser-check.png
+tmp-record.json

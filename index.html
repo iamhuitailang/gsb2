@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>采样可视化实验室 · 低分辨率三角形光栅化</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <h1>采样可视化实验室</h1>
+        <span class="sub">低分辨率软件光栅化 · 看清每个像素里采样点被谁覆盖</span>
+      </div>
+      <div class="presets">
+        <span class="preset-label">内置例子：</span>
+        <div id="preset-bar" class="preset-bar"></div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="center-col">
+        <div class="preset-info">
+          <h2 id="preset-title">薄三角</h2>
+          <p id="preset-desc"></p>
+        </div>
+        <div class="canvas-scroll">
+          <div id="canvas-wrap" class="canvas-wrap"></div>
+        </div>
+        <div class="legend">
+          <span><i class="dot dot-green"></i> 采样点被面覆盖（填色=胜者颜色）</span>
+          <span><i class="dot dot-white"></i> 采样点落背景</span>
+          <span><i class="dot dot-yellow"></i> 顶点 / 选中像素</span>
+          <span class="hint">点击像素选中检查 · 拖动三角形平移 · 方向键 0.25px 微调（Shift=1px）</span>
+        </div>
+        <div id="status" class="statusbar"></div>
+      </section>
+
+      <aside class="side-col" id="side-wrap"></aside>
+      <aside class="inspector-col" id="inspector-wrap"></aside>
+    </main>
+
+    <div id="toast" class="toast"></div>
+    <script src="dist/app.js"></script>
+  </body>
+</html>

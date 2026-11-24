@@ -1,0 +1,15 @@
+{
+  "name": "sampling-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "低分辨率三角形光栅化采样可视化教学工具（纯 TypeScript，软件模拟采样）",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "start": "node tools/serve.js",
+    "test": "npm run build && node tools/smoke.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0"
+  }
+}
