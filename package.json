@@ -1,0 +1,13 @@
+{
+  "name": "light-probe-previewer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "本地三维光照探针预览器：室内外过渡 / 门 / 区域限制",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test tests/*.test.js",
+    "check": "sh scripts/check.sh",
+    "verify": "node scripts/verify.mjs"
+  }
+}

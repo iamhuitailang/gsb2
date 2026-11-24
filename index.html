@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>光照探针预览器 · 室内外过渡</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div>
+        <h1>光照探针预览器</h1>
+        <p>相邻空间格 · 室内外过渡 · 门与区域限制</p>
+      </div>
+    </div>
+
+    <nav class="demos" aria-label="演示场景">
+      <button class="demo-tab" data-demo="open" type="button">门开</button>
+      <button class="demo-tab" data-demo="closed" type="button">门关</button>
+      <button class="demo-tab" data-demo="gap" type="button">区域罩不全</button>
+    </nav>
+
+    <div class="top-actions">
+      <button id="btn-save" class="btn" type="button">保存场景</button>
+      <button id="btn-load" class="btn" type="button">读取场景</button>
+      <button id="btn-export" class="btn" type="button">导出路径 CSV</button>
+      <button id="btn-report" class="btn" type="button">导出帧报告</button>
+      <button id="btn-import-report" class="btn btn-quiet" type="button">读回报告</button>
+      <input id="file-scene" type="file" accept="application/json,.json" hidden />
+      <input id="file-report" type="file" accept="application/json,.json" hidden />
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="stage">
+      <div class="viewport" id="viewport">
+        <canvas id="view3d" aria-label="三维场景预览"></canvas>
+        <div class="vp-hud">
+          <div class="hud-line"><span class="hud-key">视角</span>拖拽旋转 · 滚轮缩放 · 拖动方块/探针</div>
+          <div class="hud-sample" id="hud-sample"></div>
+        </div>
+        <div class="vp-toolbar" role="group" aria-label="视图选项">
+          <div class="segmented" id="mix-mode" role="group" aria-label="混色策略">
+            <button type="button" data-mode="restricted" class="is-active">受区域限制</button>
+            <button type="button" data-mode="unrestricted">无区域限制</button>
+          </div>
+          <label class="check"><input type="checkbox" id="toggle-floor" checked /> 地面光照</label>
+          <label class="check"><input type="checkbox" id="toggle-rays" checked /> 贡献射线</label>
+          <label class="check"><input type="checkbox" id="toggle-probes" checked /> 探针</label>
+          <button class="btn btn-small" id="btn-reset-view" type="button">重置视角</button>
+        </div>
+        <div class="vp-legend" aria-hidden="true">
+          <span><i class="dot dot-up"></i>朝上分量</span>
+          <span><i class="dot dot-side"></i>朝侧分量</span>
+          <span><i class="dot dot-fallback"></i>补缺值</span>
+        </div>
+      </div>
+
+      <section class="chart-card">
+        <header class="chart-head">
+          <div>
+            <h2>沿路径的亮度</h2>
+            <p id="chart-sub">两条曲线分别是受区域限制与无区域限制的混色结果；下方为补缺占比。</p>
+          </div>
+          <div class="chart-legend" id="chart-legend">
+            <span class="legend-item"><i class="line-key key-restricted"></i>受区域限制</span>
+            <span class="legend-item"><i class="line-key key-unrestricted"></i>无区域限制</span>
+            <span class="legend-item"><i class="swatch key-fallback"></i>补缺占比</span>
+          </div>
+          <div class="steps">
+            <button type="button" class="btn btn-small" id="btn-prev-event" title="跳到上一个事件">‹ 事件</button>
+            <button type="button" class="btn btn-small" id="btn-prev" title="上一帧">‹ 帧</button>
+            <button type="button" class="btn btn-small btn-accent" id="btn-play" title="沿路径播放">播放</button>
+            <button type="button" class="btn btn-small" id="btn-next" title="下一帧">帧 ›</button>
+            <button type="button" class="btn btn-small" id="btn-next-event" title="跳到下一个事件">事件 ›</button>
+            <label class="check check-inline"><input type="checkbox" id="toggle-follow" checked /> 沿路径</label>
+          </div>
+        </header>
+
+        <div class="chart-wrap">
+          <canvas id="chart" aria-label="沿路径亮度折线图"></canvas>
+          <div class="chart-tooltip" id="chart-tooltip" hidden></div>
+        </div>
+
+        <div class="chart-foot">
+          <div class="frame-readout" id="frame-readout"></div>
+          <details class="table-view" id="table-view">
+            <summary>帧表（文本视图）</summary>
+            <div class="table-scroll"><table id="frame-table"></table></div>
+          </details>
+        </div>
+      </section>
+    </section>
+
+    <aside class="sidebar">
+      <section class="panel">
+        <header class="panel-head">
+          <h2>俯视编辑</h2>
+          <span class="hint">点格子选择 · 拖动探针</span>
+        </header>
+        <div class="map-wrap"><canvas id="map" aria-label="场景俯视图"></canvas></div>
+        <div class="map-legend">
+          <span><i class="swatch zone-interior"></i>室内区</span>
+          <span><i class="swatch zone-exterior"></i>室外区</span>
+          <span><i class="swatch hatch"></i>不可用</span>
+          <span><i class="line-key key-path"></i>路径</span>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-now">
+        <header class="panel-head">
+          <h2>当前采样</h2>
+          <span class="pill" id="now-mode-pill">受区域限制</span>
+        </header>
+        <div id="now-body"></div>
+      </section>
+
+      <section class="panel" id="panel-probes">
+        <header class="panel-head">
+          <h2>使用的采样点</h2>
+          <span class="hint" id="probe-count-hint"></span>
+        </header>
+        <div id="probe-body"></div>
+      </section>
+
+      <section class="panel" id="panel-audit">
+        <header class="panel-head">
+          <h2>数据能否支持预览</h2>
+          <span id="audit-status"></span>
+        </header>
+        <div id="audit-body"></div>
+      </section>
+
+      <section class="panel" id="panel-divider">
+        <header class="panel-head">
+          <h2>隔墙与门</h2>
+          <span class="pill" id="leak-pill"></span>
+        </header>
+        <label class="check"><input type="checkbox" id="door-has-opening" checked /> 墙上留门洞</label>
+        <div class="slider door-slider">
+          <div class="slider-head"><span>开启</span><span id="door-open-label">100%</span></div>
+          <input type="range" id="door-open" min="0" max="100" step="1" value="100" />
+        </div>
+        <div id="leak-body"></div>
+      </section>
+
+      <section class="panel" id="panel-inspector">
+        <header class="panel-head">
+          <h2>编辑格子 / 探针</h2>
+          <span class="hint">室内外亮度差很大时，优先检查靠门探针</span>
+        </header>
+        <div id="inspector-body"></div>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="statusbar">
+    <span id="status-text">本地运行 · 无离线渲染 · 所有预览由探针采样实时计算</span>
+    <span id="status-metrics"></span>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
