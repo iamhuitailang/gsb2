@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>程序化山坡 · 分块 LOD 与接边检查</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <canvas id="glCanvas" aria-label="WebGL 程序化地形"></canvas>
+
+  <header id="titleCard" class="panel">
+    <div class="eyebrow">WebGL / 程序高度图 / 分块细节档位</div>
+    <h1>从近到远的山坡</h1>
+    <div id="liveStats" class="stat-line">正在初始化地形…</div>
+    <div id="auditSummary" class="stat-line audit-summary">固定镜头审计尚未完成。</div>
+  </header>
+
+  <aside id="controlPanel" class="panel">
+    <section>
+      <h2>固定镜头复核</h2>
+      <div class="button-grid">
+        <button id="btnTourCross" class="primary">A · 走过块边界</button>
+        <button id="btnTourEdge" class="primary">B · 沿块边平移</button>
+        <button id="btnCorner">定位三/四档拐角</button>
+        <button id="btnStopTour">停止巡游 / 自由视角</button>
+      </div>
+      <div id="tourLive" class="note">尚未播放固定镜头。</div>
+    </section>
+
+    <section>
+      <h2>显示与档位</h2>
+      <label class="check"><input type="checkbox" id="chkCrack" /> 裂缝检查视图（LOD 分色 + 线框 + 误差边）</label>
+      <div class="lod-legend" aria-label="LOD 颜色图例">
+        <span><i class="lod-dot lod0"></i>LOD0 密</span>
+        <span><i class="lod-dot lod1"></i>LOD1</span>
+        <span><i class="lod-dot lod2"></i>LOD2</span>
+        <span><i class="lod-dot lod3"></i>LOD3 疏</span>
+      </div>
+      <p class="hint error-legend">误差边颜色：<span class="good">绿 &lt;0.12m</span> · <span class="warn">黄 &lt;0.45m</span> · <span class="warn">橙 &lt;1.1m</span> · <span class="bad">红 ≥1.1m</span>；点边后显示两侧原生折线和最大误差杆。</p>
+      <label class="check"><input type="checkbox" id="chkWireframe" /> 额外显示网格线框</label>
+      <label class="check"><input type="checkbox" id="chkFreeze" /> 冻结自动换档（移动镜头做档位对比）</label>
+      <label class="check"><input type="checkbox" id="chkSnap" checked /> 相邻边缘锁高（取消可复现原始裂缝）</label>
+
+      <div class="field-row">
+        <label for="selResolution">地形网格分辨率</label>
+        <select id="selResolution">
+          <option value="32">32 基准（LOD 32/16/8/4）</option>
+          <option value="64" selected>64 基准（64/32/16/8）</option>
+          <option value="128">128 基准（128/64/32/16）</option>
+        </select>
+      </div>
+      <div class="field-row">
+        <label for="selRenderScale">渲染分辨率缩放</label>
+        <select id="selRenderScale">
+          <option value="0.75">0.75×</option>
+          <option value="1" selected>1× / DPR 上限 2</option>
+          <option value="1.5">1.5×</option>
+          <option value="2">2×</option>
+        </select>
+      </div>
+      <button id="btnResetCamera" class="wide">回到初始山坡视角</button>
+    </section>
+
+    <section>
+      <h2>点边诊断</h2>
+      <p class="hint">进入“裂缝检查视图”后，直接点击任意块边；普通视图下也可以点选。拖拽旋转不会误选。</p>
+      <div id="edgeInspector" class="inspector empty">尚未选中块边。</div>
+    </section>
+
+    <section>
+      <h2>分块档位 / 面数矩阵</h2>
+      <div id="chunkMatrix" class="chunk-matrix" aria-label="每个地形块的 LOD 和面数"></div>
+      <p class="hint">每格代表一块，格内为 LOD 与三角面数缩写；悬停可看块坐标、段数和精确面数。点边诊断中也会列出两侧精确面数。</p>
+    </section>
+
+    <section>
+      <h2>峰值面数 / 接边误差审计</h2>
+      <div id="auditReport" class="audit">
+        <div class="note">正在用同一种子逐采样复核两段固定镜头…</div>
+      </div>
+      <p class="hint">误差单位为米。“原始档差”是两侧各自 LOD 折线不锁边时的最大竖向差；“锁边后残差”是公共粗档折线相对真实高度场的最大逼近误差。锁边后渲染接边差为 0。</p>
+    </section>
+
+    <section>
+      <h2>种子与诊断点复核</h2>
+      <div class="seed-line">seed = <code id="seedValue">16304</code></div>
+      <div id="baselineHashes" class="hash-line">计算基线中…</div>
+      <div class="table-wrap">
+        <table id="diagnosticTable">
+          <thead><tr><th>点</th><th>x,z</th><th>height</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <button id="btnCopyBaseline" class="wide">复制诊断基线 JSON</button>
+    </section>
+
+    <section>
+      <h2>操作</h2>
+      <ul class="controls-help">
+        <li>鼠标/单指拖拽：环绕旋转</li>
+        <li>滚轮/双指：拉近、拉远并触发 LOD</li>
+        <li>固定镜头播放时仍可在右侧切换冻结、分辨率和点边</li>
+      </ul>
+    </section>
+  </aside>
+
+  <div id="bottomHint" class="panel bottom-hint">
+    拖拽环绕 · 滚轮缩放 · 裂缝视图点击块边 · 同一种子 16304
+  </div>
+  <div id="toast" role="status"></div>
+
+  <script src="js/terrain.js"></script>
+  <script src="js/viewer.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

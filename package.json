@@ -1,0 +1,10 @@
+{
+  "name": "procedural-hillside-lod",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dependency-free WebGL procedural hillside with chunk LOD, hysteresis and seam diagnostics.",
+  "scripts": {
+    "start": "python3 -m http.server 8163",
+    "test": "node --test test/terrain.test.js"
+  }
+}
