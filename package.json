@@ -1,0 +1,24 @@
+{
+  "name": "game-copy-context-checker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "本地游戏文案上下文检查台：数量/称呼/类别句式、回退溯源、变量质检、语言包更新对比、离线质检清单",
+  "type": "module",
+  "scripts": {
+    "qa": "node src/cli.ts",
+    "test": "node --test test/core.test.ts",
+    "typecheck": "tsc --noEmit",
+    "bundle:web": "esbuild src/ui/main.ts --bundle --format=iife --target=es2020 --outfile=web/app.bundle.js",
+    "bundle:cli": "esbuild src/cli.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist/cli.mjs",
+    "build": "npm run typecheck && npm run bundle:web && npm run bundle:cli",
+    "smoke:ui": "node test/ui.smoke.ts",
+    "shoot": "node test/shoot.mjs"
+  },
+  "devDependencies": {
+    "@types/jsdom": "^30.0.0",
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.25.0",
+    "jsdom": "^26.0.0",
+    "typescript": "^5.7.0"
+  }
+}
