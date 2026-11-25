@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>多音轨对齐工具（本地离线）</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">🎚️ 多音轨对齐工具 <span class="sub">本地离线 · NCC 相关性对齐 · 时钟漂移校准</span></div>
+    <div class="actions">
+      <button id="importBtn">＋ 导入音轨</button>
+      <button id="alignBtn" class="primary">自动对齐</button>
+      <button id="driftBtn">漂移分析</button>
+      <button id="anchorDriftBtn">由漂移生成锚点</button>
+      <span class="sep"></span>
+      <button id="saveBtn">保存工程</button>
+      <button id="loadBtn">打开工程</button>
+      <button id="exportBtn" class="primary">导出同步音轨</button>
+    </div>
+  </header>
+
+  <section class="transport">
+    <button id="playBtn">▶ 播放</button>
+    <button id="stopBtn">⏹ 停止</button>
+    <span class="time"><b id="timeNow">00:00:00.000</b> / <span id="timeTotal">00:00:00.000</span></span>
+    <label class="mode-switch">对齐前
+      <input type="checkbox" id="modeAfter" checked> 对齐后
+    </label>
+    <span class="sep"></span>
+    <label>循环起 <input type="number" id="loopStart" step="0.1" value="0" size="6"> s</label>
+    <label>循环止 <input type="number" id="loopEnd" step="0.1" size="6"> s</label>
+    <button id="loopSetBtn">设置分段循环</button>
+    <button id="loopClearBtn">清除</button>
+    <span class="sep"></span>
+    <button id="zoomOut">－</button>
+    <button id="zoomIn">＋</button>
+    <button id="zoomFit">适应宽度</button>
+    <span class="spacer"></span>
+    <span id="status" class="status"></span>
+  </section>
+
+  <main class="layout">
+    <aside class="sidebar">
+      <h3>轨道</h3>
+      <div id="trackPanel" class="track-panel"></div>
+
+      <h3>校准锚点（多点）</h3>
+      <div class="anchor-tools">
+        <button id="anchorHereBtn">在播放指针处加锚点</button>
+        <button id="anchorDriftSideBtn">由漂移生成</button>
+        <button id="clearAnchorBtn">清空锚点</button>
+      </div>
+      <div id="anchorTable" class="anchor-table"></div>
+
+      <h3>漂移 / 局部偏差</h3>
+      <div id="driftInfo" class="drift-info"></div>
+
+      <h3>导出选项</h3>
+      <div class="export-opts">
+        <label>采样率
+          <select id="exportRate">
+            <option value="44100">44100 Hz</option>
+            <option value="48000" selected>48000 Hz</option>
+            <option value="96000">96000 Hz</option>
+          </select>
+        </label>
+        <label><input type="checkbox" id="skipMuted"> 跳过静音轨</label>
+        <label><input type="checkbox" id="applyGain" checked> 应用增益</label>
+        <label><input type="checkbox" id="asZip" checked> 打包为单个 ZIP</label>
+      </div>
+
+      <div id="relinkPanel" class="relink hidden">
+        <h3>重新关联音频</h3>
+        <p class="hint">工程仅保存对齐参数，不内嵌音频。请选择原始音频文件（按文件名自动匹配）。</p>
+        <button id="relinkBtn">选择音频文件…</button>
+        <div id="relinkList"></div>
+      </div>
+    </aside>
+
+    <section class="canvas-wrap">
+      <canvas id="waveCanvas"></canvas>
+      <div class="canvas-hint">
+        单击/拖动标尺：定位播放指针 · 拖动波形：调整该轨起始偏移 · 双击波形：添加校准锚点 · 拖动锚点：微调校准点 · 滚轮：缩放 · Shift+拖动：定位
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

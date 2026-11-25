@@ -1,0 +1,14 @@
+{
+  "name": "multitrack-align",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "本地多音轨对齐工具：基于归一化互相关的离线对齐、漂移校准与同步导出",
+  "scripts": {
+    "start": "python3 -m http.server 8080 --directory public",
+    "generate:samples": "python3 tools/generate_samples.py",
+    "prepare:e2e": "python3 tools/prepare_e2e.py public/samples /tmp/sample_e2e_data.json",
+    "test": "node tests/run.js",
+    "test:e2e": "python3 tools/prepare_e2e.py public/samples /tmp/sample_e2e_data.json && node tests/sample_e2e.js"
+  }
+}
