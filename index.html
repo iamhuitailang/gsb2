@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%234f9cf9'/%3E%3Cpath d='M9 21l6-12 6 12H9z' fill='none' stroke='white' stroke-width='2.4' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <title>MeshPaint 3D — 模型表面贴图绘制工具</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">MeshPaint&nbsp;3D</div>
+        <div class="top-actions">
+          <button id="btn-open" title="导入本地模型 (OBJ / glTF / GLB)">导入模型</button>
+          <input id="file-open" type="file" accept=".obj,.mtl,.gltf,.glb" multiple hidden />
+          <button id="btn-save" title="保存工程（含模型、纹理、笔刷参数）">保存工程</button>
+          <button id="btn-load" title="恢复工程文件">打开工程</button>
+          <input id="file-project" type="file" accept=".json,.tpp.json" hidden />
+          <button id="btn-export" title="导出纹理图片与绑定信息">导出纹理</button>
+        </div>
+      </header>
+
+      <div class="workspace">
+        <aside class="panel left-panel">
+          <section class="panel-section">
+            <h3>对象</h3>
+            <select id="select-object"></select>
+          </section>
+
+          <section class="panel-section">
+            <h3>材质 / 纹理层</h3>
+            <select id="select-material"></select>
+            <div class="row">
+              <label class="chk"><input type="checkbox" id="chk-paint-only" /> 仅看绘画层</label>
+            </div>
+            <div class="row">
+              <label class="chk"><input type="checkbox" id="chk-uv" checked /> UV 线框</label>
+            </div>
+            <div class="row">
+              <label class="chk"><input type="checkbox" id="chk-seams" checked /> 高亮接缝</label>
+            </div>
+          </section>
+
+          <section class="panel-section">
+            <h3>笔刷</h3>
+            <div class="row">
+              <button id="btn-paint-mode" class="mode active">绘制</button>
+              <button id="btn-nav-mode" class="mode">视角</button>
+            </div>
+            <div class="row color-row">
+              <label>颜色</label>
+              <input type="color" id="brush-color" value="#e23b3b" />
+            </div>
+            <div class="row">
+              <label>大小 <span id="val-size">24</span></label>
+              <input type="range" id="brush-size" min="1" max="100" value="24" />
+            </div>
+            <div class="row">
+              <label>硬度 <span id="val-hardness">80%</span></label>
+              <input type="range" id="brush-hardness" min="0" max="100" value="80" />
+            </div>
+            <div class="row">
+              <label>不透明度 <span id="val-opacity">90%</span></label>
+              <input type="range" id="brush-opacity" min="1" max="100" value="90" />
+            </div>
+            <div class="row">
+              <button id="btn-eraser" class="toggle">橡皮</button>
+              <button id="btn-undo" title="撤销 (Ctrl+Z)">撤销</button>
+              <button id="btn-redo" title="重做 (Ctrl+Y)">重做</button>
+            </div>
+          </section>
+
+          <section class="panel-section">
+            <h3>纹理尺寸</h3>
+            <div class="row">
+              <select id="select-resolution">
+                <option value="512">512 × 512</option>
+                <option value="1024" selected>1024 × 1024</option>
+                <option value="2048">2048 × 2048</option>
+              </select>
+              <button id="btn-new-layer" title="为当前材质新建空白基础纹理">新建</button>
+              <button id="btn-checker" title="程序生成棋盘格基础纹理">棋盘</button>
+            </div>
+          </section>
+
+          <section class="panel-section tips">
+            <h3>操作</h3>
+            <ul>
+              <li>左键在模型上拖动：绘制</li>
+              <li>右键 / 中键拖动：旋转视角</li>
+              <li>滚轮：缩放</li>
+              <li>按住空格临时切换视角</li>
+              <li>Ctrl+Z / Ctrl+Y：撤销重做</li>
+            </ul>
+          </section>
+        </aside>
+
+        <main class="viewport-wrap">
+          <canvas id="viewport"></canvas>
+          <div id="hint" class="hint"></div>
+        </main>
+
+        <aside class="panel right-panel">
+          <section class="panel-section">
+            <h3>纹理画布预览</h3>
+            <canvas id="uv-preview" width="384" height="384"></canvas>
+            <p class="note">画布与模型采样同一张纹理，旋转视角后笔触位置不变；接缝两侧在三维空间中连续着画。</p>
+          </section>
+        </aside>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
