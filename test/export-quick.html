@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>export quick</title></head>
+<body><pre id="out">running…</pre>
+<script type="module">
+import { FrameClock } from '/js/clock.js';
+import { createScene } from '/js/scene.js';
+import { Renderer } from '/js/renderer.js';
+import { ProbeBank, defaultProbes } from '/js/probes.js';
+import { Exporter } from '/js/exporter.js';
+
+const out = [];
+const log = (ok, msg, extra = '') => out.push(`${ok ? 'OK  ' : 'FAIL'} ${msg}${extra ? '  ' + extra : ''}`);
+
+try {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256; canvas.height = 180;
+  const clock = new FrameClock();
+  const r = new Renderer(canvas);
+  r.allocate(256, 180);
+  const scene = createScene('fence-0001');
+  r.setSceneDefs(scene.defs);
+  const probes = new ProbeBank(r);
+  defaultProbes(probes);
+  const exp = new Exporter({
+    renderer: r, scene, probes, clock,
+    getConfig: () => ({ ...r.config }), yieldEvery: 0,
+  });
+
+  const frames = [1, 30, 300, 301];
+  const t0 = performance.now();
+  const result = await exp.run(frames, () => {});
+  const t1 = performance.now();
+  log(true, `单次重放完成,耗时 ${(t1 - t0).toFixed(0)}ms`, `perFrame=${result.json.perFrame.length}`);
+
+  const j = result.json;
+  log(j.schema === 'taa-ghost-inspection-v1', 'JSON schema 正确');
+  log(j.selectedFrames.join() === frames.join(), '选中帧齐全', j.selectedFrames.join(','));
+  log(j.resetEvents.some((e) => e.reason === 'camera-jump' && e.frame === 300), '含相机跳变重开事件',
+    `${j.resetEvents.length} 条: ${j.resetEvents.map((e) => e.reason).join(',')}`);
+  log(j.probeSamples.length === 4, '探针读数按选中帧导出');
+  log(result.sheetBlob.type === 'image/png' && result.sheetBlob.size > 500,
+    '联系表 PNG', `${(result.sheetBlob.size / 1024).toFixed(1)}KB`);
+  const bmp = await createImageBitmap(result.sheetBlob);
+  log(bmp.width === 1024, '联系表 4 列宽', `${bmp.width}x${bmp.height}`);
+  JSON.parse(await result.jsonBlob.text());
+  log(true, 'JSON Blob 可无损解析');
+
+  // 第二次完整重放,验证逐位确定性
+  const r2 = new Renderer(canvas);
+  r2.allocate(256, 180);
+  const scene2 = createScene('fence-0001');
+  r2.setSceneDefs(scene2.defs);
+  const probes2 = new ProbeBank(r2);
+  defaultProbes(probes2);
+  const exp2 = new Exporter({
+    renderer: r2, scene: scene2, probes: probes2, clock,
+    getConfig: () => ({ ...r2.config }), yieldEvery: 0,
+  });
+  const again = await exp2.run(frames, () => {});
+  let maxDiff = 0;
+  for (let i = 0; i < j.perFrame.length; i++) {
+    for (const k of ['ghost', 'edgeGhost', 'meanWeight', 'staticEdgeDelta']) {
+      maxDiff = Math.max(maxDiff, Math.abs(j.perFrame[i][k] - again.json.perFrame[i][k]));
+    }
+  }
+  log(maxDiff === 0, '两次导出逐位一致(重跑同镜头可比对)', `maxDiff=${maxDiff}`);
+} catch (e) {
+  log(false, '导出异常', (e.stack || e.message).split('\n').slice(0, 3).join(' | '));
+}
+document.getElementById('out').textContent = out.join('\n');
+window.__done = true;
+</script>
+</body></html>

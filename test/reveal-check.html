@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>reveal check</title></head>
+<body><pre id="out">running…</pre>
+<script type="module">
+import { createScene } from '/js/scene.js';
+import { Renderer, RESET_REASON } from '/js/renderer.js';
+
+const out = [];
+const log = (ok, msg, extra = '') => out.push(`${ok ? 'OK  ' : 'FAIL'} ${msg}${extra ? '  ' + extra : ''}`);
+
+const canvas = document.createElement('canvas');
+canvas.width = 480; canvas.height = 320;
+const r = new Renderer(canvas);
+r.allocate(480, 320);
+const scene = createScene('fence-0001');
+r.setSceneDefs(scene.defs);
+r.reset(RESET_REASON.FIRST_FRAME);
+
+// 只统计遮挡物覆盖区域(屏幕右中部一块)的显露像素。
+// 用"逐帧增量"而非绝对值:栅栏移动的显露是持续背景噪声,
+// 遮挡物挪开瞬间会产生一个显著的显露脉冲。
+function regionReveal(region) {
+  let n = 0;
+  for (let y = region.y0; y < region.y1; y += 2) {
+    for (let x = region.x0; x < region.x1; x += 2) {
+      if (r.readTexture('debug', x, y)[1] > 0.5) n++;
+    }
+  }
+  return n;
+}
+
+const region = { x0: 300, y0: 60, x1: 430, y1: 280 };
+let prev = null;
+const series = [];
+for (let f = 0; f <= 260; f++) {
+  const st = scene.evaluate(f);
+  r.renderFrame(st, prev, { wrapped: false });
+  series.push(regionReveal(region));
+  prev = st;
+}
+// 场景参数里遮挡物开始挪开的帧
+const revealStart = scene.params.occluderOut0;
+// 挪开前 20 帧的平均显露(基线)与挪开窗内的峰值对比
+const baseline = series.slice(revealStart - 25, revealStart - 5)
+  .reduce((a, b) => a + b, 0) / 20;
+const peak = Math.max(...series.slice(revealStart, revealStart + 30));
+log(peak > baseline * 1.6, '遮挡挪开瞬间出现显露脉冲',
+  `基线=${baseline.toFixed(1)} 峰值=${peak}(f${revealStart}起)`);
+
+// 对照:遮挡物"滑入"阶段(coverK 上升)也应有显露,因为它在覆盖新像素
+const in0 = scene.params.occluderIn0;
+const inPeak = Math.max(...series.slice(in0, in0 + 25));
+log(inPeak > 5, '遮挡滑入阶段同样标记显露', `峰值=${inPeak}`);
+
+// 显露像素的权重必须为 0(彻底抛开历史)
+let badWeight = 0;
+for (let y = 0; y < 320; y += 2) {
+  for (let x = 0; x < 480; x += 2) {
+    const d = r.readTexture('debug', x, y);
+    if (d[1] > 0.5 && d[0] > 0.001) badWeight++;
+  }
+}
+log(badWeight === 0, '所有显露像素历史权重=0(及时抛开历史)', `违例=${badWeight}`);
+
+// 静止墙面在正常帧的权重应保持高(没有被误判显露)
+const st = scene.evaluate(100);
+let wallWeights = [], samples = 0;
+r.reset(RESET_REASON.FIRST_FRAME);
+prev = null;
+for (let f = 0; f <= 100; f++) {
+  const s = scene.evaluate(f);
+  r.renderFrame(s, prev, { wrapped: false });
+  prev = s;
+}
+// 墙面中心区域(取左上方一块静态区)
+for (let y = 40; y < 80; y += 4) {
+  for (let x = 60; x < 120; x += 4) {
+    wallWeights.push(r.readTexture('debug', x, y)[0]);
+    samples++;
+  }
+}
+const avgW = wallWeights.reduce((a, b) => a + b, 0) / samples;
+log(avgW > 0.7, '静止墙面正常帧保持高历史权重', `avg=${avgW.toFixed(3)}`);
+
+document.getElementById('out').textContent = out.join('\n');
+window.__done = true;
+</script>
+</body></html>

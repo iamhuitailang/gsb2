@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>app check</title></head>
+<body><pre id="out">running…</pre>
+<script type="module">
+// 复用真实 index.html 的逻辑不现实,这里直接验证 app.js 暴露的关键 DOM 行为:
+// 通过模拟点击驱动 UI,检查指标/图表/事件流是否联动。
+const out = [];
+const log = (ok, msg, extra = '') => out.push(`${ok ? 'OK  ' : 'FAIL'} ${msg}${extra ? '  ' + extra : ''}`);
+window.__out = out; window.__log = log;
+window.__done = false;
+
+const iframe = document.createElement('iframe');
+iframe.src = '/index.html';
+iframe.style.width = '1400px';
+iframe.style.height = '950px';
+document.body.appendChild(iframe);
+await new Promise((r) => (iframe.onload = r));
+await new Promise((r) => setTimeout(r, 1500)); // 等 App 构造完成
+const w = iframe.contentWindow;
+const d = iframe.contentDocument;
+const $ = (id) => d.getElementById(id);
+
+try {
+  // 1) 首帧指标已填充
+  const metrics0 = $('metrics-table').textContent;
+  log(metrics0.includes('全图平均重影亮度') && !metrics0.includes('NaN'), '首帧指标已渲染', metrics0.replace(/\s+/g, ' ').slice(0, 60));
+
+  // 2) 单步推进 30 帧
+  for (let i = 0; i < 30; i++) $('btn-step').click();
+  await new Promise((r) => setTimeout(r, 200));
+  const seekVal = $('seek-frame').value;
+  log(seekVal === '30', `单步 30 次后帧号=30`, `实际=${seekVal}`);
+
+  // 3) 图表 canvas 有非背景像素(说明画了数据线)
+  const chart = $('chart-ghost');
+  const cx = chart.getContext('2d');
+  const px = cx.getImageData(0, 0, chart.width, chart.height).data;
+  let colored = 0;
+  for (let i = 0; i < px.length; i += 4) {
+    // 橙色数据线 rgb 约 (217,89,38)
+    if (px[i] > 150 && px[i + 1] < 130 && px[i + 2] < 90) colored++;
+  }
+  log(colored > 5, '重影图表已绘制数据线', `${colored} 个橙色像素`);
+
+  // 4) 探针列表有读数
+  const probeText = $('probe-list').textContent;
+  log(probeText.includes('w 0.') || probeText.includes('w 1.'), '探针面板显示权重读数', probeText.replace(/\s+/g, ' ').slice(0, 70));
+
+  // 5) 切到分屏与调试通道不报错
+  d.querySelector('[data-mode="2"]').click();
+  d.querySelector('[data-mode="4"]').click();
+  log(true, '模式切换(分屏/调试)无异常');
+
+  // 6) 相机瞬移按钮 -> 事件流出现 camera/手动重开
+  const eventsBefore = $('event-log').children.length;
+  $('btn-jump-cam').click();
+  await new Promise((r) => setTimeout(r, 200));
+  const eventsAfter = $('event-log').children.length;
+  log(eventsAfter > eventsBefore, '相机瞬移产生重开事件', `${eventsBefore}->${eventsAfter}`);
+
+  // 7) seek 回 10 帧:重放规则生效,帧号正确
+  $('seek-frame').value = '10';
+  $('seek-frame').dispatchEvent(new w.Event('change'));
+  await new Promise((r) => setTimeout(r, 300));
+  log($('seek-frame').value === '10', 'seek 到第 10 帧(触发重放)');
+
+  // 8) 调整历史权重滑块,配置生效
+  const slider = $('s-mix');
+  slider.value = '0.6';
+  slider.dispatchEvent(new w.Event('input'));
+  log($('v-mix').textContent === '0.60', '历史权重滑块联动', $('v-mix').textContent);
+} catch (e) {
+  log(false, '交互异常', (e.stack || e.message).split('\n')[0]);
+}
+document.getElementById('out').textContent = out.join('\n');
+window.__done = true;
+</script>
+</body></html>

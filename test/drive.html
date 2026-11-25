@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>drive</title>
+<link rel="stylesheet" href="/css/style.css"></head>
+<body style="height:100vh">
+<div class="canvas-wrap" id="canvas-wrap" style="position:relative;width:900px;height:560px">
+  <canvas id="gl-canvas" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+  <canvas id="overlay-canvas" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none"></canvas>
+</div>
+<pre id="status"></pre>
+<script type="module">
+import { createScene } from '/js/scene.js';
+import { Renderer, RESET_REASON } from '/js/renderer.js';
+import { ProbeBank, defaultProbes } from '/js/probes.js';
+import { Overlay } from '/js/overlay.js';
+
+const q = new URLSearchParams(location.search);
+const target = parseInt(q.get('frame') || '120', 10);
+const mode = parseInt(q.get('mode') || '1', 10);
+const channel = parseInt(q.get('channel') || '0', 10);
+
+const glCanvas = document.getElementById('gl-canvas');
+const overlayCanvas = document.getElementById('overlay-canvas');
+const dpr = 1;
+glCanvas.width = 900; glCanvas.height = 560;
+const r = new Renderer(glCanvas);
+r.allocate(900, 560);
+const scene = createScene('fence-0001');
+r.setSceneDefs(scene.defs);
+const probes = new ProbeBank(r);
+defaultProbes(probes);
+const overlay = new Overlay(overlayCanvas, glCanvas);
+overlay.syncSize();
+overlay.probes = probes;
+overlay.mode = mode;
+
+r.reset(RESET_REASON.FIRST_FRAME);
+let prev = null;
+for (let f = 0; f <= target; f++) {
+  const st = scene.evaluate(f);
+  const info = r.renderFrame(st, prev, { wrapped: false });
+  probes.sample(f);
+  if (f === target) {
+    r.display(mode, channel, 0.5);
+    overlay.frameInfo = {
+      frame: f, maxFrame: 900, t: f / 30, jitterIndex: info.jitterIndex - 1,
+      jx: info.jitter.x, jy: info.jitter.y,
+      reset: r.lastReset && r.lastReset.frame === f ? r.lastReset.reason : null,
+    };
+    overlay.draw();
+  }
+  prev = st;
+}
+document.getElementById('status').textContent =
+  `frame=${target} mode=${mode} ch=${channel} stats=${JSON.stringify(r.lastStats)}`;
+window.__done = true;
+</script>
+</body></html>

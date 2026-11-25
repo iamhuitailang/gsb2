@@ -1,0 +1,10 @@
+{
+  "name": "taa-ghost-inspection",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node test/run-tests.js",
+    "syntax": "node --check js/app.js && node --check js/renderer.js && node --check js/shaders.js && node --check js/scene.js && node --check js/exporter.js && node --check js/probes.js && node --check js/overlay.js && node --check js/charts.js && node --check js/geometry.js && node --check js/clock.js && node --check js/math.js && node --check js/prng.js"
+  }
+}

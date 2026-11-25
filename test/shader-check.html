@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>shader check</title></head>
+<body><pre id="out">running…</pre>
+<script type="module">
+import {
+  GBUF_VS, GBUF_FS, RESOLVE_VS, RESOLVE_FS, STATS_VS, STATS_FS,
+  DISPLAY_VS, DISPLAY_FS,
+} from '/js/shaders.js';
+
+const gl = document.createElement('canvas').getContext('webgl2');
+const lines = [];
+lines.push('webgl2: ' + !!gl + ' float32: ' + !!gl.getExtension('EXT_color_buffer_float'));
+
+function check(name, type, src) {
+  const sh = gl.createShader(type);
+  gl.shaderSource(sh, src);
+  gl.compileShader(sh);
+  const ok = gl.getShaderParameter(sh, gl.COMPILE_STATUS);
+  lines.push(`${ok ? 'OK  ' : 'FAIL'} ${name}${ok ? '' : '\n' + gl.getShaderInfoLog(sh)}`);
+}
+check('GBUF_VS', gl.VERTEX_SHADER, GBUF_VS);
+check('GBUF_FS', gl.FRAGMENT_SHADER, GBUF_FS);
+check('RESOLVE_VS', gl.VERTEX_SHADER, RESOLVE_VS);
+check('RESOLVE_FS', gl.FRAGMENT_SHADER, RESOLVE_FS);
+check('STATS_VS', gl.VERTEX_SHADER, STATS_VS);
+check('STATS_FS', gl.FRAGMENT_SHADER, STATS_FS);
+check('DISPLAY_VS', gl.VERTEX_SHADER, DISPLAY_VS);
+check('DISPLAY_FS', gl.FRAGMENT_SHADER, DISPLAY_FS);
+document.getElementById('out').textContent = lines.join('\n');
+</script>
+</body></html>

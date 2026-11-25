@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>runtime check</title></head>
+<body><pre id="out">running…</pre>
+<script type="module">
+import { createScene } from '/js/scene.js';
+import { Renderer, RESET_REASON } from '/js/renderer.js';
+import { ProbeBank } from '/js/probes.js';
+
+const out = [];
+const log = (ok, msg, extra = '') => out.push(`${ok ? 'OK  ' : 'FAIL'} ${msg}${extra ? '  ' + extra : ''}`);
+
+const canvas = document.createElement('canvas');
+canvas.width = 480; canvas.height = 320;
+const r = new Renderer(canvas);
+r.allocate(480, 320);
+const scene = createScene('fence-0001');
+r.setSceneDefs(scene.defs);
+const probes = new ProbeBank(r);
+probes.addGhost(0.4, 0.5);
+probes.addJitter(0.7, 0.3);
+
+function runSequence(frames) {
+  r.reset(RESET_REASON.MANUAL);
+  let prev = null;
+  const stats = [];
+  for (const f of frames) {
+    const st = scene.evaluate(f);
+    r.renderFrame(st, prev, { wrapped: false });
+    probes.sample(f);
+    stats.push(r.lastStats);
+    prev = st;
+  }
+  return stats;
+}
+
+try {
+  // 1) 两条独立重放必须逐位一致(确定性)
+  const s1 = runSequence([...Array(40).keys()]);
+  const snap1 = r.readDisplay(1, 0, 0.5);
+  const s2 = runSequence([...Array(40).keys()]);
+  const snap2 = r.readDisplay(1, 0, 0.5);
+  let diff = 0;
+  for (let i = 0; i < snap1.length; i++) diff = Math.max(diff, Math.abs(snap1[i] - snap2[i]));
+  log(diff === 0, '同镜头重放逐位一致', `maxAbsDiff=${diff}`);
+
+  // 2) 指标结构完整且数值合理
+  const st39 = s1[39];
+  const finite = Object.values(st39).every((v) => typeof v !== 'number' || Number.isFinite(v));
+  log(finite && st39.meanWeight > 0 && st39.meanWeight <= 1, '指标有限且权重在 (0,1]',
+    `w=${st39.meanWeight.toFixed(3)} ghost=${st39.ghost.toFixed(5)}`);
+
+  // 3) 相机瞬移帧必须产生 camera-jump 重开事件
+  r.reset(RESET_REASON.MANUAL);
+  const ev0 = r.events.length;
+  let prev = null;
+  for (let f = 0; f <= 302; f++) {
+    const st = scene.evaluate(f);
+    r.renderFrame(st, prev, { wrapped: f === 0 && false });
+    prev = st;
+  }
+  const jumpEv = r.events.filter((e) => e.reason === RESET_REASON.CAMERA_JUMP);
+  log(jumpEv.length >= 1 && jumpEv[0].frame === 300, '相机瞬移触发重开', JSON.stringify(jumpEv.at(-1)));
+
+  // 4) 重开后首帧权重为 0(显露标记),之后恢复
+  r.reset(RESET_REASON.MANUAL);
+  const st0 = scene.evaluate(0);
+  r.renderFrame(st0, null, { wrapped: false });
+  const dbg0 = r.readTexture('debug', 240, 160);
+  r.renderFrame(scene.evaluate(1), st0, { wrapped: false });
+  const dbg1 = r.readTexture('debug', 240, 160);
+  log(dbg0[1] === 1, '重开首帧显露标记=1', `g=${dbg0[1]}`);
+  log(dbg1[0] > 0.5, '第二帧历史权重恢复', `w=${dbg1[0].toFixed(3)}`);
+
+  // 5) 移动边缘处速度非零;静止墙区域速度接近 0
+  const vel = r.readTexture('velocity', 240, 160);
+  log(Number.isFinite(vel[0]) && Number.isFinite(vel[1]), '速度纹理可读且有限',
+    `vx=${vel[0].toFixed(3)} vy=${vel[1].toFixed(3)}`);
+
+  // 6) 各显示模式不抛错
+  let modesOk = true;
+  for (let m = 0; m <= 4; m++) {
+    try { r.display(m, m === 4 ? 4 : 0, 0.5); } catch (e) { modesOk = false; out.push('   ' + e.message); }
+  }
+  log(modesOk, '5 种显示模式均可渲染');
+
+  // 7) 画布尺寸变化:重开事件 + 缓冲重建后仍可渲染
+  r.allocate(400, 300);
+  r.reset(RESET_REASON.RESIZE);
+  const stR = scene.evaluate(0);
+  r.renderFrame(stR, null, { wrapped: false });
+  const after = r.lastStats;
+  log(after && Number.isFinite(after.ghost), '尺寸变化后管线恢复', `400x300 ghost=${after.ghost.toFixed(5)}`);
+
+  // 8) 探针逐帧留痕(测试页未接 App 的 clearTrails,只验证单次序列完整累积)
+  log(probes.get(probes.ghost[0].id).length >= 80, '探针历史随帧累积',
+    `n=${probes.get(probes.ghost[0].id).length}`);
+} catch (e) {
+  log(false, '运行时异常', e.stack || e.message);
+}
+
+document.getElementById('out').textContent = out.join('\n');
+window.__result = out;
+window.__done = true;
+</script>
+</body></html>

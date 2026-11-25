@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TAA 逐帧重影检查台</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">TAA 逐帧重影检查台</div>
+  <div class="transport">
+    <button id="btn-play" class="btn primary" title="空格">▶ 播放</button>
+    <button id="btn-step-back" class="btn" title="←">◀ 帧</button>
+    <button id="btn-step" class="btn" title="→">帧 ▶</button>
+    <button id="btn-reset" class="btn" title="回到第 0 帧并清空历史">⟲ 重开</button>
+    <label class="frame-jump">跳转
+      <input id="seek-frame" type="number" min="0" max="900" value="0" class="num">
+    </label>
+    <button id="btn-jump-cam" class="btn warn" title="在当前帧制造一次相机瞬移">相机瞬移</button>
+  </div>
+  <div class="seed-line">
+    <label>镜头 seed
+      <input id="seed-input" type="text" value="fence-0001" spellcheck="false">
+    </label>
+    <button id="btn-seed" class="btn">重建镜头</button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="viewport-col">
+    <div class="mode-bar">
+      <div class="seg" id="mode-seg">
+        <button data-mode="0">单帧</button>
+        <button data-mode="1" class="active">TAA</button>
+        <button data-mode="2">分屏</button>
+        <button data-mode="3">区域掩膜</button>
+        <button data-mode="4">调试通道</button>
+      </div>
+      <select id="debug-channel" class="hidden">
+        <option value="0">历史权重 w</option>
+        <option value="1">显露/重开标记</option>
+        <option value="2">像素速度场</option>
+        <option value="3">邻域裁剪量</option>
+        <option value="4">重影热力 |TAA-单帧|</option>
+      </select>
+      <div class="hint">点击画面添加探针: <b>G</b> 拖影 / <b>J</b> 抖动 / <b>T</b> 追踪点(先按字母再点画布)</div>
+    </div>
+    <div class="canvas-wrap" id="canvas-wrap">
+      <canvas id="gl-canvas"></canvas>
+      <canvas id="overlay-canvas"></canvas>
+    </div>
+    <div class="charts">
+      <canvas id="chart-ghost" class="spark"></canvas>
+      <canvas id="chart-static" class="spark"></canvas>
+      <canvas id="chart-weight" class="spark"></canvas>
+    </div>
+  </section>
+
+  <aside class="side">
+    <section class="panel">
+      <h3>TAA 参数</h3>
+      <label class="slider">基准历史权重 <span id="v-mix"></span>
+        <input id="s-mix" type="range" min="0.5" max="0.98" step="0.01">
+      </label>
+      <label class="slider">高速拒绝阈值(px/帧) <span id="v-speed"></span>
+        <input id="s-speed" type="range" min="1" max="20" step="0.5">
+      </label>
+      <label class="slider">高速权重地板 <span id="v-floor"></span>
+        <input id="s-floor" type="range" min="0" max="0.8" step="0.01">
+      </label>
+      <label class="slider">深度不一致 ε <span id="v-eps"></span>
+        <input id="s-eps" type="range" min="0.0005" max="0.02" step="0.0005">
+      </label>
+      <label class="check"><input id="c-jitter" type="checkbox" checked> 启用 Halton 亚像素抖动</label>
+    </section>
+
+    <section class="panel">
+      <h3>本帧指标</h3>
+      <table class="metrics" id="metrics-table">
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <h3>探针读数</h3>
+      <div id="probe-list" class="probe-list"></div>
+      <button id="btn-clear-probes" class="btn small">清空探针</button>
+    </section>
+
+    <section class="panel">
+      <h3>重开事件流</h3>
+      <div id="event-log" class="event-log"></div>
+    </section>
+
+    <section class="panel">
+      <h3>锁定路径导出</h3>
+      <label class="slider">帧号列表(逗号分隔)
+        <input id="export-frames" type="text" value="1,60,95,125,205,240,299,300,301,450">
+      </label>
+      <button id="btn-export" class="btn primary">重放并导出 PNG + JSON</button>
+      <div id="export-progress" class="hint"></div>
+    </section>
+  </aside>
+</main>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
