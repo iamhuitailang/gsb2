@@ -45,3 +45,15 @@ coverage/
 
 # 生成的示例素材(可用 npm run generate:samples 恢复)
 public/samples/
+
+# ---- 视频防抖工具运行期产物 ----
+# 注意: samples/*.mp4 是要求随附的示例素材, 不予忽略; 也可用 make_samples.py 再生成。
+# 导出视频 / 参数 sidecar
+exports/*
+!exports/.gitkeep
+# 保存的分析项目 JSON
+projects/*
+!projects/.gitkeep
+# 临时视频校验输出
+/tmp/
+

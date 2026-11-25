@@ -1,0 +1,10 @@
+# 本地视频防抖工具 Python 依赖
+# Python 3.10+ (开发验证版本: 3.13)
+flask>=3.0
+opencv-python>=4.8
+numpy>=1.24
+
+# 另需系统命令 ffmpeg / ffprobe (视频编码、音轨保留、音视频探测):
+#   macOS:   brew install ffmpeg
+#   Ubuntu:  sudo apt install ffmpeg
+#   Windows: https://www.gyan.dev/ffmpeg/builds/ 并加入 PATH

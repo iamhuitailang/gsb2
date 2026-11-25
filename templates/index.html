@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>本地视频防抖工作台 · Video Stabilizer</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎥</text></svg>" />
+</head>
+<body>
+  <!-- 顶栏 -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-logo">🎥</span>
+      <div class="brand-text">
+        <strong>本地视频防抖工作台</strong>
+        <small>运动轨迹 · 平滑 · 画幅裁切 · 区间排除 · 帧级一致导出</small>
+      </div>
+    </div>
+    <div class="top-actions">
+      <input id="path-input" class="path-input" type="text"
+             placeholder="视频绝对路径，如 /Users/me/Movies/handheld.mp4" />
+      <button id="btn-open-path" class="btn">分析打开</button>
+      <span class="divider"></span>
+      <select id="project-select" class="select" title="已保存项目"></select>
+      <button id="btn-load-project" class="btn">载入项目</button>
+      <button id="btn-save-project" class="btn">💾 保存项目</button>
+      <span class="divider"></span>
+      <button id="btn-export-params" class="btn" disabled>导出处理参数 JSON</button>
+      <button id="btn-export-video" class="btn btn-primary" disabled>🎬 导出稳定视频</button>
+    </div>
+  </header>
+
+  <!-- 示例素材条 -->
+  <section id="sample-bar" class="sample-bar">
+    <div class="sample-bar-inner">
+      <span class="sample-title">📼 示例短片：</span>
+      <div id="sample-list" class="sample-list"></div>
+      <button id="btn-gen-samples" class="btn btn-small">生成 / 补全全部示例</button>
+      <span class="sample-hint">素材由程序在本地合成，含轻微抖动、快速摇摄、镜头切换</span>
+    </div>
+    <div id="sample-job" class="mini-progress" hidden>
+      <div class="mini-progress-bar"><i id="sample-job-fill"></i></div>
+      <span id="sample-job-msg">准备中…</span>
+    </div>
+  </section>
+
+  <!-- 空状态 -->
+  <main id="empty-state" class="empty-state">
+    <div class="empty-card">
+      <h2>开始一段防抖分析</h2>
+      <p>选择上方任意一个<b>示例短片</b>直接体验，或输入本机视频的绝对路径后点击「分析打开」。</p>
+      <ul class="feature-grid">
+        <li><b>① 轨迹分析</b><span>光流估计逐帧位移 / 旋转，绘制原始与平滑轨迹</span></li>
+        <li><b>② 双画面预览</b><span>原始画面叠加有效画幅框，右侧即导出同款稳定画面</span></li>
+        <li><b>③ 裁切与安全构图</b><span>自动计算消除黑边的裁切倍数，画幅框内确认主体安全</span></li>
+        <li><b>④ 识别切换 / 摇摄</b><span>时间轴标注事件，可拖拽标记不处理区间</span></li>
+        <li><b>⑤ 帧级一致</b><span>暂停后用 ← / → 逐帧检查，所见帧即导出对应帧</span></li>
+        <li><b>⑥ 项目与参数</b><span>保存分析项目随时续调，导出新文件，原片永不改动</span></li>
+      </ul>
+    </div>
+  </main>
+
+  <!-- 工作区 -->
+  <main id="workspace" class="workspace" hidden>
+    <section class="stage-col">
+      <!-- 双预览 -->
+      <div class="views">
+        <div class="view-panel">
+          <div class="view-head">
+            <span class="view-title">原始画面 · 有效画幅叠加</span>
+            <label class="check"><input type="checkbox" id="chk-overlay" checked /> 显示画幅框</label>
+          </div>
+          <div class="canvas-wrap" id="wrap-original">
+            <img id="img-original" alt="原始画面" draggable="false" />
+            <span class="view-tag tag-original">ORIGINAL</span>
+            <span id="badge-excluded" class="badge badge-bypass" hidden>不处理区间 · 原画面</span>
+          </div>
+        </div>
+        <div class="view-panel">
+          <div class="view-head">
+            <span class="view-title">稳定预览（与导出同一渲染函数）</span>
+            <span class="view-extra" id="stable-meta"></span>
+          </div>
+          <div class="canvas-wrap" id="wrap-stable">
+            <img id="img-stable" alt="稳定后画面" draggable="false" />
+            <span class="view-tag tag-stable">STABILIZED</span>
+            <span id="badge-blackwarn" class="badge badge-warn" hidden>⚠ 裁切不足，可能有黑边</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 走带控制 -->
+      <div class="transport card">
+        <button class="btn btn-icon" id="btn-first" title="回到首帧 (Home)">⏮</button>
+        <button class="btn btn-icon" id="btn-prev" title="上一帧 (←)">◀</button>
+        <button class="btn btn-play" id="btn-play" title="播放 / 暂停 (空格)">▶ 播放</button>
+        <button class="btn btn-icon" id="btn-next" title="下一帧 (→)">▶</button>
+        <button class="btn btn-icon" id="btn-last" title="末帧 (End)">⏭</button>
+        <input type="range" id="frame-range" class="frame-range" min="0" max="0" value="0" />
+        <div class="frame-readout">
+          <input id="frame-input" class="frame-input" type="number" min="0" value="0" />
+          <span class="frame-total" id="frame-total">/ 0</span>
+        </div>
+        <span class="timecode" id="timecode">00:00.00</span>
+        <select id="preview-width" class="select select-small" title="预览分辨率（不影响导出）">
+          <option value="854">流畅 480p</option>
+          <option value="1280" selected>标准 720p</option>
+          <option value="1920">清晰 1080p</option>
+          <option value="0">原图</option>
+        </select>
+      </div>
+
+      <!-- 轨迹图 -->
+      <div class="card chart-card">
+        <div class="chart-head">
+          <div class="chart-tabs" id="chart-tabs">
+            <button class="chart-tab active" data-metric="x">水平位移 X</button>
+            <button class="chart-tab" data-metric="y">垂直位移 Y</button>
+            <button class="chart-tab" data-metric="a">旋转 A</button>
+            <button class="chart-tab" data-metric="motion">运动量 / 事件</button>
+          </div>
+          <div class="chart-legend">
+            <span><i class="ln ln-raw"></i>原始轨迹</span>
+            <span><i class="ln ln-smooth"></i>平滑轨迹</span>
+            <span><i class="mk mk-pan"></i>摇摄</span>
+            <span><i class="mk mk-cut"></i>切换</span>
+            <span><i class="mk mk-ex"></i>不处理区间</span>
+          </div>
+        </div>
+        <canvas id="traj-chart" height="210"></canvas>
+        <div class="chart-foot">
+          <span class="hint">💡 在曲线图上<b>按住并横向拖拽</b>选择区间，可标记为「不处理」；点击已有灰色区间可删除。</span>
+          <div id="range-action" class="range-action" hidden>
+            <span id="range-text"></span>
+            <button class="btn btn-small btn-primary" id="btn-range-add">标记为不处理</button>
+            <button class="btn btn-small" id="btn-range-cancel">取消选择</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 右侧参数面板 -->
+    <aside class="side-col">
+      <section class="card param-card">
+        <h3>🎛 稳定强度与平滑范围</h3>
+        <div class="param-row">
+          <div class="param-label"><label for="rng-strength">稳定强度</label><output id="val-strength">85%</output></div>
+          <input type="range" id="rng-strength" min="0" max="100" step="1" value="85" />
+          <p class="param-desc">强度越低越保留原始手持感，越高画面越稳。</p>
+        </div>
+        <div class="param-row">
+          <div class="param-label"><label for="rng-smooth">平滑范围（窗口时长）</label><output id="val-smooth">0.80 s</output></div>
+          <input type="range" id="rng-smooth" min="0.15" max="2.5" step="0.05" value="0.8" />
+          <p class="param-desc"><span id="smooth-frames">半径约 12 帧</span>；范围越大越平滑，但快速运镜时滞后越明显。</p>
+        </div>
+        <div class="param-row">
+          <label class="check"><input type="checkbox" id="chk-adaptive" checked /> 快速摇摄自适应减弱校正</label>
+          <div class="sub-param" id="pan-sens-row">
+            <div class="param-label"><label for="rng-pan-sens">摇摄识别灵敏度</label><output id="val-pan-sens">1.0×</output></div>
+            <input type="range" id="rng-pan-sens" min="0.3" max="2.5" step="0.1" value="1.0" />
+          </div>
+          <p class="param-desc">大位移被识别为正常摇摄而非抖动，峰值处少校正，避免与运镜对抗。</p>
+        </div>
+      </section>
+
+      <section class="card param-card">
+        <h3>🔍 裁切范围与有效画幅</h3>
+        <div class="param-row">
+          <div class="param-label">
+            <label for="rng-zoom">裁切 / 放大倍数</label>
+            <output id="val-zoom">1.080×</output>
+          </div>
+          <input type="range" id="rng-zoom" min="1" max="1.8" step="0.005" value="1.08" />
+          <div class="btn-row">
+            <button class="btn btn-small" id="btn-auto-zoom">自动计算无黑边倍数</button>
+            <label class="check check-inline"><input type="checkbox" id="chk-auto-zoom" checked /> 参数变化时自动</label>
+          </div>
+          <div class="crop-info" id="crop-info">有效源画幅约 — × —</div>
+          <p class="param-desc">左侧原图中的青色四边形即最终有效画幅，请确认重要主体始终落在框内，避免被裁出。</p>
+          <div id="zoom-warning" class="inline-warn" hidden></div>
+        </div>
+      </section>
+
+      <section class="card param-card">
+        <h3>🎬 镜头切换 / 快速摇摄 / 不处理区间</h3>
+        <div class="event-summary" id="event-summary">分析后显示</div>
+        <div class="btn-row wrap">
+          <button class="btn btn-small" id="btn-auto-pan">自动标记摇摄区间</button>
+          <label class="check check-inline"><input type="checkbox" id="chk-auto-cuts" /> 同时包含切换点</label>
+          <button class="btn btn-small btn-danger-ghost" id="btn-clear-ex">清空区间</button>
+        </div>
+        <ul class="ex-list" id="ex-list"></ul>
+      </section>
+
+      <section class="card param-card export-card">
+        <h3>📤 导出</h3>
+        <label class="block-label">导出文件名（可留空，自动命名）</label>
+        <input type="text" id="export-name" class="text-input" placeholder="例如 hike_2026_stable" />
+        <button class="btn btn-primary btn-block" id="btn-export-video-2">🎬 导出稳定视频（不动原片）</button>
+        <div id="export-job" class="export-job" hidden>
+          <div class="progress"><i id="export-fill"></i></div>
+          <div class="export-msg" id="export-msg">准备中…</div>
+          <div class="btn-row">
+            <a id="export-link" class="btn btn-small btn-primary" hidden target="_blank">▶ 打开 / 播放</a>
+            <button id="btn-reveal" class="btn btn-small" hidden>在文件夹中显示</button>
+          </div>
+        </div>
+        <div class="previous-exports">
+          <button class="btn btn-link" id="btn-refresh-exports">查看历史导出 ↓</button>
+          <div id="export-history" hidden></div>
+        </div>
+      </section>
+
+      <section class="card tips-card">
+        <h3>⌨️ 操作与一致性说明</h3>
+        <ul class="tips">
+          <li><kbd>空格</kbd> 播放 / 暂停，<kbd>←</kbd><kbd>→</kbd> 逐帧，<kbd>Home</kbd>/<kbd>End</kbd> 首 / 末帧。</li>
+          <li>预览帧与导出视频调用同一个逐帧渲染函数，帧号一一对应。</li>
+          <li>项目 JSON 保存全部分析数据与参数，可离线续调；原片路径仅记录在 JSON 中。</li>
+        </ul>
+      </section>
+    </aside>
+  </main>
+
+  <!-- 全局任务遮罩(分析 / 生成素材 / 载入项目) -->
+  <div id="job-overlay" class="job-overlay" hidden>
+    <div class="job-modal">
+      <div class="spinner"></div>
+      <h3 id="job-title">正在处理…</h3>
+      <div class="progress progress-lg"><i id="job-fill"></i></div>
+      <div class="job-msg" id="job-msg">请稍候</div>
+      <button class="btn btn-small btn-danger-ghost" id="btn-job-cancel">取消任务</button>
+    </div>
+  </div>
+
+  <!-- toast -->
+  <div id="toast" class="toast" hidden></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
