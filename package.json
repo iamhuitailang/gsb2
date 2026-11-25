@@ -1,0 +1,14 @@
+{
+  "name": "local-green-screen-studio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "本地视频绿幕抠像与合成工作台（纯浏览器端处理，无在线服务）",
+  "type": "module",
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "generate:samples": "node tools/generate-samples.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

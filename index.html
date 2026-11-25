@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>本地绿幕抠像工作台</title>
+  <link rel="stylesheet" href="src/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <span>本地绿幕抠像工作台</span>
+      <span class="local-badge" title="所有处理均在本机浏览器内完成">100% 本地处理</span>
+    </div>
+    <input id="projectName" class="project-name" type="text" value="未命名项目" spellcheck="false" />
+    <div class="top-actions">
+      <button id="btnSample" class="btn">载入/重建示例素材</button>
+      <button id="btnImportSrc" class="btn">导入源视频</button>
+      <div class="dropdown">
+        <button id="btnProjectMenu" class="btn">项目 ▾</button>
+        <div id="projectMenu" class="dropdown-menu hidden">
+          <button data-action="save">保存项目到本机</button>
+          <button data-action="export">导出项目文件 (.json)</button>
+          <button data-action="import">导入项目文件</button>
+          <hr/>
+          <button data-action="list">已保存的项目…</button>
+          <button data-action="new">新建空项目</button>
+        </div>
+      </div>
+      <button id="btnExport" class="btn btn-primary">导出成果</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <!-- 左侧：预览 -->
+    <section class="preview-pane">
+      <div class="preview-toolbar">
+        <div class="segmented" id="viewMode">
+          <button data-mode="original" class="seg">原始背景</button>
+          <button data-mode="alpha" class="seg active">透明棋盘</button>
+          <button data-mode="background" class="seg">替换背景</button>
+        </div>
+        <div class="preview-tools">
+          <button id="btnEyedrop" class="btn btn-small" title="在画面上点击拾取抠像主色">取色器</button>
+          <span id="eyedropHint" class="eyedrop-hint hidden">点击画面拾取绿幕主色，按 Esc 取消</span>
+          <span id="syncState" class="sync-state"></span>
+        </div>
+      </div>
+
+      <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="glCanvas"></canvas>
+        <canvas id="maskCanvas"></canvas>
+        <div id="emptyState" class="empty-state">
+          <div class="empty-card">
+            <h2>开始一个抠像项目</h2>
+            <p>所有视频解码、抠像、遮罩与导出都在本机浏览器内完成，不会上传任何数据。</p>
+            <div class="empty-actions">
+              <button id="btnEmptySample" class="btn btn-primary">载入内置示例（本地生成短片）</button>
+              <button id="btnEmptyImport" class="btn">导入我自己的绿幕视频</button>
+            </div>
+            <p class="empty-note">示例短片包含：飘动的头发边缘、快速移动镜头、与绿幕颜色相近的绿色道具。</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 时间线 -->
+      <div class="timeline-block">
+        <div class="transport">
+          <button id="btnHome" class="btn btn-small" title="回到开头">⏮</button>
+          <button id="btnPlay" class="btn btn-primary btn-small">▶ 播放</button>
+          <span class="time-readout"><b id="timeCur">00:00.00</b> / <span id="timeDur">00:00.00</span></span>
+          <span class="transport-sep"></span>
+          <label class="temporal-ctl">时间稳定
+            <input id="temporal" type="range" min="0" max="95" value="40" />
+            <span id="temporalVal">40%</span>
+          </label>
+          <span class="transport-sep"></span>
+          <button id="btnSplitSeg" class="btn btn-small">在播放头切分时间段</button>
+          <button id="btnDelSeg" class="btn btn-small">删除当前时间段</button>
+        </div>
+        <div class="timeline-scroll" id="timelineScroll">
+          <canvas id="timelineCanvas" height="86"></canvas>
+        </div>
+        <div class="kf-bar">
+          <button id="btnAddKf" class="btn btn-small">◆ 添加关键帧</button>
+          <button id="btnDelKf" class="btn btn-small">移除当前关键帧</button>
+          <span id="segInfo" class="seg-info"></span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 右侧：参数面板 -->
+    <aside class="side-pane">
+      <div class="tabs">
+        <button class="tab active" data-tab="key">抠像</button>
+        <button class="tab" data-tab="mask">局部遮罩</button>
+        <button class="tab" data-tab="bg">背景</button>
+      </div>
+
+      <div class="tab-panel active" data-tab="key">
+        <div class="control-row">
+          <div class="control-head">
+            <label>抠像主色</label>
+            <span class="swatch-wrap">
+              <span id="keySwatch" class="swatch"></span>
+              <input id="keyColorPick" type="color" value="#12c020" title="直接指定主色" />
+            </span>
+          </div>
+          <p class="hint">用预览区上方的「取色器」直接点选绿幕，或点击色块手动指定。</p>
+        </div>
+        <div class="control-row">
+          <div class="control-head"><label for="similarity">取色范围</label><span id="similarityVal">42</span></div>
+          <input id="similarity" type="range" min="0" max="100" value="42" />
+          <p class="hint">范围越大，越多接近绿幕的颜色被抠除；过大会侵蚀前景。</p>
+        </div>
+        <div class="control-row">
+          <div class="control-head"><label for="softness">边缘柔化</label><span id="softnessVal">30</span></div>
+          <input id="softness" type="range" min="0" max="100" value="30" />
+          <p class="hint">控制前景/背景之间过渡带的宽度，让发丝等半透明边缘更自然。</p>
+        </div>
+        <div class="control-row">
+          <div class="control-head"><label for="spill">溢色修正</label><span id="spillVal">55</span></div>
+          <input id="spill" type="range" min="0" max="100" value="55" />
+          <p class="hint">去除人物边缘反射的绿色环境光。</p>
+        </div>
+        <div class="control-row">
+          <div class="control-head"><label for="shadow">暗部保护</label><span id="shadowVal">35</span></div>
+          <input id="shadow" type="range" min="0" max="100" value="35" />
+          <p class="hint">保护深色头发等暗部不被误抠，数值越大越倾向保留暗像素。</p>
+        </div>
+        <hr class="panel-sep"/>
+        <div class="control-row keyframe-note">
+          <p class="hint">参数通过时间线上的<b>关键帧</b>按时间段保存，关键帧之间自动平滑过渡；拖动滑块会自动更新当前时间的关键帧。</p>
+        </div>
+      </div>
+
+      <div class="tab-panel" data-tab="mask">
+        <div class="control-row">
+          <div class="control-head"><label>画笔模式</label></div>
+          <div class="segmented segmented-full" id="maskMode">
+            <button data-mode="keep" class="seg">✓ 保留区域</button>
+            <button data-mode="remove" class="seg active">✕ 移除区域</button>
+          </div>
+        </div>
+        <div class="control-row">
+          <div class="control-head"><label for="brushSize">画笔大小</label><span id="brushSizeVal">24</span></div>
+          <input id="brushSize" type="range" min="4" max="120" value="24" />
+        </div>
+        <div class="control-row">
+          <div class="control-head"><label for="maskFeather">遮罩羽化</label><span id="maskFeatherVal">6</span></div>
+          <input id="maskFeather" type="range" min="0" max="30" value="6" />
+        </div>
+        <div class="control-row btn-row">
+          <button id="btnMaskUndo" class="btn">撤销一笔</button>
+          <button id="btnMaskClear" class="btn">清空当前时间段遮罩</button>
+        </div>
+        <div class="control-row">
+          <div class="mask-legend">
+            <span><i class="dot keep"></i>绿色 = 强制保留（如绿色道具）</span>
+            <span><i class="dot remove"></i>红色 = 强制移除（残留绿幕）</span>
+          </div>
+          <p class="hint">直接在预览画面上涂抹。遮罩按时间段隔离，只影响当前时间段，切到其他时间段互不干扰。</p>
+        </div>
+      </div>
+
+      <div class="tab-panel" data-tab="bg">
+        <div class="control-row">
+          <div class="control-head"><label>背景来源</label></div>
+          <div class="segmented segmented-full" id="bgMode">
+            <button data-mode="none" class="seg active">无</button>
+            <button data-mode="image" class="seg">图片</button>
+            <button data-mode="video" class="seg">视频</button>
+          </div>
+        </div>
+        <div class="control-row btn-row">
+          <button id="btnBgFile" class="btn" disabled>选择背景文件…</button>
+          <span id="bgFileName" class="file-name"></span>
+        </div>
+        <div class="control-row">
+          <div class="control-head"><label for="bgFit">填充方式</label></div>
+          <select id="bgFit">
+            <option value="cover">覆盖（保持比例裁切）</option>
+            <option value="contain">完整显示（留边）</option>
+            <option value="stretch">拉伸</option>
+          </select>
+        </div>
+        <p class="hint">背景为视频时，会与前景源视频联动播放/暂停，并在跳动时自动对齐时间轴。</p>
+      </div>
+    </aside>
+  </main>
+
+  <!-- 导出对话框 -->
+  <div id="exportDialog" class="modal hidden">
+    <div class="modal-card">
+      <h2>导出成果</h2>
+      <div class="control-row">
+        <div class="control-head"><label>导出格式</label></div>
+        <label class="radio"><input type="radio" name="expFmt" value="pngseq" checked /> 带透明通道 PNG 序列（打包 .zip）</label>
+        <label class="radio"><input type="radio" name="expFmt" value="alpha" /> 透明通道视频（WebM，Chrome/Edge）</label>
+        <label class="radio"><input type="radio" name="expFmt" value="composite" /> 合成视频（当前替换背景）</label>
+      </div>
+      <div class="control-row export-opts">
+        <label>帧率 <select id="expFps"><option>24</option><option selected>30</option><option>60</option></select></label>
+        <label>分辨率 <select id="expScale"><option value="1" selected>原始尺寸</option><option value="0.5">1/2 尺寸</option></select>
+        <label class="check"><input id="expTemporal" type="checkbox" checked /> 开启时间稳定（减少运动闪烁）</label>
+      </div>
+      <div class="progress-wrap hidden" id="expProgressWrap">
+        <progress id="expProgress" max="100" value="0"></progress>
+        <span id="expProgressText">准备中…</span>
+      </div>
+      <div class="modal-actions">
+        <button id="btnExpCancel" class="btn hidden">取消</button>
+        <button id="btnExpClose" class="btn">关闭</button>
+        <button id="btnExpStart" class="btn btn-primary">开始导出</button>
+      </div>
+      <p class="hint" id="expHint"></p>
+    </div>
+  </div>
+
+  <!-- 项目列表对话框 -->
+  <div id="projectsDialog" class="modal hidden">
+    <div class="modal-card">
+      <h2>本机已保存的项目</h2>
+      <div id="projectList" class="project-list"></div>
+      <div class="modal-actions">
+        <button id="btnProjectsClose" class="btn">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="fileSrc" accept="video/*" class="hidden" />
+  <input type="file" id="fileBg" class="hidden" />
+  <input type="file" id="fileProject" accept="application/json,.json" class="hidden" />
+  <div id="toast" class="toast hidden"></div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
