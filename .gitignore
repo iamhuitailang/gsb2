@@ -20,6 +20,9 @@ data.json
 *.sqlite3
 tmp/
 
+# HDR 工具运行期工作区（上传缓存、对齐结果、导出文件）
+workspace/
+
 # ---- 依赖与构建产物 ----
 node_modules/
 __pycache__/

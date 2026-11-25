@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>本地 HDR 合成工具</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">📷 本地 HDR 合成工具</div>
+  <div class="top-actions">
+    <button id="btn-save-project" class="btn">保存工程</button>
+    <label class="btn">
+      打开工程
+      <input id="input-load-project" type="file" accept=".json,application/json" hidden>
+    </label>
+    <button id="btn-export" class="btn primary">导出合成图</button>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- 左栏：图片库 -->
+  <aside class="sidebar">
+    <h2>图片库</h2>
+    <label class="btn upload-btn">
+      ＋ 添加曝光照片（可多选）
+      <input id="input-images" type="file" accept="image/*" multiple hidden>
+    </label>
+    <div id="upload-failures" class="failures" hidden></div>
+    <div id="library" class="library">
+      <p class="hint">添加至少两张同一场景、不同曝光的照片</p>
+    </div>
+    <div class="group-create">
+      <input id="group-name" type="text" placeholder="分组名称（可选）">
+      <button id="btn-create-group" class="btn">用勾选照片建组</button>
+    </div>
+  </aside>
+
+  <!-- 中栏：分组与画布 -->
+  <section class="main-pane">
+    <div class="group-tabs" id="group-tabs"></div>
+
+    <div class="frame-strip-wrap">
+      <div class="strip-toolbar">
+        <span class="strip-title">曝光序列（暗 → 亮，可拖动调整顺序）</span>
+        <button id="btn-sort-ev" class="btn small">按曝光信息排序</button>
+      </div>
+      <div id="frame-strip" class="frame-strip"></div>
+    </div>
+
+    <div class="canvas-toolbar">
+      <div class="canvas-actions">
+        <button id="btn-align" class="btn">① 校准位移</button>
+        <button id="btn-detect-ghost" class="btn">② 检测重影</button>
+        <label class="check"><input type="checkbox" id="chk-auto-ghost"> 采用自动重影区域（默认取中间曝光）</label>
+        <button id="btn-fuse" class="btn primary">③ 合成 HDR</button>
+      </div>
+      <div class="canvas-modes">
+        <label><input type="radio" name="canvas-mode" value="view" checked> 查看</label>
+        <label><input type="radio" name="canvas-mode" value="mark"> 标记重影</label>
+        <select id="select-source-frame"></select>
+      </div>
+    </div>
+
+    <div class="canvas-wrap">
+      <canvas id="canvas"></canvas>
+      <div id="canvas-empty" class="canvas-empty">暂无分组，请先添加照片并建立分组</div>
+    </div>
+    <div id="align-reports" class="reports"></div>
+
+    <div class="marks-panel">
+      <div class="marks-head">
+        <h3>重影标记与取舍来源</h3>
+        <span class="hint">在“标记重影”模式下于画布上单击绘制多边形，双击/回车闭合；每个标记可指定来源帧</span>
+      </div>
+      <ul id="marks-list" class="marks-list"></ul>
+    </div>
+  </section>
+
+  <!-- 右栏：色调控制 -->
+  <aside class="controls">
+    <h2>预览色调控制</h2>
+    <p class="hint">参数只影响预览与导出，不会修改输入照片</p>
+    <label class="slider-label">整体色调（EV）
+      <input type="range" id="sl-exposure" min="-2" max="2" step="0.05" value="0">
+      <span id="val-exposure" class="val">0.00</span>
+    </label>
+    <label class="slider-label">暗部提升
+      <input type="range" id="sl-shadows" min="-1" max="1" step="0.05" value="0">
+      <span id="val-shadows" class="val">0.00</span>
+    </label>
+    <label class="slider-label">亮部压缩
+      <input type="range" id="sl-highlights" min="-1" max="1" step="0.05" value="0">
+      <span id="val-highlights" class="val">0.00</span>
+    </label>
+    <label class="slider-label">饱和度
+      <input type="range" id="sl-saturation" min="0" max="2" step="0.05" value="1">
+      <span id="val-saturation" class="val">1.00</span>
+    </label>
+    <button id="btn-reset-tonemap" class="btn small">重置参数</button>
+
+    <div class="export-box">
+      <h3>导出内容</h3>
+      <ul class="hint">
+        <li>8-bit PNG 合成图</li>
+        <li>16-bit TIFF 高动态范围图</li>
+        <li>参数记录 JSON（含每帧状态、位移、重影标记）</li>
+      </ul>
+      <div id="export-links" class="export-links"></div>
+    </div>
+  </aside>
+</main>
+
+<div id="toast" class="toast" hidden></div>
+<script src="app.js"></script>
+</body>
+</html>
