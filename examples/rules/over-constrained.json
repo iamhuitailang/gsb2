@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "name": "过约束地牢（演示失败用）",
+  "grid": { "width": 12, "height": 12 },
+  "maxRooms": 9,
+  "defaultAdjacency": "deny",
+  "_comment": "静态检查可通过（面积够、相邻图可达、min 之和不超 maxRooms），但所有房间都是 3~4 格的大块且每侧端口偏移固定，在 12x12 网格内端口链很快互相顶死，任何种子都无法在回溯预算内放下全部必需房间。用于演示结构化冲突报告。",
+  "adjacency": [
+    { "a": "start", "b": "combat", "allow": true },
+    { "a": "combat", "b": "combat", "allow": true },
+    { "a": "combat", "b": "treasure", "allow": true },
+    { "a": "treasure", "b": "boss", "allow": true },
+    { "a": "combat", "b": "boss", "allow": false },
+    { "a": "boss", "b": "*", "allow": false }
+  ],
+  "roomTypes": [
+    {
+      "id": "start",
+      "name": "起点",
+      "color": "#4f8cff",
+      "start": true,
+      "sizes": [[4, 4]],
+      "min": 1,
+      "max": 1,
+      "ports": { "n": [1, 2], "e": [1, 2], "s": [1, 2], "w": [1, 2] }
+    },
+    {
+      "id": "combat",
+      "name": "战斗房",
+      "color": "#d96a5b",
+      "sizes": [[4, 4]],
+      "min": 4,
+      "max": 5,
+      "ports": { "n": [1, 2], "e": [1, 2], "s": [1, 2], "w": [1, 2] }
+    },
+    {
+      "id": "treasure",
+      "name": "宝藏房",
+      "color": "#e8b93c",
+      "sizes": [[3, 3]],
+      "min": 2,
+      "max": 2,
+      "ports": { "n": [1], "e": [1], "s": [1], "w": [1] }
+    },
+    {
+      "id": "boss",
+      "name": "Boss",
+      "color": "#b0463f",
+      "end": true,
+      "sizes": [[4, 4]],
+      "min": 1,
+      "max": 1,
+      "ports": { "n": [1, 2], "e": [1, 2], "s": [1, 2], "w": [1, 2] }
+    }
+  ]
+}

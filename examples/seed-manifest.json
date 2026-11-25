@@ -1,0 +1,25 @@
+{
+  "_comment": "种子结果清单。种子在同一规则、同一编辑器版本下结果完全可复现。用 node bin/dungeon.js batch --rules <rules> --seeds <范围> 可重新核验。",
+  "rules": "small-dungeon.json",
+  "successSeeds": [
+    { "seed": "1",   "expect": "成功且校验通过", "rooms": 11 },
+    { "seed": "7",   "expect": "成功且校验通过", "rooms": 10 },
+    { "seed": "42",  "expect": "成功且校验通过（README 演示默认种子）", "rooms": 8 },
+    { "seed": "100", "expect": "成功且校验通过", "rooms": 12 },
+    { "seed": "2026", "expect": "成功且校验通过（文字/数字混合种子示例）", "rooms": 9 }
+  ],
+  "failureSeeds": [
+    { "seed": "41",  "expect": "生成失败，主冲突 MIN_NOT_MET / OUT_OF_BOUNDS / OVERLAP" },
+    { "seed": "48",  "expect": "生成失败，回溯预算内无法满足全部 min 房间" },
+    { "seed": "87",  "expect": "生成失败，高频冲突为相邻规则拒绝与空间不足" }
+  ],
+  "alwaysFailRules": {
+    "file": "over-constrained.json",
+    "seeds": ["fail-a", "fail-b", "fail-c"],
+    "expect": "静态检查通过，但任何种子运行时都失败并输出结构化冲突"
+  },
+  "alwaysRejectRules": {
+    "file": "invalid-rules.json",
+    "expect": "静态检查直接报错（终点缺失、端口越界、min 超 maxRooms、引用未知类型、网格过小）"
+  }
+}

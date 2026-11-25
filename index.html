@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>程序化地牢规则编辑器</title>
+  <link rel="stylesheet" href="src/web/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>程序化地牢规则编辑器</h1>
+    <div class="top-actions">
+      <button id="btn-check-rules" class="btn">规则静态检查</button>
+      <button id="btn-generate" class="btn btn-primary">生成地图</button>
+      <button id="btn-save-version" class="btn">存为版本</button>
+      <button id="btn-save-project" class="btn">保存工程</button>
+      <button id="btn-open-project" class="btn">打开工程</button>
+      <button id="btn-export-map" class="btn">导出地图</button>
+      <button id="btn-import-map" class="btn">导入地图</button>
+      <input type="file" id="file-project" accept=".json" hidden>
+      <input type="file" id="file-map" accept=".json" hidden>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- 左栏：规则编辑 -->
+    <section class="panel panel-left">
+      <h2>规则配置</h2>
+
+      <div class="meta-grid">
+        <label>规则名 <input id="meta-name"></label>
+        <label>网格宽 <input id="meta-grid-w" type="number" min="2"></label>
+        <label>网格高 <input id="meta-grid-h" type="number" min="2"></label>
+        <label>房间上限 <input id="meta-max-rooms" type="number" min="1"></label>
+        <label>默认相邻
+          <select id="meta-default-adj">
+            <option value="deny">默认禁止</option>
+            <option value="allow">默认允许</option>
+          </select>
+        </label>
+        <button id="btn-apply-meta" class="btn btn-small">应用元信息</button>
+      </div>
+
+      <h3>房间类型 <button id="btn-new-type" class="btn btn-small">+ 新类型</button></h3>
+      <div id="type-list" class="type-list"></div>
+
+      <h3>相邻规则 <button id="btn-add-adjacency" class="btn btn-small">+ 新规则</button></h3>
+      <div id="adjacency-list" class="adjacency-list"></div>
+    </section>
+
+    <!-- 中栏：地图与问题 -->
+    <section class="panel panel-center">
+      <div class="gen-bar">
+        <label>种子 <input id="input-seed" value="42" style="width:120px"></label>
+        <label>缩放 <input id="input-zoom" type="number" value="1" step="0.25" min="0.4" max="2.5" style="width:70px"></label>
+        <button id="btn-relock-regen" class="btn btn-warn">锁定后重新生成</button>
+        <button id="btn-clear-locks" class="btn">清除锁定</button>
+        <input id="input-version-label" placeholder="版本标签（可选）" style="width:150px">
+      </div>
+      <div id="gen-status" class="gen-status"></div>
+
+      <div class="map-scroll">
+        <svg id="map-svg" class="map-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+
+      <div class="under-map">
+        <div class="room-detail-box">
+          <h3>房间详情</h3>
+          <div id="room-detail"><span class="muted">点击地图上的房间查看详情 / 锁定</span></div>
+        </div>
+        <div class="issue-box">
+          <h3>校验问题（点击条目在图上定位）</h3>
+          <div id="issue-list" class="issue-list"></div>
+        </div>
+      </div>
+
+      <div id="conflict-panel" class="conflict-panel"></div>
+    </section>
+
+    <!-- 右栏：版本与对比 -->
+    <section class="panel panel-right">
+      <h2>生成版本</h2>
+      <div id="version-list" class="version-list"></div>
+      <button id="btn-compare" class="btn btn-primary">对比勾选的两个版本</button>
+      <div id="compare-panel" class="compare-panel"></div>
+
+      <h3>图例</h3>
+      <ul class="legend">
+        <li><span class="swatch" style="background:#4f8cff"></span> 起点</li>
+        <li><span class="swatch" style="background:#b0463f"></span> 终点</li>
+        <li><span class="swatch ring-demo"></span> 红色描边 = 问题位置</li>
+        <li><span class="swatch lock-demo">🔒</span> 锁定房间（重生成不变）</li>
+        <li><span class="swatch port-demo"></span> 小方块 = 门口（空心为孤立门口）</li>
+      </ul>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="src/core/rng.js"></script>
+  <script src="src/core/rules.js"></script>
+  <script src="src/core/generator.js"></script>
+  <script src="src/core/validator.js"></script>
+  <script src="src/core/project.js"></script>
+  <script src="src/web/render.js"></script>
+  <script src="src/web/app.js"></script>
+</body>
+</html>

@@ -30,6 +30,9 @@ dist/
 build/
 target/
 bin/
+# 本仓库的 CLI 入口需要纳入版本管理
+!bin/
+!bin/dungeon.js
 *.exe
 *.test
 *.out

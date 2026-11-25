@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "name": "非法规则样例（演示静态检查）",
+  "grid": { "width": 6, "height": 6 },
+  "maxRooms": 4,
+  "defaultAdjacency": "deny",
+  "_comment": "故意包含多处静态错误，用于演示 check-rules：缺终点、min 之和超 maxRooms、端口偏移越界、相邻规则引用不存在的类型。",
+  "adjacency": [
+    { "a": "start", "b": "combat", "allow": true },
+    { "a": "combat", "b": "ghost", "allow": true }
+  ],
+  "roomTypes": [
+    {
+      "id": "start",
+      "name": "起点",
+      "color": "#4f8cff",
+      "start": true,
+      "sizes": [[3, 3]],
+      "min": 1,
+      "max": 1,
+      "ports": { "n": [1], "e": [1], "s": [1], "w": [1] }
+    },
+    {
+      "id": "combat",
+      "name": "战斗房",
+      "color": "#d96a5b",
+      "sizes": [[3, 3]],
+      "min": 6,
+      "max": 8,
+      "ports": { "n": [99], "e": [1], "s": [1], "w": [1] }
+    }
+  ]
+}

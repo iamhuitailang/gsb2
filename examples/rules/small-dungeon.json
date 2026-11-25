@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "name": "小型地牢",
+  "grid": { "width": 14, "height": 11 },
+  "maxRooms": 12,
+  "defaultAdjacency": "deny",
+  "adjacency": [
+    { "a": "start", "b": "combat", "allow": true },
+    { "a": "start", "b": "treasure", "allow": true },
+    { "a": "combat", "b": "combat", "allow": true },
+    { "a": "combat", "b": "treasure", "allow": true },
+    { "a": "combat", "b": "puzzle", "allow": true },
+    { "a": "combat", "b": "rest", "allow": true },
+    { "a": "puzzle", "b": "treasure", "allow": true },
+    { "a": "puzzle", "b": "rest", "allow": true },
+    { "a": "puzzle", "b": "puzzle", "allow": false },
+    { "a": "rest", "b": "combat", "allow": true },
+    { "a": "treasure", "b": "boss", "allow": true },
+    { "a": "puzzle", "b": "boss", "allow": true },
+    { "a": "rest", "b": "boss", "allow": true },
+    { "a": "boss", "b": "*", "allow": false }
+  ],
+  "roomTypes": [
+    {
+      "id": "start",
+      "name": "起点大厅",
+      "color": "#4f8cff",
+      "start": true,
+      "sizes": [[3, 3], [4, 3]],
+      "min": 1,
+      "max": 1,
+      "ports": { "n": [1], "s": [1], "e": [1], "w": [1] }
+    },
+    {
+      "id": "combat",
+      "name": "战斗房",
+      "color": "#d96a5b",
+      "sizes": [[3, 3], [4, 3], [3, 4]],
+      "min": 3,
+      "max": 5,
+      "ports": { "n": [1], "s": [1], "e": [1], "w": [1] }
+    },
+    {
+      "id": "treasure",
+      "name": "宝藏房",
+      "color": "#e8b93c",
+      "sizes": [[2, 2], [3, 2]],
+      "min": 1,
+      "max": 3,
+      "ports": { "n": [1], "s": [1], "e": [0], "w": [0] }
+    },
+    {
+      "id": "puzzle",
+      "name": "机关房",
+      "color": "#8e6fd6",
+      "required": true,
+      "sizes": [[3, 3]],
+      "min": 1,
+      "max": 2,
+      "ports": { "n": [1], "s": [1], "e": [1], "w": [1] }
+    },
+    {
+      "id": "rest",
+      "name": "休息房",
+      "color": "#56b389",
+      "sizes": [[2, 2]],
+      "min": 0,
+      "max": 2,
+      "ports": { "n": [1], "s": [1], "e": [1], "w": [1] }
+    },
+    {
+      "id": "boss",
+      "name": "Boss 房",
+      "color": "#b0463f",
+      "end": true,
+      "sizes": [[4, 4]],
+      "min": 1,
+      "max": 1,
+      "ports": { "n": [1, 2], "s": [1, 2], "e": [1, 2], "w": [1, 2] }
+    }
+  ]
+}
