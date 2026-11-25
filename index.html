@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>曲线排字工坊 · TypeScript Curve Type</title>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1>曲线排字工坊</h1>
+          <p>本机字体 · 开放/闭合曲线 · 掉头翻正 · 边界与接缝检查 · SVG/配置往返</p>
+        </div>
+        <div class="top-actions">
+          <button id="preset-inflection" type="button">拐点线</button>
+          <button id="preset-hairpin" type="button">回头路</button>
+          <button id="preset-closed" type="button">闭合路线</button>
+          <span class="divider"></span>
+          <button id="import-button" type="button">导入配置/SVG</button>
+          <button id="export-config" type="button">导出配置</button>
+          <button id="export-svg" class="primary" type="button">导出 SVG</button>
+          <input id="file-input" type="file" accept=".json,.svg,image/svg+xml,application/json" hidden />
+        </div>
+      </header>
+
+      <main class="layout">
+        <aside class="control-panel" aria-label="排字配置">
+          <section class="card">
+            <h2>文字与本机字体</h2>
+            <label class="field">
+              <span>文字（中文 / 重音字母 / 空格）</span>
+              <textarea id="text-input" rows="3"></textarea>
+            </label>
+            <label class="field">
+              <span>字体</span>
+              <select id="font-family"></select>
+            </label>
+            <div class="grid-2">
+              <label class="field">
+                <span>字号 <b id="font-size-value"></b></span>
+                <input id="font-size" type="range" min="12" max="72" step="1" />
+              </label>
+              <label class="field">
+                <span>字重</span>
+                <select id="font-weight">
+                  <option value="400">400</option>
+                  <option value="500">500</option>
+                  <option value="600">600</option>
+                  <option value="700">700</option>
+                </select>
+              </label>
+            </div>
+            <div class="grid-2">
+              <label class="field">
+                <span>额外字距 <b id="letter-spacing-value"></b></span>
+                <input id="letter-spacing" type="range" min="0" max="20" step="0.5" />
+              </label>
+              <label class="field">
+                <span>样式</span>
+                <select id="font-style">
+                  <option value="normal">正体</option>
+                  <option value="italic">斜体</option>
+                </select>
+              </label>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>起点与方向</h2>
+            <label class="field">
+              <span>起点弧长 <b id="start-value"></b></span>
+              <input id="start-distance" type="range" min="0" step="0.5" />
+            </label>
+            <div class="segmented">
+              <button id="direction-forward" type="button">正排（沿路）</button>
+              <button id="direction-backward" type="button">反排</button>
+            </div>
+            <div class="scenario-grid">
+              <button id="test-inflection-forward" type="button">拐点·正排</button>
+              <button id="test-inflection-backward" type="button">拐点·反排</button>
+              <button id="test-closed-forward-seam" type="button">闭合·正排贴缝</button>
+              <button id="test-closed-backward-seam" type="button">闭合·反排贴缝</button>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>急弯、掉头与容量</h2>
+            <label class="field inline">
+              <input id="orientation-upright" type="checkbox" />
+              <span>掉头段自动翻正，保持字朝上</span>
+            </label>
+            <label class="field inline">
+              <input id="avoid-overlap" type="checkbox" />
+              <span>急弯自动加间距，避免字框叠在一起</span>
+            </label>
+            <label class="field">
+              <span>弯曲防叠余量 <b id="clearance-value"></b></span>
+              <input id="overlap-clearance" type="range" min="0" max="8" step="0.5" />
+            </label>
+            <label class="field">
+              <span>过短时</span>
+              <select id="fit-mode">
+                <option value="shrink">自动缩字号排入</option>
+                <option value="reject">拒绝排入并提示</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>最小字号 <b id="min-font-value"></b></span>
+              <input id="min-font-size" type="range" min="8" max="32" step="1" />
+            </label>
+            <label class="field">
+              <span>末端预留 <b id="padding-value"></b></span>
+              <input id="end-padding" type="range" min="0" max="40" step="1" />
+            </label>
+          </section>
+
+          <section class="card">
+            <h2>曲线编辑</h2>
+            <label class="field inline">
+              <input id="curve-closed" type="checkbox" />
+              <span>闭合路线</span>
+            </label>
+            <label class="field">
+              <span>平滑张力 <b id="tension-value"></b></span>
+              <input id="tension" type="range" min="0" max="0.28" step="0.01" />
+            </label>
+            <div class="editor-actions">
+              <button id="delete-anchor" type="button">删除选中锚点</button>
+              <button id="reset-current" type="button">恢复当前示例</button>
+            </div>
+            <p class="hint">双击空白处加锚点；拖动蓝点改线，拖动绿色起点，双击锚点可删除。</p>
+            <label class="field inline">
+              <input id="show-bounds" type="checkbox" />
+              <span>显示全部字框；界限/接缝/碰撞高亮始终显示</span>
+            </label>
+          </section>
+        </aside>
+
+        <section class="workspace">
+          <div class="canvas-card">
+            <div class="canvas-toolbar">
+              <span id="status-badge" class="badge"></span>
+              <span id="status-text" class="status-text"></span>
+            </div>
+            <div id="canvas-wrap" class="canvas-wrap">
+              <svg id="stage" xmlns="http://www.w3.org/2000/svg" aria-label="曲线排字画布"></svg>
+            </div>
+          </div>
+          <section id="report-panel" class="report-panel" aria-live="polite"></section>
+        </section>
+      </main>
+      <div id="toast" class="toast" role="status"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
