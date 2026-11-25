@@ -43,5 +43,7 @@ coverage/
 .vscode/
 *.swp
 
-# 生成的示例素材(可用 npm run generate:samples 恢复)
-public/samples/
+# 样例素材由 tools/generate_samples.py 生成并已入库；
+# 如需复现可运行 npm run generate:samples。这里只忽略运行期截图等临时产物
+tmp_smoke_*.png
+tmp/

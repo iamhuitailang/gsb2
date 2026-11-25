@@ -1,0 +1,55 @@
+{
+  "note": "由 tools/generate_samples.py 生成，可运行 npm run generate:samples 复现",
+  "files": {
+    "brick_albedo.png": {
+      "width": 256,
+      "height": 256,
+      "bytes": 87874
+    },
+    "brick_normal.png": {
+      "width": 256,
+      "height": 256,
+      "bytes": 91134
+    },
+    "brick_roughness.png": {
+      "width": 256,
+      "height": 256,
+      "bytes": 59572
+    },
+    "brick_ao.png": {
+      "width": 256,
+      "height": 256,
+      "bytes": 52415
+    },
+    "brick_metallic.png": {
+      "width": 256,
+      "height": 256,
+      "bytes": 24045
+    },
+    "wood_albedo.png": {
+      "width": 256,
+      "height": 256,
+      "bytes": 84102
+    },
+    "wood_normal.png": {
+      "width": 256,
+      "height": 256,
+      "bytes": 98511
+    },
+    "wood_roughness.png": {
+      "width": 256,
+      "height": 256,
+      "bytes": 58041
+    },
+    "wood_ao.png": {
+      "width": 256,
+      "height": 256,
+      "bytes": 43008
+    },
+    "mismatch/brick_albedo_small.png": {
+      "width": 128,
+      "height": 128,
+      "bytes": 22716
+    }
+  }
+}
