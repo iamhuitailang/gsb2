@@ -1,0 +1,19 @@
+{
+  "name": "game-input-mapping-configurator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "游戏输入映射配置器：多情境、键盘/手柄主副绑定、冲突预检、模拟输入与游戏预览",
+  "scripts": {
+    "test": "node tests/bindings.test.js && node tests/capture.test.js",
+    "serve": "node scripts/serve.js",
+    "smoke": "node tests/run-smoke.js"
+  },
+  "keywords": [
+    "gamepad",
+    "keyboard",
+    "input-mapping",
+    "key-bindings",
+    "conflict-detection"
+  ],
+  "license": "MIT"
+}

@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>游戏输入映射配置器</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">🎮</span>
+      <div>
+        <h1>游戏输入映射配置器</h1>
+        <p class="sub">多情境 · 键盘/手柄 · 冲突预检 · 模拟输入与游戏预览</p>
+      </div>
+    </div>
+    <div class="profile-bar">
+      <label class="field">
+        <span>玩家方案</span>
+        <select id="profileSelect" title="切换玩家方案"></select>
+      </label>
+      <button id="btnNewProfile" class="btn">新建</button>
+      <button id="btnRenameProfile" class="btn">重命名</button>
+      <button id="btnDeleteProfile" class="btn btn-danger">删除</button>
+      <button id="btnResetProfile" class="btn btn-warn">恢复默认</button>
+      <span class="divider"></span>
+      <button id="btnImport" class="btn btn-primary">导入配置</button>
+      <button id="btnExport" class="btn">导出配置</button>
+      <input type="file" id="importFile" accept=".json,application/json" hidden />
+    </div>
+  </header>
+
+  <nav class="context-tabs" id="contextTabs" aria-label="操作情境"></nav>
+
+  <main class="layout">
+    <section class="panel config-panel">
+      <div class="panel-head">
+        <h2>操作绑定 <small id="contextName"></small></h2>
+        <div id="conflictSummary" class="conflict-summary" aria-live="polite"></div>
+      </div>
+      <div class="table-wrap">
+        <table class="binding-table">
+          <thead>
+            <tr>
+              <th class="col-action">操作</th>
+              <th class="col-slot">主绑定</th>
+              <th class="col-slot">副绑定</th>
+            </tr>
+          </thead>
+          <tbody id="bindingTableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="conflict-section">
+        <h3>冲突检查</h3>
+        <div id="conflictList" class="conflict-list"></div>
+      </div>
+    </section>
+
+    <aside class="panel sim-panel">
+      <div class="panel-head">
+        <h2>模拟输入</h2>
+        <span id="deviceStatus" class="device-status" title="真实设备连接状态">检测中…</span>
+      </div>
+      <p class="hint">
+        下方模拟键盘 / 手柄与真实设备走同一条输入总线：点按键 = 按下，松开 = 抬起；
+        支持按住修饰键再点另一个键形成组合键。捕获输入时同样可以用它录入。
+      </p>
+
+      <div id="captureBar" class="capture-bar" hidden>
+        <div class="capture-info">
+          <span class="dot"></span>
+          <div>
+            <strong id="captureTitle">正在捕获输入…</strong>
+            <div id="captureChord" class="capture-chord">（等待按键 / 手柄按钮）</div>
+          </div>
+        </div>
+        <button id="btnCancelCapture" class="btn btn-danger">取消 (Esc)</button>
+      </div>
+
+      <h3 class="sim-title">⌨️ 模拟键盘</h3>
+      <div id="virtualKeyboard" class="virtual-keyboard"></div>
+
+      <h3 class="sim-title">🕹️ 模拟手柄</h3>
+      <div id="virtualGamepad" class="virtual-gamepad"></div>
+    </aside>
+  </main>
+
+  <section class="panel preview-panel">
+    <div class="panel-head">
+      <h2>游戏预览</h2>
+      <div class="scene-tabs" id="sceneTabs"></div>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="previewCanvas" width="760" height="340"></canvas>
+      <div id="previewHint" class="preview-hint"></div>
+    </div>
+    <div class="action-bar" id="actionBar"></div>
+  </section>
+
+  <footer class="footer">
+    <span>所有配置仅保存在本浏览器 localStorage；导入文件不会覆盖任何内容，需在预览弹窗中逐项确认。</span>
+  </footer>
+
+  <div id="modalRoot"></div>
+  <div id="toastRoot" class="toast-root" aria-live="polite"></div>
+
+  <script src="src/keycodes.js"></script>
+  <script src="src/bindings.js"></script>
+  <script src="src/defaults.js"></script>
+  <script src="src/storage.js"></script>
+  <script src="src/input-bus.js"></script>
+  <script src="src/capture.js"></script>
+  <script src="src/preview.js"></script>
+  <script src="src/ui/toast.js"></script>
+  <script src="src/ui/modal.js"></script>
+  <script src="src/ui/simulator.js"></script>
+  <script src="src/ui/import-export.js"></script>
+  <script src="src/ui/app.js"></script>
+</body>
+</html>
