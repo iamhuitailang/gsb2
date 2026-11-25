@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>二维灯光调试台 · Visibility Polygon</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <h1>二维灯光调试台</h1>
+      <p class="subtitle">画墙、摆灯，实时查看线段遮挡</p>
+
+      <section class="panel">
+        <h2>工具</h2>
+        <div class="tool-grid">
+          <button id="toolSelect" class="tool-btn active" data-tool="select">选择/拖动</button>
+          <button id="toolWall" class="tool-btn" data-tool="wall">画墙（单击加点，双击结束）</button>
+          <button id="toolLight" class="tool-btn" data-tool="light">放灯（单击地面）</button>
+        </div>
+        <div class="row">
+          <button id="undoBtn" class="ghost">撤销最后一段墙</button>
+          <button id="deleteBtn" class="ghost danger">删除选中项</button>
+        </div>
+        <p class="hint">Esc 取消当前墙链；拖动灯或墙端点后遮挡实时更新。</p>
+      </section>
+
+      <section class="panel">
+        <h2>视图模式</h2>
+        <div class="tool-grid">
+          <button class="view-btn active" data-view="composite">最终合成</button>
+          <button class="view-btn" data-view="visibility">单灯可见区域</button>
+          <button class="view-btn" data-view="hits">墙段命中</button>
+        </div>
+        <label class="row-line">
+          单灯视图对象
+          <select id="singleLightSelect"></select>
+        </label>
+        <label class="row-line">
+          混合方式
+          <select id="blendMode">
+            <option value="additive">加法叠加（lighter）</option>
+            <option value="lighten">取亮混合（lighten / 近似 max）</option>
+            <option value="normal">普通透明叠加（alpha）</option>
+          </select>
+        </label>
+        <label class="check-line">
+          <input type="checkbox" id="showHelpers" checked /> 显示辅助线（墙、灯、标记、命中点）
+        </label>
+        <label class="check-line">
+          <input type="checkbox" id="snapToGrid" /> 吸附到 10px 网格
+        </label>
+      </section>
+
+      <section class="panel">
+        <h2>灯具</h2>
+        <ul id="lightList" class="light-list"></ul>
+      </section>
+
+      <section class="panel" id="inspectorPanel">
+        <h2>选中项参数</h2>
+        <div id="inspector"><p class="hint">在画布中选择一盏灯或一条墙链。</p></div>
+      </section>
+
+      <section class="panel">
+        <h2>场景</h2>
+        <div class="row">
+          <button id="saveBtn">保存到浏览器</button>
+          <button id="loadBtn" class="ghost">读取存档</button>
+        </div>
+        <div class="row">
+          <button id="exportSceneBtn" class="ghost">导出场景 JSON</button>
+          <button id="importSceneBtn" class="ghost">导入场景 JSON</button>
+          <input type="file" id="importFile" accept="application/json,.json" hidden />
+        </div>
+        <div class="row">
+          <button id="exportLightmapBtn">导出光照图 PNG</button>
+          <button id="exportMappingBtn" class="ghost">导出坐标映射 JSON</button>
+        </div>
+        <div class="row">
+          <button id="defaultSceneBtn" class="ghost">载入内置凹角窄缝场景</button>
+          <button id="emptySceneBtn" class="ghost">空白场景</button>
+        </div>
+        <p class="hint">自动保存到 localStorage，刷新不丢。</p>
+      </section>
+
+      <section class="panel" id="markerPanel">
+        <h2>对照标记（拖灯过去试）</h2>
+        <ul id="markerList" class="marker-list"></ul>
+      </section>
+    </aside>
+
+    <main class="stage">
+      <div class="stage-toolbar">
+        <span id="statusText" class="status">就绪</span>
+        <span id="mouseText" class="status dim"></span>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="canvas" width="1000" height="700"></canvas>
+        <div id="queryTip" class="query-tip" hidden></div>
+      </div>
+      <div class="stage-foot">
+        <span class="dim">世界坐标 = 画布内部像素，原点 (0,0) 左上，1 单位 = 1px · 单击空地查询该点受光情况</span>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/geometry.js"></script>
+  <script src="js/lighting.js"></script>
+  <script src="js/scene.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
