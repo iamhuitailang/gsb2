@@ -45,3 +45,10 @@ coverage/
 
 # 生成的示例素材(可用 npm run generate:samples 恢复)
 public/samples/
+
+# SeamSqueeze 运行期导出（examples/ 下的两张源演示图保留入库）
+examples/run_*/
+examples/preview/
+examples/replay/
+examples/gui_export/
+examples/x/
