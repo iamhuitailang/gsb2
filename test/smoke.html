@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8" /><title>smoke</title></head>
+<body>
+<pre id="out">running</pre>
+<script type="module">
+  import { createProject, addCut, setSegmentCamera, setSourceOffset, buildSegments, coverageAt } from '../src/core/model.js';
+  import { snapToFrame } from '../src/core/time.js';
+  import { buildEDL } from '../src/core/edl.js';
+  import { serializeProject, deserializeProject } from '../src/core/persistence.js';
+  const log = [];
+  try {
+    const p = createProject();
+    p.sources.push(
+      { id: 'A', name: 'A.mp4', kind: 'video', duration: 6, fps: 25, offset: 0, hasAudio: true },
+      { id: 'B', name: 'B.mp4', kind: 'video', duration: 8, fps: 30, offset: 0, hasAudio: true },
+    );
+    p.cuts.push({ id: 'c0', time: 0, sourceId: 'A' });
+    addCut(p, 2, 'A');
+    addCut(p, 3, 'B');
+    log.push('segments=' + buildSegments(p).length);
+    setSegmentCamera(p, 1, 'B');
+    log.push('seg1 cam=' + buildSegments(p)[1].sourceId);
+    log.push('seg1 snapped30=' + (buildSegments(p)[1].start === snapToFrame(buildSegments(p)[1].start, 30)));
+    // 越界：把 A 偏移到只剩很少覆盖
+    setSourceOffset(p, 'A', 5);
+    const cov = coverageAt(p, 'A', 0.5);
+    log.push('coverage@0.5 after offset5=' + cov.status);
+    const edl = buildEDL(p);
+    log.push('edl cuts=' + edl.cuts.length + ' oorr=' + edl.cuts.filter((c) => c.status !== 'ok').length);
+    // 工程往返
+    const json = serializeProject(p, 'smoke');
+    const back = deserializeProject(JSON.parse(json), [{ name: 'A.mp4', size: null }, { name: 'B.mp4', size: null }]);
+    log.push('roundtrip sources=' + back.project.sources.length + ' cuts=' + back.project.cuts.length + ' missing=' + back.missing.length);
+    document.getElementById('out').textContent = 'PASS\n' + log.join('\n');
+    document.title = 'SMOKE-PASS';
+  } catch (e) {
+    document.getElementById('out').textContent = 'FAIL: ' + e.stack;
+    document.title = 'SMOKE-FAIL';
+  }
+</script>
+</body>
+</html>

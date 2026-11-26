@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8" /><title>audio-pipeline</title></head>
+<body>
+<pre id="out">running</pre>
+<script type="module">
+  import { audioBufferToEnvelope, estimateOffset } from '../src/core/sync.js';
+
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  async function decode(url) {
+    const res = await fetch(url);
+    const arr = await res.arrayBuffer();
+    return ctx.decodeAudioData(arr.slice(0));
+  }
+
+  try {
+    const [bufA, bufB, bufRef] = await Promise.all([
+      decode('../public/samples/camA_synctest_25fps.mp4'),
+      decode('../public/samples/camB_synctest_30fps.mp4'),
+      decode('../public/samples/reference_click.wav'),
+    ]);
+    const envA = audioBufferToEnvelope(bufA);
+    const envB = audioBufferToEnvelope(bufB);
+    const envRef = audioBufferToEnvelope(bufRef);
+    const estB = estimateOffset(envA, envB, 0);
+    const estRef = estimateOffset(envA, envRef, 0);
+    const okB = Math.abs(estB.offset - -0.8) <= 0.01;
+    const okRef = Math.abs(estRef.offset - 0.5) <= 0.01;
+    const lines = [
+      `env lengths: A=${envA.length} B=${envB.length} ref=${envRef.length}`,
+      `camB offset=${estB.offset.toFixed(3)} conf=${(estB.confidence * 100).toFixed(0)}% expect -0.800 -> ${okB ? 'PASS' : 'FAIL'}`,
+      `ref  offset=${estRef.offset.toFixed(3)} conf=${(estRef.confidence * 100).toFixed(0)}% expect +0.500 -> ${okRef ? 'PASS' : 'FAIL'}`,
+    ];
+    const pass = okB && okRef;
+    document.getElementById('out').textContent = (pass ? 'PASS' : 'FAIL') + '\n' + lines.join('\n');
+    document.title = pass ? 'AUDIO-PASS' : 'AUDIO-FAIL';
+  } catch (e) {
+    document.getElementById('out').textContent = 'FAIL: ' + e.stack;
+    document.title = 'AUDIO-FAIL';
+  }
+</script>
+</body>
+</html>

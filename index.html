@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>多机位对齐整理工具（纯本地）</title>
+  <link rel="stylesheet" href="src/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">🎬 多机位对齐整理工具 <span class="hint">所有素材只在本机读取 · 无网络请求</span></div>
+    <div class="toolbar">
+      <button class="btn primary" id="import-btn">导入视频/音频</button>
+      <input type="file" id="file-input" multiple accept="video/*,audio/*" hidden />
+      <button class="btn" id="load-sample-btn">载入样例素材</button>
+      <span class="sep"></span>
+      <button class="btn" id="open-project-btn">打开工程</button>
+      <input type="file" id="project-input" multiple accept=".json,application/json" hidden />
+      <button class="btn" id="save-project-btn">保存工程</button>
+      <span class="sep"></span>
+      <button class="btn" id="export-json-btn">导出清单 JSON</button>
+      <button class="btn" id="export-csv-btn">导出清单 CSV</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="preview-area">
+      <div class="preview-wrap">
+        <canvas id="preview" width="960" height="540"></canvas>
+      </div>
+      <div class="transport">
+        <button class="btn" id="seek-start-btn">⏮</button>
+        <button class="btn primary" id="play-btn">▶ 播放</button>
+        <button class="btn" id="seek-end-btn">⏭</button>
+        <button class="btn" id="add-cut-btn">在播放头加切点</button>
+        <button class="btn danger" id="del-cut-btn">删除选中段起点</button>
+        <span class="sep"></span>
+        <button class="btn" id="undo-btn">↶ 撤销</button>
+        <button class="btn" id="redo-btn">↷ 重做</button>
+        <span class="time-readout" id="time-readout">0:00.00s  00:00:00:00</span>
+      </div>
+      <div class="timeline-toolbar">
+        <button class="btn small" id="zoom-out-btn">－</button>
+        <button class="btn small" id="zoom-in-btn">＋</button>
+        <button class="btn small" id="zoom-fit-btn">适应</button>
+        <span class="hint">滚轮缩放 · 双击标尺/泳道加切点 · 拖白点移切点 · 拖黄色手柄改偏移 · 数字键 1-9 切换选中段机位 · 空格播放</span>
+      </div>
+      <canvas id="timeline"></canvas>
+    </section>
+
+    <aside class="side">
+      <section class="panel">
+        <h3>素材</h3>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th></th><th>名称</th><th>帧率</th><th>时长</th><th>偏移</th><th></th></tr></thead>
+            <tbody id="sources-list"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h3>① 音频同步</h3>
+        <div id="sync-panel"><p class="hint">导入素材后可用。</p></div>
+      </section>
+
+      <section class="panel">
+        <h3>② 偏移手动校正</h3>
+        <div id="offset-panel"><p class="hint">导入素材后可在此手动校正偏移。</p></div>
+      </section>
+
+      <section class="panel">
+        <h3>修改前后对比</h3>
+        <div id="diff-panel"></div>
+      </section>
+    </aside>
+  </main>
+
+  <section class="panel segments-panel">
+    <h3>机位段落与切点（帧对齐）</h3>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th>#</th><th>当前机位</th><th>时间线区间</th><th>素材内区间</th><th>范围</th><th>切换机位</th></tr>
+        </thead>
+        <tbody id="segments-list"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="statusbar"><span id="status-text">就绪 · 素材仅在本机读取，不发起网络请求</span></footer>
+
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "multicam-align",
+  "version": "1.0.0",
+  "private": true,
+  "description": "本地多机位素材对齐与机位切换整理工具",
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "test": "node --test test/*.test.js",
+    "generate:samples": "bash scripts/generate-samples.sh",
+    "verify:samples": "node scripts/verify-samples.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
