@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>游戏提示可辨认性检查工具</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">🎮 提示可辨认性检查工具</div>
+  <div class="top-actions">
+    <button id="btn-demo" class="btn btn-accent">▶ 一键演示：纯色底合格 → 渐变底局部难分</button>
+    <button id="btn-demo-export" class="btn">导出演示示意图</button>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- 左：素材与放置 -->
+  <aside class="panel panel-left">
+    <section class="group">
+      <h3>1. 背景</h3>
+      <select id="bg-select">
+        <option value="demo">自带：演示渐变底（左白 / 右渐变）</option>
+        <option value="white">自带：纯白底</option>
+        <option value="dark">自带：纯深底</option>
+        <option value="checker">自带：棋盘格底</option>
+      </select>
+      <label class="file-btn">导入背景图片
+        <input type="file" id="bg-file" accept="image/*" hidden>
+      </label>
+    </section>
+
+    <section class="group">
+      <h3>2. 提示图（透明 PNG）</h3>
+      <div id="builtin-icons" class="builtin-grid"></div>
+      <label class="file-btn">导入透明提示图（可多选）
+        <input type="file" id="icon-files" accept="image/*" multiple hidden>
+      </label>
+      <ul id="icon-list" class="icon-list"></ul>
+    </section>
+
+    <section class="group">
+      <h3>3. 放置（画布上可直接拖动 / 拖右下角缩放）</h3>
+      <label>水平位置 <input type="range" id="pos-x" min="0" max="639" value="0"></label>
+      <label>垂直位置 <input type="range" id="pos-y" min="0" max="399" value="0"></label>
+      <label>显示宽度 <input type="range" id="pos-w" min="24" max="240" value="80"></label>
+    </section>
+
+    <section class="group">
+      <h3>4. 改色 / 加符号（用于前后对比）</h3>
+      <label>色相旋转 <input type="range" id="tint-hue" min="-180" max="180" value="0">
+        <span id="tint-hue-val">0°</span></label>
+      <label>饱和度 <input type="range" id="tint-sat" min="0" max="200" value="100">
+        <span id="tint-sat-val">100%</span></label>
+      <label>附加符号
+        <select id="symbol-select">
+          <option value="none">无（仅靠颜色）</option>
+          <option value="plus">十字 ＋</option>
+          <option value="ring">圆环 ○</option>
+          <option value="dot">圆点 ●</option>
+          <option value="bar">横线 ―</option>
+        </select>
+      </label>
+      <label class="row">
+        <input type="checkbox" id="border-check"> 加白色描边
+      </label>
+      <button id="btn-reset-style" class="btn btn-small">重置该提示样式</button>
+    </section>
+  </aside>
+
+  <!-- 中：画布与视图模式 -->
+  <section class="panel panel-center">
+    <div class="mode-bar" id="mode-bar"></div>
+    <div class="canvas-wrap">
+      <canvas id="stage" width="640" height="400"></canvas>
+      <div id="tooltip" class="tooltip" hidden></div>
+    </div>
+    <div class="overlay-bar">
+      <button id="btn-overlay-none" class="btn btn-small">原始画面</button>
+      <button id="btn-overlay-heat" class="btn btn-small">色差热力图</button>
+      <button id="btn-overlay-alpha" class="btn btn-small">透明区分类</button>
+      <span class="legend">
+        <i style="background:#265cd3"></i>色差小（难分）
+        <i style="background:rgb(242,201,76)"></i>中等
+        <i style="background:rgb(224,49,49)"></i>色差大（清晰）
+      </span>
+      <span class="legend">
+        <i style="background:#2ecc71"></i>不透明
+        <i style="background:#f19c2a"></i>半透明边缘
+        <i style="background:#9b59d0"></i>全透明区
+      </span>
+    </div>
+
+    <section class="group scan-box">
+      <h3>5. 找同一提示最难分辨的位置</h3>
+      <div class="scan-controls">
+        <label>扫描对象 <select id="scan-icon"></select></label>
+        <label>步长(px) <input type="number" id="scan-step" value="16" min="4" max="64" style="width:70px"></label>
+        <label>指标
+          <select id="scan-metric">
+            <option value="76">ΔE76（快，推荐扫描）</option>
+            <option value="2000">ΔE2000（慢，更精确）</option>
+          </select>
+        </label>
+        <button id="btn-scan" class="btn btn-accent">开始扫描</button>
+        <button id="btn-scan-cancel" class="btn" hidden>取消</button>
+      </div>
+      <div class="progress" hidden><div id="progress-fill"></div></div>
+      <div id="scan-result" class="scan-result"></div>
+    </section>
+  </section>
+
+  <!-- 右：数值结果与对比 -->
+  <aside class="panel panel-right">
+    <section class="group">
+      <h3>检查结果（当前视图：<span id="cur-mode">正常画面</span>）</h3>
+      <div id="results"></div>
+    </section>
+
+    <section class="group">
+      <h3>6. 前后并排比较</h3>
+      <div class="snap-actions">
+        <button id="btn-snap" class="btn btn-small">保存当前为快照</button>
+        <button id="btn-snap-clear" class="btn btn-small">清空快照</button>
+      </div>
+      <div id="snapshots" class="snapshots"></div>
+    </section>
+
+    <section class="group">
+      <h3>7. 导出报告（含坐标与数值）</h3>
+      <button id="btn-export-json" class="btn btn-small">导出 JSON</button>
+      <button id="btn-export-html" class="btn btn-small">导出 HTML 报告</button>
+      <button id="btn-export-png" class="btn btn-small">导出当前画面 PNG</button>
+    </section>
+  </aside>
+</main>
+
+<script src="js/color.js"></script>
+<script src="js/geometry.js"></script>
+<script src="js/assets.js"></script>
+<script src="js/analysis.js"></script>
+<script src="js/render.js"></script>
+<script src="js/report.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "hint-legibility-checker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "游戏颜色提示图在复杂背景上的可辨认性检查工具（色盲模拟 / 局部色差 / 最难位置扫描 / 报告导出）",
+  "scripts": {
+    "test": "node --test",
+    "generate:samples": "node tools/generate-samples.js",
+    "serve": "node tools/serve.js"
+  },
+  "license": "MIT"
+}
