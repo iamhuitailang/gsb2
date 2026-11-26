@@ -45,3 +45,6 @@ coverage/
 
 # 生成的示例素材(可用 npm run generate:samples 恢复)
 public/samples/
+
+# rawframe 程序生成的演示样例与导出物（可用 ./rawframe-cli generate demo_data 恢复）
+demo_data/
