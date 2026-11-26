@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>触发区预演台 · Trigger Zone Rehearsal</title>
+  <link rel="stylesheet" href="styles/app.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <h1>触发区预演台</h1>
+      <span class="brand-sub">进入 / 退出 / 停留事件的本地可玩演示</span>
+    </div>
+    <div class="topbar-actions">
+      <button id="btnSample" class="btn">载入样例场景</button>
+      <button id="btnCompare" class="btn">规则对照视图</button>
+      <button id="btnTheme" class="btn ghost" title="切换明暗主题">◐</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- 左：画布与播放控制 -->
+    <section class="stage-col">
+      <div class="toolbar">
+        <div class="tool-group" id="toolGroup">
+          <button class="tool active" data-tool="select">选择/移动</button>
+          <button class="tool" data-tool="addCircle">＋ 圆</button>
+          <button class="tool" data-tool="addRect">＋ 矩形</button>
+          <button class="tool" data-tool="addPolygon">＋ 多边形</button>
+        </div>
+        <div class="tool-group" id="actionGroup">
+          <button class="tool active" data-action="walk">步行</button>
+          <button class="tool" data-action="teleport">瞬移</button>
+          <button class="tool" data-action="dash">高速穿过</button>
+        </div>
+      </div>
+
+      <div class="canvas-wrap">
+        <canvas id="stage" width="960" height="600"></canvas>
+        <div class="canvas-hint" id="canvasHint">选择工具后在画布上操作；步行=点击落点，瞬移=点击目标，高速=拖拽起止点</div>
+      </div>
+
+      <div class="transport">
+        <button id="btnPlay" class="btn primary">▶ 播放路线</button>
+        <button id="btnPause" class="btn">⏸ 暂停</button>
+        <button id="btnStep" class="btn">⏭ 单帧</button>
+        <button id="btnRecord" class="btn record">● 录制</button>
+        <button id="btnReplay" class="btn">↻ 回放</button>
+        <button id="btnReset" class="btn ghost">⟲ 重置</button>
+        <input type="range" id="scrub" min="0" max="0" value="0" />
+        <span class="clock" id="clock">t=0ms · 帧 0</span>
+        <label class="speed">速度
+          <select id="speedSel">
+            <option value="0.5">0.5×</option>
+            <option value="1" selected>1×</option>
+            <option value="2">2×</option>
+            <option value="4">4×</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="swimlane-panel">
+        <div class="panel-head">
+          <h2>泳道时间线（每区一条，事件按固定顺序着色）</h2>
+          <span class="hint" id="laneHint"></span>
+        </div>
+        <div id="swimlane" class="swimlane"></div>
+      </div>
+    </section>
+
+    <!-- 右：区域配置 + 事件追踪 -->
+    <aside class="side-col">
+      <div class="panel" id="zonePanel">
+        <div class="panel-head"><h2>区域配置</h2></div>
+        <div id="zoneList" class="zone-list"></div>
+        <div id="zoneEditor" class="zone-editor"></div>
+      </div>
+
+      <div class="panel grow">
+        <div class="panel-head">
+          <h2>事件追踪</h2>
+          <div class="filters" id="eventFilters">
+            <label><input type="checkbox" data-type="enter" checked /> 进入</label>
+            <label><input type="checkbox" data-type="exit" checked /> 退出</label>
+            <label><input type="checkbox" data-type="stay" checked /> 停留</label>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table id="eventTable">
+            <thead>
+              <tr>
+                <th>#</th><th>时间</th><th>帧</th><th>区域</th><th>事件</th><th>动作</th><th>触发依据</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="panel-foot">
+          <button id="btnExportJson" class="btn small">导出 JSON（事件+配置）</button>
+          <button id="btnExportCsv" class="btn small">导出 CSV</button>
+          <button id="btnSave" class="btn small">存到浏览器</button>
+          <button id="btnLoad" class="btn small">读档</button>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- 规则对照弹层 -->
+  <div id="compareModal" class="modal hidden">
+    <div class="modal-card wide">
+      <div class="modal-head">
+        <h2>规则前后对照 · 同一条路线</h2>
+        <button id="btnCloseCompare" class="btn ghost">✕</button>
+      </div>
+      <p class="modal-sub" id="compareSub"></p>
+      <div class="compare-grid">
+        <div>
+          <h3 id="strictTitle">严格规则</h3>
+          <div id="strictLane" class="mini-lane"></div>
+          <div class="mini-counts" id="strictCounts"></div>
+        </div>
+        <div>
+          <h3 id="lenientTitle">宽松规则</h3>
+          <div id="lenientLane" class="mini-lane"></div>
+          <div class="mini-counts" id="lenientCounts"></div>
+        </div>
+      </div>
+      <div class="diff-panel">
+        <h3>逐帧明细（<span class="diff-tag allowed">宽松放行</span> / <span class="diff-tag suppressed">严格抑制</span> / <span class="diff-tag same">一致</span>）</h3>
+        <div class="table-wrap">
+          <table id="diffTable">
+            <thead><tr><th>帧</th><th>时间</th><th>区域</th><th>严格</th><th>宽松</th><th>原因</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="src/ui/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "trigger-zone-rehearsal",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "关卡摆件触发区预演：几何触发区、进出/停留事件引擎、录制回放与规则对照的本地可玩演示",
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "serve": "python3 -m http.server 8123"
+  }
+}
