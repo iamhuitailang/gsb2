@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8E%A5%3C/text%3E%3C/svg%3E"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>第三人称镜头调试器 · Camera Zone Debugger</title>
+  </head>
+  <body>
+    <div id="app">
+      <header id="topbar">
+        <div class="brand">
+          <span class="brand-mark">🎥</span>
+          <div>
+            <div class="brand-title">第三人称镜头调试器</div>
+            <div class="brand-sub">Follow · Zones · Occlusion · Timeline</div>
+          </div>
+        </div>
+        <div class="top-actions">
+          <button id="btn-new" class="btn ghost" title="恢复为内置示例项目">新建示例</button>
+          <button id="btn-open" class="btn ghost">打开项目…</button>
+          <input id="file-open" type="file" accept="application/json,.json" hidden />
+          <button id="btn-save" class="btn">保存项目</button>
+          <button id="btn-export-runtime" class="btn accent">导出运行时镜头配置</button>
+        </div>
+      </header>
+
+      <main id="workspace">
+        <aside id="panel-left" class="panel"></aside>
+
+        <section id="viewport-wrap">
+          <div id="viewport"></div>
+
+          <div id="hud-topleft" class="hud-card">
+            <div class="hud-row"><span class="hud-label">当前区域</span><span id="hud-zone" class="zone-badge">—</span></div>
+            <div class="hud-row"><span class="hud-label">遮挡状态</span><span id="hud-occ" class="occ-badge ok">通畅</span></div>
+            <div id="hud-occ-reason" class="hud-reason"></div>
+          </div>
+
+          <div id="hud-topright" class="hud-card">
+            <div class="view-switch">
+              <button id="view-debug" class="seg active">调试轨道视角</button>
+              <button id="view-game" class="seg">游戏镜头视角</button>
+            </div>
+            <div class="gizmo-toggles">
+              <label><input type="checkbox" data-gizmo="zones" checked /> 区域</label>
+              <label><input type="checkbox" data-gizmo="bounds" checked /> 镜头边界</label>
+              <label><input type="checkbox" data-gizmo="route" checked /> 路线</label>
+              <label><input type="checkbox" data-gizmo="occluders" checked /> 碰撞体</label>
+              <label><input type="checkbox" data-gizmo="rays" checked /> 遮挡射线</label>
+            </div>
+          </div>
+
+          <div id="hud-bottom" class="hud-card">
+            <div class="transport">
+              <button id="btn-play" class="btn primary" title="播放/暂停 (空格)">▶ 播放</button>
+              <button id="btn-stop" class="btn" title="回到开头">⏮ 复位</button>
+              <select id="select-loop" title="循环模式">
+                <option value="once">单次</option>
+                <option value="loop" selected>循环</option>
+                <option value="pingpong">往返（验证反向切换）</option>
+              </select>
+              <select id="select-speed" title="播放速度">
+                <option value="0.25">0.25×</option>
+                <option value="0.5">0.5×</option>
+                <option value="1" selected>1×</option>
+                <option value="2">2×</option>
+              </select>
+              <span id="time-label" class="time-label">0.00 / 0.00 s</span>
+            </div>
+            <input id="timeline" type="range" min="0" max="1000" value="0" step="1" />
+            <div id="timeline-markers" class="timeline-markers"></div>
+          </div>
+
+          <div id="viewport-hint" class="viewport-hint">
+            左键旋转 · 右键平移 · 滚轮缩放（调试视角）｜ 空格 播放/暂停 ｜ 点击左侧「路线」可在地面加点
+          </div>
+        </section>
+
+        <aside id="panel-right" class="panel"></aside>
+      </main>
+
+      <div id="toast" hidden></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
