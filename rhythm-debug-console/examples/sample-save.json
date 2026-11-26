@@ -1,0 +1,119 @@
+{
+  "format": "rhythm-debug-console/v1",
+  "savedAt": "2026-11-26T17:47:17.867Z",
+  "description": "综合示例：beat8 处 100->160 BPM 变速；长按 h1(beat6-10) 跨越变速点；t3/t4 为相距 187.5ms 的相邻单点；t5 故意漏拍。输入由 seed=7 确定性生成，bias=+40ms、jitter=±20ms。",
+  "chart": {
+    "name": "综合示例：变速 + 跨变速长按 + 相邻单点",
+    "initialBpm": 100,
+    "timeSignature": [
+      4,
+      4
+    ],
+    "segments": [
+      {
+        "beat": 8,
+        "bpm": 160
+      }
+    ],
+    "notes": [
+      {
+        "id": "t1",
+        "type": "tap",
+        "beat": 2
+      },
+      {
+        "id": "t2",
+        "type": "tap",
+        "beat": 4
+      },
+      {
+        "id": "h1",
+        "type": "hold",
+        "beat": 6,
+        "endBeat": 10
+      },
+      {
+        "id": "t3",
+        "type": "tap",
+        "beat": 11
+      },
+      {
+        "id": "t4",
+        "type": "tap",
+        "beat": 11.5
+      },
+      {
+        "id": "t5",
+        "type": "tap",
+        "beat": 13
+      },
+      {
+        "id": "t6",
+        "type": "tap",
+        "beat": 15
+      }
+    ]
+  },
+  "inputs": [
+    {
+      "time": 1.220468190126121,
+      "type": "down"
+    },
+    {
+      "time": 1.290468190126121,
+      "type": "up"
+    },
+    {
+      "time": 2.4224783303029835,
+      "type": "down"
+    },
+    {
+      "time": 2.4924783303029834,
+      "type": "up"
+    },
+    {
+      "time": 3.6590763053111726,
+      "type": "down"
+    },
+    {
+      "time": 5.569076305311174,
+      "type": "up"
+    },
+    {
+      "time": 5.972961148228496,
+      "type": "down"
+    },
+    {
+      "time": 6.042961148228496,
+      "type": "up"
+    },
+    {
+      "time": 6.153357810741291,
+      "type": "down"
+    },
+    {
+      "time": 6.22335781074129,
+      "type": "up"
+    },
+    {
+      "time": 7.461220867522061,
+      "type": "down"
+    },
+    {
+      "time": 7.531220867522061,
+      "type": "up"
+    }
+  ],
+  "windowsA": {
+    "name": "A 标准窗",
+    "perfectMs": 50,
+    "lateMs": 150,
+    "releaseMs": 120
+  },
+  "windowsB": {
+    "name": "B 宽松窗",
+    "perfectMs": 80,
+    "lateMs": 200,
+    "releaseMs": 160
+  }
+}
