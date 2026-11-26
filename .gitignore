@@ -45,3 +45,7 @@ coverage/
 
 # 生成的示例素材(可用 npm run generate:samples 恢复)
 public/samples/
+
+# 自动化测试产物
+tests/output/
+tests/__pycache__/

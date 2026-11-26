@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>灵动标题工坊 · 动态图形标题工具</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='2' width='28' height='28' rx='8' fill='%236e8bff'/%3E%3Cpath d='M16 7l2.4 6.6L25 16l-6.6 2.4L16 25l-2.4-6.6L7 16l6.6-2.4z' fill='white'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+  <!-- ============ 顶部栏 ============ -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">◆</span>
+      <span class="brand-name">灵动标题工坊</span>
+      <span class="brand-sub">Motion Title Studio</span>
+    </div>
+
+    <input id="projectName" class="project-name" value="未命名工程" spellcheck="false"
+           aria-label="工程名称" />
+
+    <div class="top-actions">
+      <button class="btn" id="btnNew" title="新建空白工程">新建</button>
+      <button class="btn" id="btnSample" title="载入示例工程">示例工程</button>
+      <span class="sep"></span>
+      <button class="btn" id="btnOpen" title="打开 .mgs.json 工程 (Ctrl/Cmd+O)">打开工程</button>
+      <button class="btn btn-primary" id="btnSave" title="保存工程到本地 (Ctrl/Cmd+S)">保存工程</button>
+      <span class="sep"></span>
+      <button class="btn icon-btn" id="btnUndo" title="撤销 (Ctrl/Cmd+Z)">↶</button>
+      <button class="btn icon-btn" id="btnRedo" title="重做 (Ctrl/Cmd+Shift+Z)">↷</button>
+      <span class="sep"></span>
+      <button class="btn btn-accent" id="btnExportSeq">导出图片序列</button>
+      <button class="btn btn-accent-solid" id="btnExportVideo">导出透明视频</button>
+      <button class="btn icon-btn" id="btnHelp" title="使用帮助">？</button>
+    </div>
+  </header>
+
+  <!-- ============ 工作区 ============ -->
+  <main class="workspace">
+
+    <!-- 左：图层 -->
+    <aside class="panel panel-layers">
+      <div class="panel-title">
+        <span>图层</span>
+        <span class="panel-hint">顶部为最上层</span>
+      </div>
+      <div class="add-row">
+        <button class="btn btn-block" data-add="text">＋ 文字</button>
+        <button class="btn btn-block" data-add="rect">＋ 矩形</button>
+        <button class="btn btn-block" data-add="image">＋ 图片</button>
+      </div>
+      <div class="layers-tree" id="layersTree" role="list" aria-label="图层列表"></div>
+      <div class="layer-footer">
+        <button class="btn btn-small" id="btnGroup" title="将选中图层编组 (Ctrl/Cmd+G)">编组</button>
+        <button class="btn btn-small" id="btnUngroup" title="取消编组 (Ctrl/Cmd+Shift+G)">取消编组</button>
+        <span class="flex1"></span>
+        <button class="btn btn-small" id="btnDuplicate" title="复制图层 (Ctrl/Cmd+D)">复制</button>
+        <button class="btn btn-small btn-danger-ghost" id="btnDelete" title="删除图层 (Delete)">删除</button>
+      </div>
+    </aside>
+
+    <!-- 中：画布 -->
+    <section class="stage-area">
+      <div class="stage-toolbar">
+        <label class="ctl">
+          <span>输出尺寸</span>
+          <select id="sizePreset" aria-label="输出尺寸预设"></select>
+        </label>
+        <label class="ctl ctl-num">
+          <span>宽</span>
+          <input type="number" id="outWidth" min="64" max="7680" step="2" aria-label="输出宽度" />
+        </label>
+        <label class="ctl ctl-num">
+          <span>高</span>
+          <input type="number" id="outHeight" min="64" max="7680" step="2" aria-label="输出高度" />
+        </label>
+        <label class="ctl ctl-check" title="修改尺寸时，所有元素的位置/尺寸按画布比例换算">
+          <input type="checkbox" id="scaleWithCanvas" checked />
+          <span>按比例调整元素</span>
+        </label>
+        <span class="sep"></span>
+        <button class="btn btn-small toggle-btn is-on" id="btnSafe" aria-pressed="true">安全区</button>
+        <button class="btn btn-small toggle-btn" id="btnThirds" aria-pressed="false">三分线</button>
+        <button class="btn btn-small toggle-btn is-on" id="btnChecker" aria-pressed="true">透明棋盘</button>
+        <span class="flex1"></span>
+        <span class="zoom-label" id="zoomLabel">适配</span>
+      </div>
+
+      <div class="stage-viewport" id="stageViewport">
+        <div class="canvas-shadow" id="canvasShadow">
+          <div class="canvas-frame checker" id="canvasFrame">
+            <canvas id="artCanvas"></canvas>
+            <canvas id="overlayCanvas"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="stage-statusbar">
+        <span id="stageInfo">—</span>
+        <span class="flex1"></span>
+        <span class="hint-text">拖动移动 · 控制点缩放/旋转 · Delete 删除 · 空格播放</span>
+      </div>
+    </section>
+
+    <!-- 右：检查器 -->
+    <aside class="panel panel-inspector" id="inspector" aria-label="属性检查器"></aside>
+
+    <!-- 下：时间线 -->
+    <section class="timeline panel-timeline">
+      <div class="tl-toolbar">
+        <button class="btn icon-btn" id="btnPlay" title="播放/暂停 (空格)">▶</button>
+        <button class="btn icon-btn" id="btnStop" title="回到开头">⏮</button>
+        <button class="btn btn-small toggle-btn is-on" id="btnLoop" aria-pressed="true">循环</button>
+        <span class="timecode" id="timecode">00:00.00 / 00:06.00</span>
+        <span class="sep"></span>
+        <label class="ctl ctl-num">
+          <span>帧率</span>
+          <input type="number" id="fpsInput" min="1" max="120" step="1" style="width:52px" />
+          <span class="unit">fps</span>
+        </label>
+        <label class="ctl ctl-num">
+          <span>时长</span>
+          <input type="number" id="durationInput" min="0.1" max="600" step="0.5" style="width:64px" />
+          <span class="unit">秒</span>
+        </label>
+        <label class="ctl ctl-check">
+          <input type="checkbox" id="autoKey" checked />
+          <span>自动关键帧</span>
+        </label>
+        <label class="ctl ctl-check">
+          <input type="checkbox" id="snapFrames" checked />
+          <span>帧吸附</span>
+        </label>
+        <span class="flex1"></span>
+        <label class="ctl">
+          <span>时间缩放</span>
+          <input type="range" id="zoomTimeline" min="40" max="400" step="10" value="120" />
+        </label>
+      </div>
+      <div class="tl-scroll" id="timelineScroll">
+        <div class="tl-inner" id="timelineInner"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ 导出弹窗 ============ -->
+  <div class="modal-mask" id="exportModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-label="导出">
+      <div class="modal-head">
+        <span id="exportTitle">导出</span>
+        <button class="modal-close" id="exportClose" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body" id="exportBody"></div>
+    </div>
+  </div>
+
+  <!-- ============ 帮助弹窗 ============ -->
+  <div class="modal-mask" id="helpModal" hidden>
+    <div class="modal modal-wide" role="dialog" aria-modal="true" aria-label="使用帮助">
+      <div class="modal-head">
+        <span>使用帮助与导出说明</span>
+        <button class="modal-close" id="helpClose" aria-label="关闭">×</button>
+      </div>
+      <div class="modal-body help-body" id="helpBody"></div>
+    </div>
+  </div>
+
+  <input type="file" id="projectFileInput" accept=".json,.mgs.json,application/json" hidden />
+  <input type="file" id="imageFileInput" accept="image/*" hidden />
+  <div id="toastHost" class="toast-host"></div>
+
+  <!-- 纯本地、零依赖脚本（经典脚本，直接双击 index.html 也可打开；推荐用本地服务器） -->
+  <script src="js/util.js"></script>
+  <script src="js/icons.js"></script>
+  <script src="js/easing.js"></script>
+  <script src="js/model.js"></script>
+  <script src="js/sample-assets.js"></script>
+  <script src="js/sample.js"></script>
+  <script src="js/interpolate.js"></script>
+  <script src="js/renderer.js"></script>
+  <script src="js/zip.js"></script>
+  <script src="js/exporter.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/history.js"></script>
+  <script src="js/ui/toast.js"></script>
+  <script src="js/ui/layers.js"></script>
+  <script src="js/ui/inspector.js"></script>
+  <script src="js/ui/timeline.js"></script>
+  <script src="js/ui/stage.js"></script>
+  <script src="js/ui/export-dialog.js"></script>
+  <script src="js/ui/help.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
