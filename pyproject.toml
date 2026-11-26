@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "markfinder"
+version = "0.1.0"
+description = "本地旋转/缩放模板查找器：圈出自绘形状，在图中查找位置与朝向，支持遮挡打分、人工复核与导出"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "opencv-python>=4.8",
+    "Pillow>=10",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.scripts]
+markfinder = "markfinder.cli:main"
+
+[tool.setuptools]
+packages = ["markfinder"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
