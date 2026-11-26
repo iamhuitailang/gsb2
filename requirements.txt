@@ -1,0 +1,4 @@
+# 运行依赖 (Python 3.10+; 开发与测试环境为 3.13)
+# 只用 numpy 做信号处理, soundfile (libsndfile) 读写音频; 无 scipy、无前端构建链
+numpy>=1.24
+soundfile>=0.12

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NoiseKit · 本地降噪预览</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">NoiseKit <span class="tag">本地降噪预览</span></div>
+  <div class="top-actions">
+    <button id="btn-samples" class="btn">载入演示样音</button>
+    <button id="btn-upload" class="btn">上传录音</button>
+    <input type="file" id="file-upload" accept=".wav,.flac,.ogg,.oga,.aiff,.aif" multiple hidden>
+    <button id="btn-open-dir" class="btn">按目录打开</button>
+    <button id="btn-save-project" class="btn">保存工程</button>
+    <button id="btn-load-project" class="btn">打开工程</button>
+    <input type="file" id="file-project" accept=".nkproj" hidden>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-head">
+      <h2>文件列表</h2>
+      <div class="batch-bar">
+        <button id="btn-apply-all" class="btn btn-small" title="把当前参数应用到所有文件">应用到全部</button>
+        <button id="btn-batch-export" class="btn btn-small btn-primary">批量导出</button>
+      </div>
+    </div>
+    <ul id="file-list" class="file-list"></ul>
+    <div id="batch-summary" class="batch-summary hidden"></div>
+  </aside>
+
+  <section class="main">
+    <div id="banner" class="banner hidden"></div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>① 选择噪声样本</h2>
+        <span class="hint">在波形上拖选一段纯底噪区间（建议 ≥ 0.5 秒）</span>
+      </div>
+      <div class="wave-wrap">
+        <canvas id="wave" height="150"></canvas>
+      </div>
+      <div class="region-bar">
+        <label>样本区间
+          <input type="number" id="region-start" step="0.01" min="0"> –
+          <input type="number" id="region-end" step="0.01" min="0"> 秒
+        </label>
+        <button id="btn-analyze" class="btn btn-primary">分析样本</button>
+        <span id="sample-stats" class="sample-stats"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>② 频谱变化</h2>
+        <span class="hint">蓝线为处理前，橙线为处理后（对当前查看区间取平均幅度谱）</span>
+      </div>
+      <canvas id="spectrum" height="220"></canvas>
+      <div class="spectrum-bar">
+        <label>查看区间
+          <input type="number" id="spec-start" step="0.01" min="0"> –
+          <input type="number" id="spec-end" step="0.01" min="0"> 秒
+        </label>
+        <button id="btn-spec-refresh" class="btn btn-small">刷新频谱</button>
+        <span class="legend"><i class="dot dot-before"></i>处理前</span>
+        <span class="legend"><i class="dot dot-after"></i>处理后</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>③ 参数与试听</h2>
+        <span class="hint">调整后自动重新处理；A/B 用等功率交叉淡变切换，无爆音</span>
+      </div>
+      <div class="params">
+        <div class="param">
+          <label>处理强度 <b id="val-strength">0.50</b></label>
+          <input type="range" id="p-strength" min="0" max="1" step="0.01" value="0.5">
+        </div>
+        <div class="param">
+          <label>增益平滑 <b id="val-smoothing">0.60</b></label>
+          <input type="range" id="p-smoothing" min="0" max="0.95" step="0.01" value="0.6">
+        </div>
+        <div class="param param-checks">
+          <label><input type="checkbox" id="p-transient" checked> 瞬态保护（敲击声）</label>
+          <label><input type="checkbox" id="p-voice" checked> 语音保护</label>
+        </div>
+      </div>
+      <div class="player">
+        <button id="btn-play" class="btn btn-primary">播放</button>
+        <button id="btn-stop" class="btn">停止</button>
+        <button id="btn-ab" class="btn ab-btn">按住试听原声 (A)</button>
+        <span id="ab-mode" class="ab-mode">当前: 处理后 (B)</span>
+        <span id="play-time" class="play-time">0.00 / 0.00 s</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>④ 波形差异</h2>
+        <span class="hint">第三行是被移除的成分（原声 − 处理后），差异过大说明参数可能过激</span>
+      </div>
+      <canvas id="wave-diff" height="190"></canvas>
+      <div id="diff-stats" class="sample-stats"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>⑤ 导出（不覆盖原件）</h2>
+      </div>
+      <div class="export-bar">
+        <label>输出目录 <input type="text" id="out-dir" placeholder="留空使用默认 tmp/exports"></label>
+        <button id="btn-export-one" class="btn btn-primary">导出当前文件</button>
+        <a id="download-link" class="btn hidden" download>下载 WAV</a>
+      </div>
+      <ul id="export-log" class="export-log"></ul>
+    </div>
+  </section>
+</main>
+
+<script src="/static/api.js"></script>
+<script src="/static/waveform.js"></script>
+<script src="/static/spectrum.js"></script>
+<script src="/static/player.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>
