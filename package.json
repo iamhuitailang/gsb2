@@ -1,0 +1,15 @@
+{
+  "name": "wiring-signal-lab",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "解谜关卡接线、确定性信号模拟与时序对比工具",
+  "scripts": {
+    "start": "node tools/serve.js",
+    "build": "node tools/bundle.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

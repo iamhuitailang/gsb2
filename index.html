@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>接线与信号检查实验室</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232a78d6'/%3E%3Cpath d='M7 10h7a4 4 0 0 1 0 8H9m0 4h10a5 5 0 0 0 0-10' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3Ccircle cx='7' cy='10' r='2.2' fill='%230ca30c'/%3E%3Ccircle cx='9' cy='18' r='2.2' fill='%23fab219'/%3E%3Ccircle cx='22' cy='22' r='2.2' fill='white'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">⌁</div>
+          <div>
+            <h1>接线与信号检查实验室</h1>
+            <p>摆放元件 · 校验接口 · 固定时步模拟 · 对比两次运行</p>
+          </div>
+        </div>
+
+        <div class="top-actions">
+          <span id="saveStatus" class="save-status" aria-live="polite">正在读取工程…</span>
+          <div class="menu-wrap">
+            <button id="exampleMenuButton" class="btn" type="button" aria-haspopup="menu" aria-expanded="false">
+              示例工程 <span aria-hidden="true">▾</span>
+            </button>
+            <div id="exampleMenu" class="menu-popover" role="menu" hidden>
+              <button type="button" data-example="starter" role="menuitem">完整入门工程（双示例）</button>
+              <button type="button" data-example="dual" role="menuitem">双开关解锁</button>
+              <button type="button" data-example="bad" role="menuitem">非法组合反馈</button>
+              <button type="button" data-example="delay" role="menuitem">合法延时反馈</button>
+              <button type="button" data-example="unknown" role="menuitem">未知输入状态</button>
+            </div>
+          </div>
+          <button id="exportButton" class="btn" type="button">导出工程</button>
+          <button id="importButton" class="btn" type="button">导入工程</button>
+          <input id="importFile" type="file" accept="application/json,.json" hidden />
+        </div>
+      </header>
+
+      <div class="workspace">
+        <aside class="palette" aria-label="元件库">
+          <div class="panel-heading">
+            <h2>元件库</h2>
+            <p>点击添加，或拖到画布</p>
+          </div>
+          <div id="paletteList" class="palette-list"></div>
+
+          <div class="palette-help">
+            <h3>接线规则</h3>
+            <ul>
+              <li>从右侧输出口拖到左侧输入口。</li>
+              <li>每个输入只能接一个来源；输出可分叉。</li>
+              <li>未接输入按 <code>?</code> 未知处理。</li>
+              <li>反馈环中必须有延时器来切开同一步依赖。</li>
+            </ul>
+            <div class="legend" aria-label="信号颜色说明">
+              <span><i class="dot sig-1"></i>1 高/通</span>
+              <span><i class="dot sig-0"></i>0 低</span>
+              <span><i class="dot sig-null"></i>? 未知</span>
+              <span><i class="dot sig-conflict"></i>! 冲突</span>
+            </div>
+          </div>
+        </aside>
+
+        <main class="stage-column">
+          <section class="simbar" aria-label="模拟控制">
+            <button id="newRunButton" class="btn btn-primary" type="button">＋ 新建运行</button>
+            <button id="playButton" class="btn btn-icon" type="button" aria-pressed="false">▶ 播放</button>
+            <button id="stepButton" class="btn" type="button">⏭ 单步</button>
+            <div class="tick-control">
+              <label for="tickScrubber">查看时步</label>
+              <input id="tickScrubber" type="range" min="0" max="0" value="0" />
+              <output id="tickLabel" for="tickScrubber">T+0</output>
+              <span class="tick-rate">固定步长 500ms</span>
+            </div>
+            <div id="runStatusPill" class="run-pill">尚未运行</div>
+            <div id="switchHint" class="switch-hint"></div>
+          </section>
+
+          <div id="alertRegion" class="alert-region" aria-live="assertive"></div>
+
+          <section id="canvasViewport" class="canvas-viewport" aria-label="电路画布，可滚动">
+            <div id="canvas" class="canvas">
+              <svg id="wireSvg" class="wire-layer" width="2200" height="1000" aria-hidden="true">
+                <defs>
+                  <pattern id="unknownHatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                    <line x1="0" y1="0" x2="0" y2="8" stroke="#b7791f" stroke-width="2" opacity="0.45" />
+                  </pattern>
+                </defs>
+                <g id="wireHitLayer"></g>
+                <g id="wireStateLayer"></g>
+                <g id="wireVisibleLayer"></g>
+                <g id="wireLabelLayer"></g>
+                <path id="draftWire" class="draft-wire" d="" hidden></path>
+              </svg>
+              <div id="noteLayer" class="note-layer"></div>
+              <div id="componentLayer" class="component-layer"></div>
+            </div>
+          </section>
+
+          <section class="bottom-panel" aria-label="时序、记录和排查">
+            <div class="bottom-tabs" role="tablist">
+              <button class="bottom-tab is-active" id="tab-compare" data-bottom-tab="compare" role="tab" aria-selected="true">
+                两次时序比较
+              </button>
+              <button class="bottom-tab" id="tab-runs" data-bottom-tab="runs" role="tab" aria-selected="false">
+                运行记录
+              </button>
+              <button class="bottom-tab" id="tab-trace" data-bottom-tab="trace" role="tab" aria-selected="false">
+                排查溯源
+              </button>
+            </div>
+            <div id="bottomContent" class="bottom-content"></div>
+          </section>
+        </main>
+
+        <aside class="inspector" aria-label="属性和检查器">
+          <section class="inspector-card">
+            <div class="panel-heading">
+              <h2>检查器</h2>
+            </div>
+            <div id="inspectorContent" class="inspector-content"></div>
+          </section>
+        </aside>
+      </div>
+
+      <div id="toastRegion" class="toast-region" aria-live="polite"></div>
+    </div>
+
+    <script src="./app.bundle.js" defer></script>
+  </body>
+</html>
