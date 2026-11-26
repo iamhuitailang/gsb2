@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>立体短片左右眼校对工具</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">LR</span>
+    <div>
+      <h1>立体短片左右眼校对工具</h1>
+      <p class="sub">错拍 / 垂直偏移 / 裁切检查 · 并排预览片导出 · 纯本地运行，素材不上传</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <label class="btn">主帧率
+      <input type="number" id="base-fps" value="25" min="1" max="240" step="0.001" class="mini-input">
+    </label>
+    <button class="btn" id="btn-export">导出并排预览片</button>
+  </div>
+</header>
+
+<main class="layout">
+  <!-- 左列：素材与对齐 -->
+  <section class="col col-side">
+    <div class="eye-card" id="eye-left">
+      <div class="eye-title left-title">
+        <span class="eye-dot"></span>左眼 L
+        <span class="source-state tag">未选择素材</span>
+      </div>
+      <div class="source-row">
+        <button class="btn btn-sample">载入内置样片</button>
+        <label class="btn">选择本地视频
+          <input type="file" class="file-input" accept="video/*" hidden>
+        </label>
+        <button class="btn btn-ghost btn-clear">清除</button>
+      </div>
+      <div class="source-name" title="素材名">—</div>
+      <div class="source-meta"></div>
+
+      <div class="ctrl-block">
+        <div class="ctrl-label">
+          时间偏移 timeOffset（秒，正值=该眼画面偏晚）
+          <span class="hint" id="left-time-frames"></span>
+        </div>
+        <div class="ctrl-line">
+          <button class="btn tiny btn-nudge-time-l">−1帧</button>
+          <input type="number" class="offset-time" step="0.001" value="0">
+          <button class="btn tiny btn-nudge-time-r">+1帧</button>
+          <span class="offset-time-frames hint"></span>
+        </div>
+        <div class="ctrl-label">
+          垂直对齐 verticalOffset（px，正值=画面向下）
+          <span class="offset-y-pct hint"></span>
+        </div>
+        <div class="ctrl-line">
+          <button class="btn tiny btn-nudge-y-u">↑1px</button>
+          <input type="number" class="offset-y" step="1" value="0">
+          <button class="btn tiny btn-nudge-y-d">↓1px</button>
+        </div>
+        <div class="ctrl-label">该眼帧率（本地视频如与实际不符请手动改）</div>
+        <div class="ctrl-line">
+          <input type="number" class="fps-input" step="0.001" value="25">
+        </div>
+        <button class="btn btn-ghost sample-correct" disabled>一键校回（仅内置样片）</button>
+      </div>
+      <div class="frame-readout hint">本地帧 —</div>
+    </div>
+
+    <div class="eye-card" id="eye-right">
+      <div class="eye-title right-title">
+        <span class="eye-dot"></span>右眼 R
+        <span class="source-state tag">未选择素材</span>
+      </div>
+      <div class="source-row">
+        <button class="btn btn-sample">载入内置样片</button>
+        <label class="btn">选择本地视频
+          <input type="file" class="file-input" accept="video/*" hidden>
+        </label>
+        <button class="btn btn-ghost btn-clear">清除</button>
+      </div>
+      <div class="source-name" title="素材名">—</div>
+      <div class="source-meta"></div>
+
+      <div class="ctrl-block">
+        <div class="ctrl-label">
+          时间偏移 timeOffset（秒，正值=该眼画面偏晚）
+          <span class="hint" id="right-time-frames"></span>
+        </div>
+        <div class="ctrl-line">
+          <button class="btn tiny btn-nudge-time-l">−1帧</button>
+          <input type="number" class="offset-time" step="0.001" value="0">
+          <button class="btn tiny btn-nudge-time-r">+1帧</button>
+          <span class="offset-time-frames hint"></span>
+        </div>
+        <div class="ctrl-label">
+          垂直对齐 verticalOffset（px，正值=画面向下）
+          <span class="offset-y-pct hint"></span>
+        </div>
+        <div class="ctrl-line">
+          <button class="btn tiny btn-nudge-y-u">↑1px</button>
+          <input type="number" class="offset-y" step="1" value="0">
+          <button class="btn tiny btn-nudge-y-d">↓1px</button>
+        </div>
+        <div class="ctrl-label">该眼帧率（本地视频如与实际不符请手动改）</div>
+        <div class="ctrl-line">
+          <input type="number" class="fps-input" step="0.001" value="25">
+        </div>
+        <button class="btn btn-ghost sample-correct" disabled>一键校回（仅内置样片）</button>
+      </div>
+      <div class="frame-readout hint">本地帧 —</div>
+    </div>
+
+    <div class="panel">
+      <h3>共同可预览范围</h3>
+      <div id="common-range" class="common-range">共同可预览范围：<b>—</b>（需要两路素材都就绪）</div>
+      <p class="hint">左右眼默认不按文件名猜测，必须分别显式选择；可随时互换文件重新载入。</p>
+    </div>
+
+    <div class="panel">
+      <h3>对齐设置</h3>
+      <div class="ctrl-line wrap">
+        <button class="btn" id="btn-save-settings">保存设置 JSON</button>
+        <label class="btn">载入设置
+          <input type="file" id="settings-file" accept="application/json,.json" hidden>
+        </label>
+        <button class="btn btn-ghost" id="btn-clear-autosave">清除自动保存</button>
+      </div>
+      <p class="hint">设置含两路 timeOffset、垂直偏移、帧率、显示选项与参考点；本机也会按素材签名自动保存。</p>
+    </div>
+  </section>
+
+  <!-- 中列：画布与时间线 -->
+  <section class="col col-main">
+    <div class="canvas-toolbar">
+      <div class="seg-group">
+        <label><input type="radio" name="mode" value="sbs" checked>并排</label>
+        <label><input type="radio" name="mode" value="overlay">叠加</label>
+        <label><input type="radio" name="mode" value="blink">交替</label>
+      </div>
+      <div class="seg-group overlay-opts">
+        <label><input type="radio" name="overlay-mode" value="alpha" checked>半透明</label>
+        <label><input type="radio" name="overlay-mode" value="anaglyph">红蓝</label>
+        <label><input type="radio" name="overlay-mode" value="diff">差值</label>
+      </div>
+      <div class="seg-group">
+        <label><input type="checkbox" id="chk-grid" checked>网格</label>
+        <label><input type="checkbox" id="chk-cross" checked>十字</label>
+        <label><input type="checkbox" id="chk-safe">安全框</label>
+      </div>
+      <div class="seg-group">
+        <button class="btn tiny" id="btn-zoom-out">−</button>
+        <button class="btn tiny" id="btn-zoom-fit">100%</button>
+        <button class="btn tiny" id="btn-zoom-in">+</button>
+      </div>
+    </div>
+
+    <div class="canvas-wrap">
+      <canvas id="main-canvas"></canvas>
+      <div id="selftest" hidden></div>
+    </div>
+
+    <div class="timeline-panel">
+      <div class="timeline-head">
+        <button class="btn tiny" id="btn-goto-start" title="跳到共同区间起点">⇤</button>
+        <button class="btn tiny" id="btn-prev">◀帧</button>
+        <button class="btn" id="btn-play">播放</button>
+        <button class="btn tiny" id="btn-next">帧▶</button>
+        <button class="btn tiny" id="btn-goto-end" title="跳到共同区间终点">⇥</button>
+        <input type="range" id="timeline-input" min="0" max="0" value="0" class="timeline-input">
+      </div>
+      <div class="timeline-track" id="timeline-track"></div>
+      <div class="timeline-legend">
+        <span><i class="legend-box leg-left"></i>左眼有效区</span>
+        <span><i class="legend-box leg-right"></i>右眼有效区</span>
+        <span><i class="legend-box leg-common"></i>共同区间（导出范围）</span>
+        <span>红斜纹 = 缺帧</span>
+      </div>
+      <div id="master-readout" class="master-readout hint"></div>
+    </div>
+  </section>
+
+  <!-- 右列：参考点 -->
+  <section class="col col-markers">
+    <div class="panel">
+      <h3>参考点（对应帧上选一对）</h3>
+      <div class="ctrl-line wrap">
+        <button class="btn primary" id="btn-pick">选一对参考点</button>
+        <button class="btn btn-ghost" id="btn-cancel-pick">取消拾取</button>
+        <button class="btn btn-ghost" id="btn-clear-markers">清空</button>
+      </div>
+      <p class="hint">
+        先点左眼参考点，再点右眼同一物体的对应位置。dx/dy 以左眼像素为基准，
+        另给归一化百分比（两路分辨率不同也可比）。换素材或改时间偏移/帧率后标记标红失效，需复核；
+        改垂直偏移不会失效，dy 会实时变化。
+      </p>
+      <div id="marker-summary" class="marker-summary"></div>
+      <div id="marker-list" class="marker-list"></div>
+    </div>
+    <div class="panel">
+      <h3>操作提示</h3>
+      <ul class="hint tips">
+        <li>← / → 逐帧，Shift+方向键跳 10 帧，空格播放，Esc 取消拾取</li>
+        <li>滚轮缩放、拖拽平移、双击复位；缩放时两眼始终同一比例</li>
+        <li>差值模式全黑即画面完全重合；红蓝模式重影越小越对齐</li>
+        <li>安全框 + 标尺可直观看出某一边是否裁掉太多</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<!-- 导出对话框 -->
+<div class="modal-mask" id="export-dialog">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>导出两路共有区间的并排预览片</h3>
+      <button class="btn btn-ghost" id="export-close">关闭</button>
+    </div>
+    <div class="modal-body">
+      <div class="ctrl-line">
+        <label>起始主帧 <input type="number" id="export-start" class="mini-input"></label>
+        <label>结束主帧 <input type="number" id="export-end" class="mini-input"></label>
+      </div>
+      <p class="hint">默认填好共同区间；起止缩略图即导出片的首末帧，请与画布预览核对。</p>
+      <div class="thumbs">
+        <figure><img id="thumb-start" alt="起始帧"><figcaption>导出首帧</figcaption></figure>
+        <figure><img id="thumb-end" alt="结束帧"><figcaption>导出末帧</figcaption></figure>
+      </div>
+      <div id="export-msg" class="hint"></div>
+      <div id="export-progress-wrap" class="progress-wrap" hidden>
+        <div class="progress-bar"><div id="export-bar"></div></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn primary" id="btn-export-go">开始导出 WebM</button>
+      <span class="hint">需要帧精确 MP4：用 scripts/export_sbs.py（ffmpeg）</span>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="js/core.js"></script>
+<script src="js/sample.js"></script>
+<script src="js/video.js"></script>
+<script src="js/view.js"></script>
+<script src="js/export.js"></script>
+<script src="tests/browser-selftest.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

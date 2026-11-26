@@ -1,0 +1,17 @@
+{
+  "name": "stereo-lr-calib",
+  "version": "1.0.0",
+  "private": true,
+  "description": "立体短片左右眼校对工具：错拍/垂直偏移/裁切检查与并排预览片导出",
+  "type": "commonjs",
+  "scripts": {
+    "serve": "python3 -I scripts/serve.py",
+    "test": "node --test 'tests/**/*.test.mjs'",
+    "test:browser": "bash scripts/browser_test.sh",
+    "generate:samples": "python3 -I scripts/generate_samples.py public/samples",
+    "export:sbs": "python3 -I scripts/export_sbs.py"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
