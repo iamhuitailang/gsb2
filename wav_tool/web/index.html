@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WAV 采样点级分段与复原工具</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>WAV 分段与复原验收工具</h1>
+        <p class="subtitle">固定/自定义切点 · 实际采样点显示 · 跨切点试听 · SHA-256 清单 · 缺段/调换/同名替换定位 · 各声道样本比较</p>
+      </div>
+      <div class="privacy">🔒 本机处理，不上传外部服务；原始文件不会被改写</div>
+    </header>
+
+    <main class="layout">
+      <section class="card demo-card">
+        <div class="section-head">
+          <h2>0. 内置样音与一键演示</h2>
+          <p>样音为 44.1 kHz 立体声、4.3 秒；左/右声道旋律不同，切点处有左右相反的脉冲，脉冲首样本恰好等于切点采样帧。</p>
+        </div>
+        <div class="button-row wrap">
+          <button id="loadDemoSourceBtn" class="secondary">载入样音到切点工具</button>
+          <button data-demo="normal" class="demo-btn">演示正常拼回</button>
+          <button data-demo="missing" class="demo-btn danger-outline">演示缺第 2 段</button>
+          <button data-demo="swap" class="demo-btn warn-outline">演示第 1/2 段调换</button>
+          <button data-demo="same_name_replaced" class="demo-btn danger-outline">演示同名文件替换</button>
+        </div>
+        <div id="demoMessage" class="inline-message" aria-live="polite"></div>
+      </section>
+
+      <section class="card">
+        <div class="section-head">
+          <h2>1. 选择原始 WAV</h2>
+          <p>支持未压缩 PCM 8/16/24/32 bit 与 IEEE float 32/64 bit。分段保持采样率、声道数和采样宽度。</p>
+        </div>
+        <div class="file-row">
+          <input id="sourceFile" type="file" accept=".wav,audio/wav,audio/x-wav" />
+          <div id="sourceMeta" class="meta-grid empty">尚未选择文件</div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-head">
+          <h2>2. 设定切点并核对实际采样点</h2>
+          <p>区间统一采用半开采样帧 <code>[start_frame, end_frame)</code>：上一段的末端就是下一段的起点，因此不重复、不漏样本。</p>
+        </div>
+
+        <div class="cut-controls">
+          <label>
+            切点方式
+            <select id="cutMode">
+              <option value="fixed">固定间隔（秒）</option>
+              <option value="custom_seconds">一组自定义时间点（秒）</option>
+              <option value="custom_frames">一组精确采样点（整数帧）</option>
+            </select>
+          </label>
+          <label id="intervalField">
+            间隔秒数
+            <input id="intervalSeconds" type="number" min="0.001" step="0.1" value="1" />
+          </label>
+          <label id="customField" class="hidden">
+            自定义切点（逗号、空格或换行分隔）
+            <textarea id="customValues" rows="2" placeholder="例如：1.0, 2.5, 4.25"></textarea>
+          </label>
+          <button id="planCutsBtn" class="primary">计算切点和分段</button>
+        </div>
+
+        <div class="audition-controls">
+          <label>切点前 <input id="preMs" type="number" min="0" step="5" value="50" /> ms</label>
+          <label>切点后 <input id="postMs" type="number" min="1" step="5" value="100" /> ms</label>
+          <span class="hint">每行可试听同一个跨切点短区间；精确范围会显示在播放器下方。</span>
+        </div>
+
+        <div class="table-wrap">
+          <table id="cutTable">
+            <thead>
+              <tr>
+                <th>切点</th>
+                <th>输入值</th>
+                <th>实际采样帧</th>
+                <th>实际时间</th>
+                <th>取整误差</th>
+                <th>跨切点试听</th>
+              </tr>
+            </thead>
+            <tbody><tr class="placeholder-row"><td colspan="6">尚未计算切点</td></tr></tbody>
+          </table>
+        </div>
+
+        <div id="auditionStatus" class="audition-status">点击“试听”后，这里显示并播放精确导出的短 WAV 区间。</div>
+        <audio id="auditionPlayer" controls preload="none"></audio>
+
+        <h3>分段边界</h3>
+        <div class="table-wrap compact">
+          <table id="segmentTable">
+            <thead><tr><th>顺序</th><th>文件</th><th>起点帧</th><th>末端帧（不含）</th><th>帧数</th><th>时间范围</th></tr></thead>
+            <tbody><tr class="placeholder-row"><td colspan="6">等待计算</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="action-row">
+          <button id="exportBtn" class="primary" disabled>导出每段 WAV + manifest.json（ZIP）</button>
+          <span id="exportMessage" class="inline-message"></span>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-head">
+          <h2>3. 导入清单与分段，逐段校对</h2>
+          <p>可先选 <code>manifest.json</code>，再多选分段或选择整个文件夹。工具按清单位置校对实际原始采样字节的 SHA-256，而不是只看文件名。</p>
+        </div>
+
+        <div class="import-grid">
+          <label class="file-box">
+            <span class="file-box-title">① 选择 manifest.json</span>
+            <input id="manifestFile" type="file" accept=".json,application/json" />
+          </label>
+          <label class="file-box">
+            <span class="file-box-title">② 多选分段 WAV</span>
+            <input id="segmentFiles" type="file" accept=".wav,audio/wav" multiple />
+          </label>
+          <label class="file-box">
+            <span class="file-box-title">或选择整个交接文件夹</span>
+            <input id="folderFiles" type="file" webkitdirectory directory multiple />
+          </label>
+        </div>
+
+        <div id="slotTableWrap" class="table-wrap hidden">
+          <table id="slotTable">
+            <thead>
+              <tr><th>位置</th><th>期望文件 / 来源范围</th><th>分配到该位置的文件</th><th>状态</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div class="action-row">
+            <button id="verifyBtn" class="primary">上传并逐段校验</button>
+            <button id="clearSlotsBtn" class="secondary">清空已选分段</button>
+            <span id="verifyMessage" class="inline-message"></span>
+          </div>
+        </div>
+
+        <div id="verifySummary" class="summary hidden"></div>
+        <div id="problemList" class="problem-list"></div>
+
+        <div id="previewBox" class="preview-box hidden">
+          <h3>试听 / 下载拼回结果</h3>
+          <p id="previewExplanation"></p>
+          <div class="button-row wrap">
+            <audio id="restorePlayer" controls preload="none"></audio>
+            <a id="downloadAudio" class="button secondary" download>下载当前 WAV</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="section-head">
+          <h2>4. 与原始音频逐声道比较</h2>
+          <p>比较总采样帧数（每声道样本数）和解码后的实际样本；差异会合并成连续区间，报告起始/结束采样帧与时间。</p>
+        </div>
+        <div class="file-row">
+          <input id="originalCompareFile" type="file" accept=".wav,audio/wav,audio/x-wav" />
+          <button id="useLoadedSourceBtn" class="secondary" disabled>使用上方已加载原始 WAV</button>
+          <span id="compareUploadMessage" class="inline-message"></span>
+        </div>
+        <div id="comparisonSummary" class="summary hidden"></div>
+        <div id="channelCompare" class="channel-grid"></div>
+      </section>
+
+      <section class="card subtle">
+        <h2>命令行与自动化验收</h2>
+        <pre><code>python3 wav_tool.py serve
+python3 wav_tool.py demo --case all --out demo_output
+python3 wav_tool.py split input.wav --interval 1 --out split_out
+python3 wav_tool.py restore split_out/manifest.json -o restored.wav --compare-original input.wav
+python3 -m unittest discover -s tests -v</code></pre>
+        <p class="hint">CLI 可用 <code>--map 2=/path/to/wrong.wav</code> 模拟调换；退出码 0 表示样本完全一致，2 表示分段校验未通过，3 表示比较发现差异。</p>
+      </section>
+    </main>
+
+    <div id="toast" class="toast hidden"></div>
+    <script src="/app.js"></script>
+  </body>
+</html>

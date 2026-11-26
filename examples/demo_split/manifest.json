@@ -1,0 +1,131 @@
+{
+  "tool": "wav-sample-split-restore",
+  "manifest_version": 1,
+  "created_at_unix": 1795733754.010108,
+  "source": {
+    "filename": "demo_sample.wav",
+    "sha256_file": "31fc225a7ea6b676cd875f46a0fb026200ad659635982b59e031276e0a818b00",
+    "wav": {
+      "audio_format": 1,
+      "channels": 2,
+      "sample_rate": 44100,
+      "sample_width": 2,
+      "bits_per_sample": 16,
+      "block_align": 4,
+      "total_frames": 189630,
+      "data_offset": 44,
+      "data_size": 758520,
+      "frame_width": 4,
+      "duration_seconds": 4.3
+    }
+  },
+  "cuts": [
+    {
+      "index": 1,
+      "raw_text": "1 × 1",
+      "requested_seconds": 1.0,
+      "requested_frame_float": 44100.0,
+      "frame": 44100,
+      "time_seconds": 1.0,
+      "delta_frames": 0.0,
+      "delta_seconds": 0.0
+    },
+    {
+      "index": 2,
+      "raw_text": "1 × 2",
+      "requested_seconds": 2.0,
+      "requested_frame_float": 88200.0,
+      "frame": 88200,
+      "time_seconds": 2.0,
+      "delta_frames": 0.0,
+      "delta_seconds": 0.0
+    },
+    {
+      "index": 3,
+      "raw_text": "1 × 3",
+      "requested_seconds": 3.0,
+      "requested_frame_float": 132300.0,
+      "frame": 132300,
+      "time_seconds": 3.0,
+      "delta_frames": 0.0,
+      "delta_seconds": 0.0
+    },
+    {
+      "index": 4,
+      "raw_text": "1 × 4",
+      "requested_seconds": 4.0,
+      "requested_frame_float": 176400.0,
+      "frame": 176400,
+      "time_seconds": 4.0,
+      "delta_frames": 0.0,
+      "delta_seconds": 0.0
+    }
+  ],
+  "segments": [
+    {
+      "index": 0,
+      "order": 1,
+      "filename": "segment_001.wav",
+      "file": "segments/segment_001.wav",
+      "start_frame": 0,
+      "end_frame": 44100,
+      "frame_count": 44100,
+      "start_seconds": 0.0,
+      "end_seconds": 1.0,
+      "sha256_raw": "13bc127d1bad53e82b0d979cb3fc002e1bffc872d56cb8e2de2b2d0e5315630a",
+      "sha256_file": "28125510d4e2a7cad6393eba79296a9bee523a2f412eb775bda5ae69a8395328"
+    },
+    {
+      "index": 1,
+      "order": 2,
+      "filename": "segment_002.wav",
+      "file": "segments/segment_002.wav",
+      "start_frame": 44100,
+      "end_frame": 88200,
+      "frame_count": 44100,
+      "start_seconds": 1.0,
+      "end_seconds": 2.0,
+      "sha256_raw": "e7c08db8f69e93f0ead50f4d5ecc154da9007c3940670f9a0d0b5be9769cec97",
+      "sha256_file": "db06cda88e8d0da053fa5788fb84c8e5dd962d559e24a482ea00f253ed9a248a"
+    },
+    {
+      "index": 2,
+      "order": 3,
+      "filename": "segment_003.wav",
+      "file": "segments/segment_003.wav",
+      "start_frame": 88200,
+      "end_frame": 132300,
+      "frame_count": 44100,
+      "start_seconds": 2.0,
+      "end_seconds": 3.0,
+      "sha256_raw": "08f3d8183d3ec4766392d67fba5056b3bbf0d00832d23d147714accd766d781f",
+      "sha256_file": "6e901ba22c6a2ec78dfbcb3fc5476357feed9e685433094ebee52626b19feacc"
+    },
+    {
+      "index": 3,
+      "order": 4,
+      "filename": "segment_004.wav",
+      "file": "segments/segment_004.wav",
+      "start_frame": 132300,
+      "end_frame": 176400,
+      "frame_count": 44100,
+      "start_seconds": 3.0,
+      "end_seconds": 4.0,
+      "sha256_raw": "41ed9211fa82a847e9256e501aba62462a633c6f8d912b87e339d2378ec19730",
+      "sha256_file": "2dd2269525d16d04d3c1701f6ab72c045e5c83796e4d166a5a61bb128ee18c60"
+    },
+    {
+      "index": 4,
+      "order": 5,
+      "filename": "segment_005.wav",
+      "file": "segments/segment_005.wav",
+      "start_frame": 176400,
+      "end_frame": 189630,
+      "frame_count": 13230,
+      "start_seconds": 4.0,
+      "end_seconds": 4.3,
+      "sha256_raw": "4487a16a31fd63aa928aeee166320300cd5897427c3c657ae205477122163884",
+      "sha256_file": "6fa4afaa48da45c4aa00f98f1f937bad499b4f7fba6ccb19d212fa48669c463a"
+    }
+  ]
+}
