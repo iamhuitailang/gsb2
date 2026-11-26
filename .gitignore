@@ -45,3 +45,6 @@ coverage/
 
 # 生成的示例素材(可用 npm run generate:samples 恢复)
 public/samples/
+
+# 演示素材(可用 python3 tools/make_test_material.py 重新生成)
+test_material/

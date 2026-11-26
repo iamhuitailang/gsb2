@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>多声道整理与试听工具</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header>
+  <h1>多声道整理与试听工具</h1>
+  <p class="sub">上传多声道 WAV → 标记声道 → 设定映射（比例 / 极性 / 留空）→ 试听与削波检查 → 导出目标声道顺序</p>
+</header>
+
+<!-- 1. 文件载入 -->
+<section id="sec-load" class="panel">
+  <h2>1. 载入素材</h2>
+  <div class="row">
+    <label class="btn file-btn">上传多声道 WAV
+      <input type="file" id="file-input" accept=".wav,audio/wav,audio/x-wav">
+    </label>
+    <span id="file-info" class="muted">未载入文件。可用 <code>python3 tools/make_test_material.py</code> 生成演示素材（test_material/）。</span>
+  </div>
+  <div id="load-warnings"></div>
+</section>
+
+<!-- 2. 输入声道 -->
+<section id="sec-inputs" class="panel hidden">
+  <h2>2. 输入声道 <span class="hint">请为每条声道选择/填写标记；未标记的声道会红色提醒，工具不会自动猜测用途</span></h2>
+  <div id="input-list"></div>
+</section>
+
+<!-- 3. 映射 -->
+<section id="sec-mapping" class="panel hidden">
+  <h2>3. 输出映射 <span class="hint">每条输出声道可叠加多个输入（各自设定比例与极性），也可以留空</span></h2>
+  <div class="row">
+    <label>目标布局：
+      <select id="layout-select"></select>
+    </label>
+    <label id="custom-out-wrap" class="hidden">声道数：
+      <input type="number" id="custom-out-count" min="1" max="32" value="2">
+    </label>
+    <button id="apply-layout" class="btn">应用布局</button>
+    <button id="btn-direct" class="btn">1:1 直通填充</button>
+    <span class="muted">应用布局会重建输出列表（已有映射可先存为预设）；映射默认留空，请显式指定</span>
+  </div>
+  <div id="mapping-list"></div>
+  <div id="usage-summary"></div>
+</section>
+
+<!-- 4. 输出与检查 -->
+<section id="sec-outputs" class="panel hidden">
+  <h2>4. 输出检查 <span class="hint">实际峰值、削波与相消提示；点击峰值标记可反查来源声道</span></h2>
+  <div id="output-list"></div>
+</section>
+
+<!-- 5. 试听控制 -->
+<section id="sec-transport" class="panel hidden">
+  <h2>5. 试听</h2>
+  <div class="row transport">
+    <button id="btn-play" class="btn primary">▶ 播放</button>
+    <button id="btn-stop" class="btn">■ 停止</button>
+    <button id="btn-mix" class="btn">全组试听</button>
+    <span id="audition-mode" class="badge">全组试听（映射后）</span>
+    <span id="play-time" class="mono">0.00 / 0.00 s</span>
+  </div>
+  <p class="muted">在各声道行内点「试听」可单独试听；「单独显示」只放大显示该声道波形。切换试听对象时保留当前时间位置。点击波形可跳转。</p>
+</section>
+
+<!-- 6. 预设 / 导出 / 校验 -->
+<section id="sec-export" class="panel hidden">
+  <h2>6. 预设、导出与读回校验</h2>
+  <div class="row">
+    <input type="text" id="preset-name" placeholder="预设名称">
+    <button id="btn-save-preset" class="btn">保存预设</button>
+    <select id="preset-list"></select>
+    <button id="btn-load-preset" class="btn">载入</button>
+    <button id="btn-del-preset" class="btn">删除</button>
+    <button id="btn-export-preset" class="btn">导出预设 JSON</button>
+    <label class="btn file-btn">导入预设 JSON
+      <input type="file" id="import-preset" accept=".json">
+    </label>
+  </div>
+  <div class="row">
+    <label>导出格式：
+      <select id="export-format">
+        <option value="16">16-bit PCM</option>
+        <option value="24" selected>24-bit PCM</option>
+        <option value="32f">32-bit Float</option>
+      </select>
+    </label>
+    <button id="btn-export-wav" class="btn primary">导出目标声道顺序 WAV</button>
+    <span id="export-status" class="muted"></span>
+  </div>
+  <div class="row">
+    <label class="btn file-btn">读回导出的 WAV 校验
+      <input type="file" id="verify-input" accept=".wav,audio/wav,audio/x-wav">
+    </label>
+    <span class="muted">校验声道数、采样率，并逐声道比对实际内容是否与当前映射一致</span>
+  </div>
+  <div id="verify-result"></div>
+</section>
+
+<div id="toast" class="hidden"></div>
+
+<script src="js/wav.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
