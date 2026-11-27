@@ -1,0 +1,11 @@
+{
+  "name": "quant-compare",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/dsp.test.mjs",
+    "generate:samples": "node scripts/make_stereo_wav.mjs",
+    "serve": "python3 -m http.server 8000"
+  }
+}

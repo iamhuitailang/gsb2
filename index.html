@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>低位数量化对照台 · 尾音失真实验</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <h1>低位数量化对照台</h1>
+    <p class="subtitle">直接量化 vs 随机扰动量化 · 定位被吃掉的尾音 · 导出 WAV 回读核对</p>
+  </header>
+
+  <!-- 1. 信号来源 -->
+  <section class="card" id="source-card">
+    <h2>1 · 信号来源</h2>
+    <div class="row wrap">
+      <label class="btn file-btn">
+        打开 WAV(单/双声道)
+        <input type="file" id="file-input" accept=".wav,audio/wav,audio/x-wav" hidden>
+      </label>
+      <div class="gen-btns" role="group" aria-label="生成弱信号样例">
+        <button class="btn" data-gen="combo">组合样例</button>
+        <button class="btn" data-gen="fade">渐弱音</button>
+        <button class="btn" data-gen="quiet">近静音持续音</button>
+        <button class="btn" data-gen="fullscale">近满幅音</button>
+      </div>
+      <span id="source-info" class="source-info muted">尚未载入信号</span>
+    </div>
+  </section>
+
+  <!-- 2. 两套量化设置 -->
+  <section class="card">
+    <h2>2 · 两套对照设置(切换不丢游标)</h2>
+    <div class="settings-grid">
+      <div class="setting-box" id="box-A" data-side="A">
+        <div class="setting-head">
+          <span class="setting-tag tag-a">设置 A</span>
+          <span class="setting-name" id="name-A"></span>
+        </div>
+        <div class="form-row">
+          <label for="bits-A">位数</label>
+          <select id="bits-A" class="bits-sel"></select>
+        </div>
+        <div class="form-row">
+          <label for="mode-A">量化方式</label>
+          <select id="mode-A">
+            <option value="off">直接量化(四舍五入)</option>
+            <option value="rpdf">RPDF 矩形扰动</option>
+            <option value="tpdf" selected>TPDF 三角扰动</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="amp-A">扰动幅度(LSB)</label>
+          <select id="amp-A">
+            <option value="0.5">0.5</option>
+            <option value="1" selected>1.0(标准)</option>
+            <option value="2">2.0</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="seed-A">随机种子</label>
+          <input type="number" id="seed-A" value="20261128" min="0" max="4294967295">
+          <button class="btn small" id="reseed-A" title="换一颗种子">换</button>
+        </div>
+        <div class="form-row check">
+          <label><input type="checkbox" id="lock-A" checked> 固定本次试验(重放可复现)</label>
+        </div>
+      </div>
+
+      <div class="setting-box" id="box-B" data-side="B">
+        <div class="setting-head">
+          <span class="setting-tag tag-b">设置 B</span>
+          <span class="setting-name" id="name-B"></span>
+        </div>
+        <div class="form-row">
+          <label for="bits-B">位数</label>
+          <select id="bits-B" class="bits-sel"></select>
+        </div>
+        <div class="form-row">
+          <label for="mode-B">量化方式</label>
+          <select id="mode-B">
+            <option value="off" selected>直接量化(四舍五入)</option>
+            <option value="rpdf">RPDF 矩形扰动</option>
+            <option value="tpdf">TPDF 三角扰动</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="amp-B">扰动幅度(LSB)</label>
+          <select id="amp-B">
+            <option value="0.5">0.5</option>
+            <option value="1" selected>1.0(标准)</option>
+            <option value="2">2.0</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label for="seed-B">随机种子</label>
+          <input type="number" id="seed-B" value="20261128" min="0" max="4294967295">
+          <button class="btn small" id="reseed-B" title="换一颗种子">换</button>
+        </div>
+        <div class="form-row check">
+          <label><input type="checkbox" id="lock-B" checked> 固定本次试验(重放可复现)</label>
+        </div>
+      </div>
+    </div>
+    <div class="row wrap switch-row">
+      <button class="btn primary" id="switch-btn">切到另一套设置(A ↔ B)</button>
+      <label class="muted">当前视图:
+        <strong id="active-label">A</strong>
+      </label>
+      <span class="muted" id="hash-label" title="整数码 FNV-1a 校验和;同设置重做应一致"></span>
+    </div>
+  </section>
+
+  <!-- 3. 关键指标 -->
+  <section class="card">
+    <h2>3 · 关键指标(当前声道)</h2>
+    <div class="tiles" id="tiles">
+      <div class="tile"><span class="tile-val" id="t-changed">—</span><span class="tile-label">翻码采样</span></div>
+      <div class="tile"><span class="tile-val" id="t-rms">—</span><span class="tile-label">误差 RMS(LSB)</span></div>
+      <div class="tile"><span class="tile-val" id="t-max">—</span><span class="tile-label">最大误差(LSB)</span></div>
+      <div class="tile"><span class="tile-val" id="t-bias">—</span><span class="tile-label">均值偏置(LSB)</span></div>
+      <div class="tile"><span class="tile-val" id="t-snr">—</span><span class="tile-label">SNR(dB)</span></div>
+      <div class="tile clip"><span class="tile-val" id="t-cliphi">—</span><span class="tile-label">越界夹断 +/−</span></div>
+      <div class="tile clip"><span class="tile-val" id="t-cliplo">—</span><span class="tile-label">压在满幅轨 +/−</span></div>
+      <div class="tile"><span class="tile-val" id="t-rail">—</span><span class="tile-label">上下限码合计占比</span></div>
+    </div>
+    <div class="row wrap">
+      <label>声道:
+        <select id="channel-sel"><option value="0">1(单声道)</option></select>
+      </label>
+      <label>分块长度:
+        <select id="block-sel">
+          <option value="20">20 ms</option>
+          <option value="50" selected>50 ms</option>
+          <option value="100">100 ms</option>
+          <option value="250">250 ms</option>
+        </select>
+      </label>
+      <label>纵向放大:
+        <select id="zoom-y">
+          <option value="1" selected>×1(满量程)</option>
+          <option value="4">×4</option>
+          <option value="16">×16</option>
+          <option value="64">×64</option>
+          <option value="256">×256</option>
+          <option value="1024">×1024(看近静音)</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <!-- 4. 波形对照 -->
+  <section class="card">
+    <h2>4 · 原音 / 还原 / 误差(红色块 = 该区域有翻码)</h2>
+    <canvas id="overview" height="90" aria-label="全片概览,点击或拖拽定位"></canvas>
+    <canvas id="waveform" height="260" aria-label="放大波形:原音与还原叠加"></canvas>
+    <canvas id="error-canvas" height="140" aria-label="量化误差波形"></canvas>
+    <div class="row wrap plot-controls">
+      <button class="btn small" id="zoom-in">横向放大 +</button>
+      <button class="btn small" id="zoom-out">横向缩小 −</button>
+      <button class="btn small" id="zoom-reset">全片</button>
+      <span class="muted" id="view-range"></span>
+      <span class="legend">
+        <span class="lg"><i class="sw orig"></i>原音</span>
+        <span class="lg"><i class="sw recon"></i>整数码还原</span>
+        <span class="lg"><i class="sw err"></i>误差</span>
+        <span class="lg"><i class="sw clip-band"></i>失真段</span>
+      </span>
+    </div>
+    <div id="tooltip" class="tooltip" hidden></div>
+  </section>
+
+  <!-- 5. 幅度直方图 -->
+  <section class="card">
+    <h2>5 · 幅度分布(原音 vs 还原;近零处看尾音是否被吃)</h2>
+    <canvas id="hist" height="200"></canvas>
+    <div class="row wrap">
+      <label><input type="checkbox" id="hist-err" checked> 叠加误差分布</label>
+      <span class="muted">纵向为对数计数,低幅度柱被压平时可在上方放大检查波形</span>
+    </div>
+  </section>
+
+  <!-- 6. 分段/分块失真表 -->
+  <section class="card">
+    <h2>6 · 失真定位表(点击行跳转到该段)</h2>
+    <div class="table-wrap">
+      <table id="block-table">
+        <thead>
+          <tr>
+            <th>段落 / 时间</th>
+            <th>原音峰值(dBFS)</th>
+            <th>翻码占比</th>
+            <th>误差 RMS(LSB)</th>
+            <th>最大误差(LSB)</th>
+            <th>状态</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 7. 试听 -->
+  <section class="card">
+    <h2>7 · 试听(共用参考响度)</h2>
+    <div class="row wrap">
+      <button class="btn" id="play-orig">▶ 原音</button>
+      <button class="btn" id="play-recon">▶ 还原音(当前设置)</button>
+      <button class="btn" id="play-err">▶ 误差信号 × 增益</button>
+      <button class="btn" id="stop-btn">■ 停止</button>
+      <label class="gain-label">参考响度
+        <input type="range" id="master-gain" min="-40" max="6" step="1" value="-6">
+        <span id="gain-val">−6 dB</span>
+      </label>
+      <label class="muted">误差监听增益
+        <select id="err-gain">
+          <option value="1">×1</option>
+          <option value="8" selected>×8</option>
+          <option value="64">×64</option>
+        </select>
+      </label>
+      <label class="muted"><input type="checkbox" id="loop-cb"> 游标处循环</label>
+    </div>
+  </section>
+
+  <!-- 8. 导出与回读核对 -->
+  <section class="card">
+    <h2>8 · 导出标准 WAV 并回读核对</h2>
+    <div class="row wrap">
+      <label>容器位深
+        <select id="export-bits">
+          <option value="8">8 位 PCM(无符号偏移码)</option>
+          <option value="16" selected>16 位 PCM</option>
+        </select>
+      </label>
+      <button class="btn primary" id="export-btn">导出当前还原音 WAV</button>
+      <label class="btn file-btn">回读任意 WAV 核对
+        <input type="file" id="verify-input" accept=".wav,audio/wav" hidden>
+      </label>
+    </div>
+    <div class="table-wrap">
+      <table id="verify-table">
+        <thead>
+          <tr><th>核对项</th><th>期望(预览/设置)</th><th>实际文件</th><th>结论</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>容器格式 / 位深</td><td id="v-fmt-exp">—</td><td id="v-fmt-act">—</td><td id="v-fmt-ok">—</td></tr>
+          <tr><td>声道数</td><td id="v-ch-exp">—</td><td id="v-ch-act">—</td><td id="v-ch-ok">—</td></tr>
+          <tr><td>采样率 / 时长</td><td id="v-dur-exp">—</td><td id="v-dur-act">—</td><td id="v-dur-ok">—</td></tr>
+          <tr><td>偏置(容器 / 量化残差, LSB)</td><td id="v-bias-exp">—</td><td id="v-bias-act">—</td><td id="v-bias-ok">—</td></tr>
+          <tr><td>与预览逐样本差(最大)</td><td id="v-samp-exp">0</td><td id="v-samp-act">—</td><td id="v-samp-ok">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted small" id="verify-note">导出后自动在内存回读;也可用“回读任意 WAV”检查下载到磁盘的文件。8 位 WAV 采用无符号偏移码,本身无直流偏置。</p>
+  </section>
+
+  <footer class="muted small">
+    全部计算在本机浏览器完成 · 量化管线:浮点 → 有符号整数码(可固定随机扰动)→ 还原浮点,试听与导出的都是整数码还原值。
+  </footer>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
