@@ -20,6 +20,13 @@ data.json
 *.sqlite3
 tmp/
 
+# 本工具导出的视频与本地比较配置
+*.mp4
+*.mkv
+*.mov
+*.avi
+compare_configs.json
+
 # ---- 依赖与构建产物 ----
 node_modules/
 __pycache__/

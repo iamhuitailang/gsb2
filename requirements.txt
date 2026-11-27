@@ -1,0 +1,7 @@
+# 运行依赖（本机已全部具备，无额外安装）
+numpy>=1.24
+opencv-python>=4.8
+Pillow>=10.0
+
+# GUI 使用 Python 标准库 tkinter（随 Python 自带，部分 Linux 需 python3-tk）
+# 测试使用标准库 unittest，无需额外框架
