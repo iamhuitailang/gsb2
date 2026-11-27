@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WebGL 重复绘制(Overdraw)检查</title>
+<style>
+  :root{
+    --bg:#14151a; --panel:#1d1f26; --panel2:#23262f; --line:#333743;
+    --text:#d8dae2; --dim:#8b90a0; --accent:#5b9dff; --ok:#4caf7d; --bad:#e5636a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:13px/1.5 "PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+  header{padding:10px 16px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  header h1{font-size:16px;margin:0}
+  header .sub{color:var(--dim);font-size:12px}
+  #controls{display:flex;flex-wrap:wrap;gap:10px 16px;padding:10px 16px;background:var(--panel);border-bottom:1px solid var(--line);align-items:center}
+  .ctl{display:flex;align-items:center;gap:6px}
+  .ctl label{color:var(--dim);white-space:nowrap}
+  select,input[type=number]{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:4px;padding:3px 6px;font:inherit}
+  input[type=number]{width:64px}
+  button{background:var(--accent);color:#fff;border:0;border-radius:4px;padding:5px 12px;cursor:pointer;font:inherit}
+  button.ghost{background:var(--panel2);border:1px solid var(--line);color:var(--text)}
+  button:hover{filter:brightness(1.15)}
+  main{display:flex;gap:14px;padding:14px 16px;align-items:flex-start;flex-wrap:wrap}
+  .views{display:flex;gap:14px;flex-wrap:wrap}
+  .view{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px}
+  .view-title{font-size:12px;color:var(--dim);margin-bottom:6px;display:flex;justify-content:space-between;gap:8px}
+  .canvas-wrap{position:relative;width:440px;height:440px}
+  canvas{display:block;width:100%;height:100%;image-rendering:pixelated;background:#000;cursor:crosshair}
+  .marker{position:absolute;width:14px;height:14px;border:2px solid #fff;border-radius:50%;box-shadow:0 0 0 1px #000,inset 0 0 0 1px #000;transform:translate(-50%,-50%);pointer-events:none;display:none}
+  .legend{margin-top:6px}
+  .legend .bar{height:10px;border-radius:3px;background:linear-gradient(90deg,#111114 0%,#2b6cb0 25%,#38a169 50%,#d69e2e 75%,#e53e3e 100%)}
+  .legend .ticks{display:flex;justify-content:space-between;color:var(--dim);font-size:11px;margin-top:2px}
+  aside{flex:1;min-width:380px;display:flex;flex-direction:column;gap:12px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+  .card h2{font-size:13px;margin:0 0 8px;color:var(--text)}
+  .card h2 .hint{font-weight:normal;color:var(--dim);font-size:11px;margin-left:6px}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+  .stat{background:var(--panel2);border-radius:5px;padding:6px 8px}
+  .stat .v{font-size:17px;font-weight:600}
+  .stat .k{color:var(--dim);font-size:11px}
+  .stat .d{font-size:11px;color:var(--accent)}
+  table{border-collapse:collapse;width:100%;font-size:12px}
+  th,td{border:1px solid var(--line);padding:3px 7px;text-align:right;white-space:nowrap}
+  th{background:var(--panel2);color:var(--dim);font-weight:normal}
+  td.l,th.l{text-align:left}
+  .ok{color:var(--ok)} .bad{color:var(--bad)} .dim{color:var(--dim)}
+  .sw{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:4px}
+  #inspector .pt{color:var(--accent)}
+  details{color:var(--dim);font-size:12px}
+  details summary{cursor:pointer;color:var(--text)}
+  footer{padding:8px 16px;border-top:1px solid var(--line);color:var(--dim);font-size:11px;display:flex;gap:16px;flex-wrap:wrap}
+  .err{background:#5a2b2e;border:1px solid #8a3b40;color:#ffd7d9;padding:8px 12px;border-radius:6px;margin:10px 16px;display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>WebGL 重复绘制(Overdraw)检查</h1>
+  <span class="sub">同一镜头 / 同一场景:左图普通渲染,右图逐像素绘制次数热图。点击任意画面查看该点的候选物件与遮挡结果。</span>
+</header>
+
+<div id="glError" class="err"></div>
+
+<div id="controls">
+  <div class="ctl"><label>布局</label>
+    <select id="selLayout">
+      <option value="occluder">大块遮挡(前有大板)</option>
+      <option value="interleave">互相穿插(环状交叠)</option>
+      <option value="nested">嵌套堆叠(同心层)</option>
+    </select>
+  </div>
+  <div class="ctl"><label>绘制顺序</label>
+    <select id="selOrder">
+      <option value="front2back">前 → 后(近处先画)</option>
+      <option value="back2front">后 → 前(远处先画)</option>
+      <option value="asdefined">定义顺序</option>
+    </select>
+  </div>
+  <div class="ctl"><label>深度写入</label>
+    <select id="selDepth">
+      <option value="opaque">仅实心片写深度</option>
+      <option value="all">全部写深度</option>
+      <option value="none">全部不写深度</option>
+    </select>
+  </div>
+  <div class="ctl"><label>分辨率</label>
+    <select id="selRes">
+      <option>256</option><option>384</option><option selected>512</option><option>768</option>
+    </select>
+  </div>
+  <div class="ctl"><label>场景视野</label>
+    <select id="selScene">
+      <option value="1.6">近(±1.6)</option>
+      <option value="2.4" selected>标准(±2.4)</option>
+      <option value="3.6">远(±3.6)</option>
+    </select>
+  </div>
+  <div class="ctl"><label>热图来源</label>
+    <select id="selHeat">
+      <option value="submitted">提交次数</option>
+      <option value="survived">遮挡后次数</option>
+      <option value="diff">差值(被挡掉的)</option>
+    </select>
+  </div>
+  <div class="ctl"><label><input type="checkbox" id="chkLock"> 锁定色阶</label>
+    <input type="number" id="numMax" min="1" max="64" value="8" title="锁定时使用的色阶上限">
+  </div>
+  <div class="ctl">
+    <button id="btnExportJson" class="ghost">导出统计 JSON</button>
+    <button id="btnExportPng" class="ghost">导出热图 PNG</button>
+    <label class="dim"><input type="checkbox" id="chkPixels"> JSON 含逐像素数据</label>
+  </div>
+</div>
+
+<main>
+  <div class="views">
+    <div class="view">
+      <div class="view-title"><span>普通画面(当前顺序 + 深度设置)</span><span id="cfgLabel"></span></div>
+      <div class="canvas-wrap" id="wrapN"><canvas id="viewNormal"></canvas><div class="marker" id="markerN"></div></div>
+    </div>
+    <div class="view">
+      <div class="view-title"><span>计数热图</span><span id="heatLabel"></span></div>
+      <div class="canvas-wrap" id="wrapH"><canvas id="viewHeat"></canvas><div class="marker" id="markerH"></div></div>
+      <div class="legend">
+        <div class="bar"></div>
+        <div class="ticks"><span>0</span><span id="legendMid"></span><span id="legendMax"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <aside>
+    <div class="card">
+      <h2>整体统计<span class="hint">括号内为与上一次渲染的差值</span></h2>
+      <div class="stats" id="statsGrid"></div>
+      <div id="histogram" style="margin-top:8px" class="dim"></div>
+    </div>
+
+    <div class="card">
+      <h2>逐物件统计<span class="hint">看差异来自哪一层;提交 = 光栅化出的片元,通过 = 过了深度测试的片元</span></h2>
+      <table id="objTable">
+        <thead><tr><th class="l">物件</th><th>面数</th><th>类型</th><th>提交片元</th><th>通过片元</th><th>被挡比例</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>取样点校验<span class="hint">期望次数由 CPU 按矩形几何精确推演,实测来自 GPU 计数纹理</span></h2>
+      <table id="sampleTable">
+        <thead><tr><th class="l">取样点</th><th>世界坐标</th><th>提交(实测/期望)</th><th>遮挡后(实测/期望)</th><th>判定</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="card" id="inspector">
+      <h2>点位检查<span class="hint">点击左侧任意画面</span></h2>
+      <div id="inspBody" class="dim">尚未选择位置。</div>
+    </div>
+
+    <div class="card">
+      <details>
+        <summary>说明:两种次数有什么区别?</summary>
+        <p><b>提交次数</b>:该像素被光栅化出的片元总数(深度测试关闭时计数),即 GPU「画了几遍」。<br>
+        <b>遮挡后次数</b>:按当前绘制顺序与深度写入设置,真正通过深度测试的片元数。<br>
+        两者差值就是被深度遮挡省掉的绘制。前→后排序 + 实心写深度时遮挡最有效;半透明片通常不写深度,排在它后面的片仍会通过。</p>
+        <p>同一个物件若由多片几何组成(如「十字片」的两条臂),在重合区域每片各算一次,点位检查里会按面分别列出。</p>
+      </details>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  <span id="selftest">计数管线自检:…</span>
+  <span>相机:固定正交,普通画面与计数画面共用同一投影矩阵与场景数据。</span>
+</footer>
+
+<script>
+'use strict';
+/* ================= 基础 ================= */
+const CAM_Z = 10;                 // 相机位于 z=+10,朝 -z 看;片 z ∈ [0,1],z 越大越近
+const $ = id => document.getElementById(id);
+const canvasN = $('viewNormal'), canvasH = $('viewHeat');
+const gl = canvasN.getContext('webgl2', {antialias:false, preserveDrawingBuffer:true});
+const hctx = canvasH.getContext('2d');
+
+const state = {
+  layout:'occluder', order:'front2back', depthMode:'opaque',
+  res:512, sceneS:2.4, heatSrc:'submitted', lockMax:false, maxLock:8,
+};
+
+function fail(msg){ const e=$('glError'); e.style.display='block'; e.textContent=msg; }
+if(!gl){ fail('当前浏览器不支持 WebGL2,无法运行。'); throw new Error('no webgl2'); }
+
+/* ================= 场景定义(程序化生成的几何片) ================= */
+// face: {x0,y0,x1,y1,z,color:[r,g,b,a]}  世界坐标,与屏幕平行的矩形片
+function rect(cx,cy,w,h){ return [cx-w/2, cy-h/2, cx+w/2, cy+h/2]; }
+function F(r,z,c){ return {x0:r[0],y0:r[1],x1:r[2],y1:r[3],z, color:c, translucent:c[3]<0.999}; }
+
+const LAYOUTS = {
+  occluder:{ name:'大块遮挡', build(){
+    return {
+      objects:[
+        {name:'后景-左',   faces:[F(rect(-0.9, 0.5,1.2,1.2),0.10,[0.25,0.45,0.85,1])]},
+        {name:'后景-右下', faces:[F(rect( 0.7,-0.6,1.4,1.0),0.15,[0.25,0.65,0.45,1])]},
+        {name:'后景-半透明',faces:[F(rect( 0.2, 0.7,1.6,0.9),0.20,[0.60,0.40,0.85,0.50])]},
+        {name:'后景-条带', faces:[F(rect(-0.3,-0.9,2.2,0.5),0.25,[0.90,0.55,0.20,0.45])]},
+        {name:'十字片',    faces:[F(rect( 0.1,-0.1,1.8,0.5),0.550,[0.85,0.30,0.35,0.55]),
+                                   F(rect( 0.1,-0.1,0.5,1.8),0.552,[0.85,0.30,0.35,0.55])]},
+        {name:'前景大板',  faces:[F(rect(-0.05,0.05,1.7,1.7),0.90,[0.55,0.60,0.65,1])]},
+      ],
+      samples:[
+        {name:'遮挡区(大板+后景)', x: 0.30, y: 0.35},
+        {name:'十字重合(同物件两面)', x: 0.10, y:-0.20},
+        {name:'无遮挡单层',       x:-1.10, y: 0.90},
+        {name:'边缘层叠(条带+大板)', x:-0.50, y:-0.70},
+      ],
+    };
+  }},
+  interleave:{ name:'互相穿插', build(){
+    return {
+      objects:[
+        {name:'片1-红',  faces:[F(rect(-0.70, 0.55,1.3,1.0),0.10,[0.80,0.30,0.30,1])]},
+        {name:'片2-黄',  faces:[F(rect( 0.15, 0.75,1.3,1.0),0.20,[0.85,0.70,0.25,0.55])]},
+        {name:'片3-绿',  faces:[F(rect( 0.75, 0.15,1.0,1.3),0.30,[0.30,0.70,0.40,1])]},
+        {name:'片4-青',  faces:[F(rect( 0.55,-0.70,1.3,1.0),0.40,[0.30,0.75,0.80,0.50])]},
+        {name:'十字片',  faces:[F(rect( 0.00, 0.00,1.6,0.45),0.450,[0.90,0.90,0.90,0.40]),
+                                 F(rect( 0.00, 0.00,0.45,1.6),0.452,[0.90,0.90,0.90,0.40])]},
+        {name:'片5-紫',  faces:[F(rect(-0.35,-0.80,1.3,1.0),0.50,[0.75,0.35,0.70,1])]},
+        {name:'片6-蓝',  faces:[F(rect(-0.95,-0.10,1.0,1.3),0.60,[0.30,0.45,0.85,0.55])]},
+      ],
+      samples:[
+        {name:'中心十字(同物件两面)', x: 0.00, y: 0.00},
+        {name:'上右交叠(黄+绿)',    x: 0.40, y: 0.55},
+        {name:'左下交叠(紫+蓝)',    x:-0.60, y:-0.60},
+        {name:'右中交叠(绿+青)',    x: 0.75, y:-0.35},
+      ],
+    };
+  }},
+  nested:{ name:'嵌套堆叠', build(){
+    return {
+      objects:[
+        {name:'层1-最外', faces:[F(rect(0,0,2.6,2.6),0.10,[0.30,0.50,0.85,1])]},
+        {name:'层2-半透明',faces:[F(rect(0,0,2.0,2.0),0.30,[0.85,0.60,0.25,0.55])]},
+        {name:'层3',     faces:[F(rect(0,0,1.4,1.4),0.50,[0.35,0.70,0.45,1])]},
+        {name:'层4-最内', faces:[F(rect(0,0,0.8,0.8),0.70,[0.80,0.35,0.40,0.60])]},
+        {name:'角块',    faces:[F(rect(1.05,-1.05,0.5,0.5),0.40,[0.60,0.55,0.80,1])]},
+      ],
+      samples:[
+        {name:'中心(四层全叠)', x: 0.00, y: 0.00},
+        {name:'两层区',        x: 0.85, y: 0.00},
+        {name:'仅最外层',      x: 1.15, y: 1.15},
+        {name:'角块+最外层',   x: 1.05, y:-1.05},
+      ],
+    };
+  }},
+};
+
+/* ================= 全局场景数据 ================= */
+let objects=[], faces=[], samples=[];
+let projMat=null, orderedCache=[];
+let submitted=null, survived=null;          // 全画面计数(CPU 侧读回)
+let perObj=[];                              // [{submitted, survived}]
+let prevPerObj=[], prevTotals=null;
+let lastPick=null;                          // {px, py}
+
+function buildScene(){
+  const built = LAYOUTS[state.layout].build();
+  objects = built.objects; samples = built.samples; faces = [];
+  objects.forEach((o,oi)=>o.faces.forEach(f=>{
+    f.objIdx=oi; f.objName=o.name; f.id=faces.length; faces.push(f);
+  }));
+  buildVBOs();
+  computeOrder();
+}
+function computeOrder(){
+  const idx = faces.slice();
+  if(state.order==='front2back') idx.sort((a,b)=> b.z - a.z || a.id - b.id); // 近(z大)先画
+  else if(state.order==='back2front') idx.sort((a,b)=> a.z - b.z || a.id - b.id);
+  orderedCache = idx;
+}
+function depthWriteFor(f){
+  return state.depthMode==='all' || (state.depthMode==='opaque' && !f.translucent);
+}
+
+/* ================= 矩阵 ================= */
+function ortho(l,r,b,t,n,f){ return [
+  2/(r-l),0,0,0,  0,2/(t-b),0,0,  0,0,-2/(f-n),0,
+  -(r+l)/(r-l), -(t+b)/(t-b), -(f+n)/(f-n), 1]; }
+function translate(x,y,z){ return [1,0,0,0, 0,1,0,0, 0,0,1,0, x,y,z,1]; }
+function mul4(a,b){ const o=new Array(16);
+  for(let c=0;c<4;c++)for(let r=0;r<4;r++){ let s=0;
+    for(let k=0;k<4;k++) s+=a[k*4+r]*b[c*4+k]; o[c*4+r]=s; } return o; }
+function computeProj(){
+  const S=state.sceneS;
+  projMat = mul4(ortho(-S,S,-S,S,0.1,100), translate(0,0,-CAM_Z));
+}
+
+/* ================= 着色器 ================= */
+const VS_SCENE=`#version 300 es
+in vec3 aPos; in vec4 aColor; uniform mat4 uProj; out vec4 vColor;
+void main(){ vColor=aColor; gl_Position=uProj*vec4(aPos,1.0); }`;
+const FS_SCENE=`#version 300 es
+precision mediump float; in vec4 vColor; out vec4 o;
+void main(){ o=vColor; }`;
+const VS_POS=`#version 300 es
+in vec3 aPos; uniform mat4 uProj;
+void main(){ gl_Position=uProj*vec4(aPos,1.0); }`;
+const FS_COUNT=`#version 300 es
+precision mediump float; uniform float uVal; out vec4 o;
+void main(){ o=vec4(uVal,0.0,0.0,0.0); }`;
+const FS_LINE=`#version 300 es
+precision mediump float; uniform vec4 uColor; out vec4 o;
+void main(){ o=uColor; }`;
+const VS_FULL=`#version 300 es
+void main(){ vec2 p=vec2(float((gl_VertexID<<1)&2),float(gl_VertexID&2));
+gl_Position=vec4(p*2.0-1.0,0.0,1.0); }`;
+const FS_BG=`#version 300 es
+precision mediump float; uniform float uCell; out vec4 o;
+void main(){ vec2 g=floor(gl_FragCoord.xy/uCell); float c=mod(g.x+g.y,2.0);
+o=vec4(mix(vec3(0.13,0.13,0.16),vec3(0.22,0.22,0.26),c),1.0); }`;
+
+function compile(vsSrc, fsSrc){
+  const mk=(t,s)=>{ const sh=gl.createShader(t); gl.shaderSource(sh,s); gl.compileShader(sh);
+    if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh)); return sh; };
+  const p=gl.createProgram();
+  gl.attachShader(p,mk(gl.VERTEX_SHADER,vsSrc)); gl.attachShader(p,mk(gl.FRAGMENT_SHADER,fsSrc));
+  gl.linkProgram(p);
+  if(!gl.getProgramParameter(p,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  return p;
+}
+let progScene, progCount, progLine, progBG, progFullCount;
+let uSceneProj, uCountProj, uCountVal, uLineProj, uLineColor, uBGCell, uFullCountVal;
+let vbo=null, vboLine=null, vaoScene=null, vaoCount=null, vaoLine=null;
+let fbo=null, countTex=null, depthRB=null;
+const CM = {kind:'float', step:1, readFormat:0, readType:0};
+
+function initGL(){
+  progScene=compile(VS_SCENE,FS_SCENE); uSceneProj=gl.getUniformLocation(progScene,'uProj');
+  progCount=compile(VS_POS,FS_COUNT);
+  uCountProj=gl.getUniformLocation(progCount,'uProj'); uCountVal=gl.getUniformLocation(progCount,'uVal');
+  progLine=compile(VS_POS,FS_LINE);
+  uLineProj=gl.getUniformLocation(progLine,'uProj'); uLineColor=gl.getUniformLocation(progLine,'uColor');
+  progBG=compile(VS_FULL,FS_BG); uBGCell=gl.getUniformLocation(progBG,'uCell');
+  progFullCount=compile(VS_FULL,FS_COUNT); uFullCountVal=gl.getUniformLocation(progFullCount,'uVal');
+  fbo=gl.createFramebuffer();
+}
+
+function buildVBOs(){
+  // 三角形面片 VBO:[x,y,z,r,g,b,a] × 6/面
+  const tri=new Float32Array(faces.length*6*7);
+  faces.forEach((f,i)=>{
+    const v=[[f.x0,f.y0],[f.x1,f.y0],[f.x1,f.y1],[f.x0,f.y0],[f.x1,f.y1],[f.x0,f.y1]];
+    v.forEach((p,j)=>{ const o=(i*6+j)*7;
+      tri[o]=p[0]; tri[o+1]=p[1]; tri[o+2]=f.z;
+      tri[o+3]=f.color[0]; tri[o+4]=f.color[1]; tri[o+5]=f.color[2]; tri[o+6]=f.color[3]; });
+  });
+  // 轮廓线 VBO:[x,y,z] × 5/面
+  const ln=new Float32Array(faces.length*5*3);
+  faces.forEach((f,i)=>{
+    const v=[[f.x0,f.y0],[f.x1,f.y0],[f.x1,f.y1],[f.x0,f.y1],[f.x0,f.y0]];
+    v.forEach((p,j)=>{ const o=(i*5+j)*3; ln[o]=p[0]; ln[o+1]=p[1]; ln[o+2]=f.z; });
+  });
+  if(vbo) gl.deleteBuffer(vbo); if(vboLine) gl.deleteBuffer(vboLine);
+  vbo=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,vbo);
+  gl.bufferData(gl.ARRAY_BUFFER,tri,gl.STATIC_DRAW);
+  vboLine=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,vboLine);
+  gl.bufferData(gl.ARRAY_BUFFER,ln,gl.STATIC_DRAW);
+  for(const v of [vaoScene,vaoCount,vaoLine]) if(v) gl.deleteVertexArray(v);
+  vaoScene=gl.createVertexArray(); gl.bindVertexArray(vaoScene);
+  gl.bindBuffer(gl.ARRAY_BUFFER,vbo);
+  let loc=gl.getAttribLocation(progScene,'aPos');
+  gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc,3,gl.FLOAT,false,28,0);
+  loc=gl.getAttribLocation(progScene,'aColor');
+  gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc,4,gl.FLOAT,false,28,12);
+  vaoCount=gl.createVertexArray(); gl.bindVertexArray(vaoCount);
+  gl.bindBuffer(gl.ARRAY_BUFFER,vbo);
+  loc=gl.getAttribLocation(progCount,'aPos');
+  gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc,3,gl.FLOAT,false,28,0);
+  vaoLine=gl.createVertexArray(); gl.bindVertexArray(vaoLine);
+  gl.bindBuffer(gl.ARRAY_BUFFER,vboLine);
+  loc=gl.getAttribLocation(progLine,'aPos');
+  gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc,3,gl.FLOAT,false,12,0);
+  gl.bindVertexArray(null);
+}
+
+/* ================= 计数管线 ================= */
+function setupCounter(kind){
+  CM.kind=kind; CM.step = kind==='float' ? 1 : 1/255;
+  const W=state.res;
+  if(countTex) gl.deleteTexture(countTex);
+  countTex=gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D,countTex);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+  if(kind==='float'){
+    if(!gl.getExtension('EXT_color_buffer_float') && !gl.getExtension('EXT_color_buffer_half_float')) return false;
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.R16F,W,W,0,gl.RED,gl.HALF_FLOAT,null);
+  }else{
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,W,W,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+  }
+  gl.bindFramebuffer(gl.FRAMEBUFFER,fbo);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,countTex,0);
+  gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,null);
+  if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE) return false;
+  if(kind==='float'){
+    CM.readFormat=gl.getParameter(gl.IMPLEMENTATION_COLOR_READ_FORMAT);
+    CM.readType=gl.getParameter(gl.IMPLEMENTATION_COLOR_READ_TYPE);
+    const okF=CM.readFormat===gl.RED||CM.readFormat===gl.RGBA;
+    const okT=CM.readType===gl.FLOAT||CM.readType===gl.HALF_FLOAT;
+    if(!(okF&&okT)) return false;
+  }
+  return true;
+}
+function halfToFloat(h){ const s=(h&0x8000)?-1:1,e=(h>>10)&0x1f,m=h&0x3ff;
+  if(e===0) return s*m*Math.pow(2,-24);
+  if(e===31) return m?NaN:s*Infinity;
+  return s*(1+m/1024)*Math.pow(2,e-15); }
+
+function readCounts(W){
+  if(CM.kind==='float'){
+    if(CM.readType===gl.FLOAT){
+      if(CM.readFormat===gl.RED){ const a=new Float32Array(W*W);
+        gl.readPixels(0,0,W,W,gl.RED,gl.FLOAT,a); return a; }
+      const a=new Float32Array(W*W*4);
+      gl.readPixels(0,0,W,W,gl.RGBA,gl.FLOAT,a);
+      const o=new Float32Array(W*W);
+      for(let i=0;i<W*W;i++) o[i]=a[i*4]; return o;
+    }
+    const ch=CM.readFormat===gl.RED?1:4, a=new Uint16Array(W*W*ch);
+    gl.readPixels(0,0,W,W,CM.readFormat,gl.HALF_FLOAT,a);
+    const o=new Float32Array(W*W);
+    for(let i=0;i<W*W;i++) o[i]=halfToFloat(a[i*ch]); return o;
+  }
+  const a=new Uint8Array(W*W*4);
+  gl.readPixels(0,0,W,W,gl.RGBA,gl.UNSIGNED_BYTE,a);
+  const o=new Float32Array(W*W);
+  for(let i=0;i<W*W;i++) o[i]=a[i*4]; return o;
+}
+
+// 渲染一遍计数 pass 并读回。useDepth=false → 提交次数;true → 遮挡后次数。
+// objIdx>=0 时只有该物件的面贡献计数(其余面照常参与深度测试/写入),用于逐物件统计。
+function countPass(useDepth, objIdx){
+  const W=state.res;
+  gl.bindFramebuffer(gl.FRAMEBUFFER,fbo);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,countTex,0);
+  gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,useDepth?depthRB:null);
+  gl.viewport(0,0,W,W);
+  gl.clearColor(0,0,0,0); gl.clearDepth(1);
+  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  gl.useProgram(progCount);
+  gl.uniformMatrix4fv(uCountProj,false,projMat);
+  gl.bindVertexArray(vaoCount);
+  gl.enable(gl.BLEND); gl.blendFunc(gl.ONE,gl.ONE);
+  if(useDepth){ gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LESS); }
+  else { gl.disable(gl.DEPTH_TEST); gl.depthMask(false); }
+  for(const f of orderedCache){
+    gl.uniform1f(uCountVal,(objIdx<0||f.objIdx===objIdx)?CM.step:0);
+    if(useDepth) gl.depthMask(depthWriteFor(f));
+    gl.drawArrays(gl.TRIANGLES,f.id*6,6);
+  }
+  gl.bindVertexArray(null);
+  gl.disable(gl.BLEND); gl.depthMask(true);
+  return readCounts(W);
+}
+
+function selfTest(){
+  for(const kind of ['float','byte']){
+    if(!setupCounter(kind)) continue;
+    const W=state.res;
+    gl.bindFramebuffer(gl.FRAMEBUFFER,fbo);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER,gl.DEPTH_ATTACHMENT,gl.RENDERBUFFER,null);
+    gl.viewport(0,0,W,W);
+    gl.clearColor(0,0,0,0); gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.useProgram(progFullCount);
+    gl.uniform1f(uFullCountVal,CM.step);
+    gl.enable(gl.BLEND); gl.blendFunc(gl.ONE,gl.ONE);
+    gl.disable(gl.DEPTH_TEST); gl.depthMask(false);
+    for(let i=0;i<3;i++) gl.drawArrays(gl.TRIANGLES,0,3);
+    gl.disable(gl.BLEND); gl.depthMask(true);
+    const a=readCounts(W), c=a[(W>>1)*W+(W>>1)];
+    if(Math.abs(c-3)<0.01) return kind;
+  }
+  return null;
+}
+
+function resizeGL(){
+  const W=state.res;
+  canvasN.width=canvasN.height=W;
+  canvasH.width=canvasH.height=W;
+  if(depthRB) gl.deleteRenderbuffer(depthRB);
+  depthRB=gl.createRenderbuffer();
+  gl.bindRenderbuffer(gl.RENDERBUFFER,depthRB);
+  gl.renderbufferStorage(gl.RENDERBUFFER,gl.DEPTH_COMPONENT24,W,W);
+  setupCounter(CM.kind);
+}
+
+/* ================= 普通画面 ================= */
+function renderNormal(){
+  const W=state.res;
+  gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+  gl.viewport(0,0,W,W);
+  gl.disable(gl.BLEND);
+  gl.clearColor(0.10,0.10,0.12,1); gl.clearDepth(1);
+  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  gl.disable(gl.DEPTH_TEST); gl.depthMask(false);
+  gl.useProgram(progBG);
+  gl.uniform1f(uBGCell,W/16);
+  gl.drawArrays(gl.TRIANGLES,0,3);
+  gl.enable(gl.DEPTH_TEST); gl.depthFunc(gl.LESS);
+  gl.useProgram(progScene);
+  gl.uniformMatrix4fv(uSceneProj,false,projMat);
+  gl.bindVertexArray(vaoScene);
+  for(const f of orderedCache){
+    gl.depthMask(depthWriteFor(f));
+    if(f.translucent){ gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA); }
+    else gl.disable(gl.BLEND);
+    gl.drawArrays(gl.TRIANGLES,f.id*6,6);
+  }
+  gl.disable(gl.BLEND); gl.disable(gl.DEPTH_TEST); gl.depthMask(false);
+  gl.useProgram(progLine);
+  gl.uniformMatrix4fv(uLineProj,false,projMat);
+  gl.bindVertexArray(vaoLine);
+  for(const f of faces){
+    const c=f.color;
+    gl.uniform4f(uLineColor,Math.min(c[0]*0.5+0.15,1),Math.min(c[1]*0.5+0.15,1),Math.min(c[2]*0.5+0.15,1),1);
+    gl.drawArrays(gl.LINE_STRIP,f.id*5,5);
+  }
+  gl.bindVertexArray(null);
+  gl.depthMask(true);
+}
+
+/* ================= 热图(2D canvas,CPU 上色) ================= */
+const STOPS=[[0,[17,17,20]],[0.25,[43,108,176]],[0.5,[56,161,105]],[0.75,[214,158,46]],[1,[229,62,62]]];
+function rampColor(v,max){
+  if(v<=0) return STOPS[0][1];
+  const t=Math.min(v/max,1);
+  for(let i=1;i<STOPS.length;i++){
+    if(t<=STOPS[i][0]){
+      const t0=STOPS[i-1][0],c0=STOPS[i-1][1],t1=STOPS[i][0],c1=STOPS[i][1];
+      const k=(t-t0)/(t1-t0);
+      return [0,1,2].map(j=>Math.round(c0[j]+(c1[j]-c0[j])*k));
+    }
+  }
+  return STOPS[STOPS.length-1][1];
+}
+function heatArray(){
+  const W=state.res,n=W*W;
+  if(state.heatSrc==='submitted') return submitted;
+  if(state.heatSrc==='survived') return survived;
+  const d=new Float32Array(n);
+  for(let i=0;i<n;i++) d[i]=submitted[i]-survived[i];
+  return d;
+}
+function heatMax(arr){
+  if(state.lockMax) return Math.max(1,state.maxLock);
+  let m=0; for(let i=0;i<arr.length;i++) if(arr[i]>m) m=arr[i];
+  return Math.max(1,m);
+}
+function renderHeat(){
+  const W=state.res, arr=heatArray(), max=heatMax(arr);
+  const img=hctx.createImageData(W,W);
+  const d=img.data;
+  for(let i=0;i<W*W;i++){
+    const c=rampColor(arr[i],max);
+    d[i*4]=c[0]; d[i*4+1]=c[1]; d[i*4+2]=c[2]; d[i*4+3]=255;
+  }
+  hctx.putImageData(img,0,0);
+  const srcName={submitted:'提交次数',survived:'遮挡后次数',diff:'差值(被挡掉的)'}[state.heatSrc];
+  $('heatLabel').textContent=srcName+(state.lockMax?` · 色阶锁定 0–${max}`:` · 色阶自动 0–${max}`);
+  $('legendMid').textContent=(max/2).toFixed(max%1?1:0);
+  $('legendMax').textContent='≥'+max;
+  return max;
+}
+
+/* ================= CPU 推演(已知正确答案) ================= */
+function cpuSim(wx,wy){
+  const rows=[]; let curMin=Infinity, sub=0, surv=0;
+  orderedCache.forEach((f,idx)=>{
+    if(wx>f.x0 && wx<f.x1 && wy>f.y0 && wy<f.y1){
+      sub++;
+      const dist=CAM_Z-f.z, pass=dist<curMin-1e-9, writes=depthWriteFor(f);
+      if(pass){ surv++; if(writes) curMin=dist; }
+      rows.push({f,idx,dist,pass,writes});
+    }
+  });
+  return {submitted:sub, survived:surv, rows};
+}
+
+/* ================= 统计与 DOM ================= */
+const fmt=n=>n.toLocaleString('en-US');
+function delta(cur,prev){
+  if(prev==null||prev===cur) return '';
+  const d=cur-prev;
+  return `<div class="d">${d>0?'+':''}${fmt(d)}</div>`;
+}
+function sumArr(a){ let s=0; for(let i=0;i<a.length;i++) s+=a[i]; return s; }
+
+function updateStats(){
+  const tSub=sumArr(submitted), tSur=sumArr(survived);
+  let maxSub=0,covered=0;
+  const buckets=[0,0,0,0,0,0,0]; // 0,1,2,3,4,5,6+
+  for(let i=0;i<submitted.length;i++){
+    const v=submitted[i];
+    if(v>0) covered++;
+    if(v>maxSub) maxSub=v;
+    buckets[Math.min(v,6)]++;
+  }
+  const p=prevTotals;
+  $('statsGrid').innerHTML=[
+    ['提交片元总数',fmt(tSub),delta(tSub,p&&p.tSub)],
+    ['遮挡后通过',fmt(tSur),delta(tSur,p&&p.tSur)],
+    ['被挡掉',fmt(tSub-tSur)+(tSub?` (${((tSub-tSur)/tSub*100).toFixed(1)}%)`:''),delta(tSub-tSur,p&&p.tSub-p.tSur)],
+    ['单像素最大提交',maxSub,''],
+    ['覆盖像素',fmt(covered),delta(covered,p&&p.covered)],
+    ['平均重复(提交/覆盖)',covered?(tSub/covered).toFixed(2):'—',''],
+  ].map(([k,v,d])=>`<div class="stat"><div class="v">${v}</div><div class="k">${k}</div>${d}</div>`).join('');
+  $('histogram').textContent='提交次数分布(像素数): '+
+    buckets.map((b,i)=>`${i===6?'6+':i}次→${fmt(b)}`).join('  ');
+  prevTotals={tSub,tSur,covered};
+}
+
+function updateObjTable(){
+  const tb=$('objTable').querySelector('tbody');
+  tb.innerHTML=objects.map((o,i)=>{
+    const cur=perObj[i], prev=prevPerObj[i];
+    const type=o.faces.every(f=>!f.translucent)?'实心':o.faces.every(f=>f.translucent)?'半透明':'混合';
+    const blocked=cur.submitted?((cur.submitted-cur.survived)/cur.submitted*100).toFixed(1)+'%':'—';
+    const d=prev&&prev.survived!==cur.survived?` <span class="dim">(${cur.survived-prev.survived>0?'+':''}${fmt(cur.survived-prev.survived)})</span>`:'';
+    const c=o.faces[0].color;
+    return `<tr><td class="l"><span class="sw" style="background:rgb(${c[0]*255|0},${c[1]*255|0},${c[2]*255|0})"></span>${o.name}</td>`+
+      `<td>${o.faces.length}</td><td>${type}</td><td>${fmt(cur.submitted)}</td><td>${fmt(cur.survived)}${d}</td><td>${blocked}</td></tr>`;
+  }).join('');
+  prevPerObj=perObj.map(p=>({...p}));
+}
+
+function worldToPixel(wx,wy){
+  const W=state.res,S=state.sceneS;
+  return [Math.min(W-1,Math.max(0,Math.floor((wx+S)/(2*S)*W))),
+          Math.min(W-1,Math.max(0,Math.floor((wy+S)/(2*S)*W)))];
+}
+function pixelToWorldCenter(px,py){
+  const W=state.res,S=state.sceneS;
+  return [(px+0.5)/W*2*S-S,(py+0.5)/W*2*S-S];
+}
+
+function updateSampleTable(){
+  const tb=$('sampleTable').querySelector('tbody');
+  tb.innerHTML=samples.map(s=>{
+    const [px,py]=worldToPixel(s.x,s.y);
+    const [cx,cy]=pixelToWorldCenter(px,py);
+    const exp=cpuSim(cx,cy);
+    const mSub=submitted[py*state.res+px], mSur=survived[py*state.res+px];
+    const ok=mSub===exp.submitted&&mSur===exp.survived;
+    return `<tr><td class="l">${s.name}</td><td>(${s.x.toFixed(2)}, ${s.y.toFixed(2)})</td>`+
+      `<td>${mSub} / ${exp.submitted}</td><td>${mSur} / ${exp.survived}</td>`+
+      `<td class="${ok?'ok':'bad'}">${ok?'✓ 一致':'✗ 不一致'}</td></tr>`;
+  }).join('');
+}
+
+/* ================= 点位检查 ================= */
+function showInspection(px,py){
+  lastPick={px,py};
+  const W=state.res;
+  const [wx,wy]=pixelToWorldCenter(px,py);
+  const gSub=submitted[py*W+px], gSur=survived[py*W+px];
+  const sim=cpuSim(wx,wy);
+  // 按物件聚合(同一物件多面重合时分别计次)
+  const byObj={};
+  sim.rows.forEach(r=>{
+    const k=r.f.objIdx;
+    byObj[k]=byObj[k]||{name:r.f.objName,hit:0,pass:0};
+    byObj[k].hit++; if(r.pass) byObj[k].pass++;
+  });
+  const rowsHtml=sim.rows.map(r=>
+    `<tr><td>${r.idx+1}</td><td class="l">${r.f.objName}#${r.f.id}</td><td>${r.f.z.toFixed(3)}</td>`+
+    `<td>${r.f.translucent?'半透明':'实心'}</td>`+
+    `<td class="${r.pass?'ok':'dim'}">${r.pass?'通过':'被挡'}</td><td>${r.writes?'是':'否'}</td></tr>`
+  ).join('');
+  $('inspBody').innerHTML=
+    `<p>像素 <span class="pt">[${px}, ${py}]</span> · 世界坐标 <span class="pt">(${wx.toFixed(3)}, ${wy.toFixed(3)})</span><br>`+
+    `GPU 实测:提交 <b>${gSub}</b> 次,遮挡后剩 <b>${gSur}</b> 次 · CPU 推演:提交 ${sim.submitted},遮挡后 ${sim.survived}`+
+    (gSub===sim.submitted&&gSur===sim.survived?' <span class="ok">✓</span>':' <span class="dim">(边缘像素可能因光栅化规则差 1)</span>')+`</p>`+
+    (sim.rows.length?
+      `<table><thead><tr><th>绘制序</th><th class="l">物件#面</th><th>z</th><th>类型</th><th>深度判定</th><th>写深度</th></tr></thead><tbody>${rowsHtml}</tbody></table>`+
+      `<p class="dim">按物件合计: `+Object.values(byObj).map(o=>`${o.name} 命中${o.hit}面→提交+${o.hit},通过+${o.pass}`).join(';')+`</p>`
+      :'<p class="dim">该点无任何片覆盖。</p>');
+  // 标记点
+  const S=state.sceneS;
+  const lx=(wx+S)/(2*S)*100, ty=(1-(wy+S)/(2*S))*100;
+  for(const id of ['markerN','markerH']){
+    const m=$(id); m.style.display='block'; m.style.left=lx+'%'; m.style.top=ty+'%';
+  }
+}
+function onPick(e){
+  const rect=e.currentTarget.getBoundingClientRect();
+  const nx=(e.clientX-rect.left)/rect.width, ny=(e.clientY-rect.top)/rect.height;
+  const W=state.res;
+  const px=Math.min(W-1,Math.max(0,Math.floor(nx*W)));
+  const py=Math.min(W-1,Math.max(0,Math.floor((1-ny)*W))); // GL y 轴向上
+  showInspection(px,py);
+}
+
+/* ================= 导出 ================= */
+function download(blob,name){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+}
+function exportJSON(){
+  const W=state.res;
+  const tSub=sumArr(submitted), tSur=sumArr(survived);
+  const report={
+    tool:'webgl-overdraw-inspector', generatedAt:new Date().toISOString(),
+    config:{
+      layout:state.layout, layoutName:LAYOUTS[state.layout].name,
+      drawOrder:state.order, depthWrite:state.depthMode,
+      resolution:W, sceneHalfExtent:state.sceneS,
+      heatSource:state.heatSrc, heatMaxLocked:state.lockMax,
+      heatMax:state.lockMax?state.maxLock:heatMax(heatArray()),
+      counterMode:CM.kind,
+    },
+    stats:{submittedFragments:tSub, survivedFragments:tSur,
+      blockedFragments:tSub-tSur, blockedRatio:tSub?(tSub-tSur)/tSub:0},
+    perObject:objects.map((o,i)=>({name:o.name, faces:o.faces.length,
+      submitted:perObj[i].submitted, survived:perObj[i].survived})),
+    samples:samples.map(s=>{
+      const [px,py]=worldToPixel(s.x,s.y);
+      const [cx,cy]=pixelToWorldCenter(px,py);
+      const exp=cpuSim(cx,cy);
+      return {name:s.name, world:[s.x,s.y], pixel:[px,py],
+        expected:{submitted:exp.submitted,survived:exp.survived},
+        measured:{submitted:submitted[py*W+px],survived:survived[py*W+px]}};
+    }),
+    inspection:lastPick?(()=>{ const {px,py}=lastPick;
+      const [wx,wy]=pixelToWorldCenter(px,py); const sim=cpuSim(wx,wy);
+      return {pixel:[px,py],world:[wx,wy],
+        measured:{submitted:submitted[py*W+px],survived:survived[py*W+px]},
+        candidates:sim.rows.map(r=>({object:r.f.objName,face:r.f.id,z:r.f.z,
+          translucent:r.f.translucent,depthPass:r.pass,depthWrite:r.writes}))};
+    })():null,
+  };
+  if($('chkPixels').checked){
+    report.pixels={width:W,height:W,
+      submitted:Array.from(submitted), survived:Array.from(survived)};
+  }
+  download(new Blob([JSON.stringify(report,null,1)],{type:'application/json'}),
+    `overdraw-${state.layout}-${W}.json`);
+}
+function exportPNG(){
+  canvasH.toBlob(b=>download(b,`overdraw-heatmap-${state.layout}-${state.heatSrc}-${state.res}.png`));
+}
+
+/* ================= 主更新 ================= */
+function fullUpdate(){
+  computeProj();
+  computeOrder();
+  submitted=countPass(false,-1);
+  survived=countPass(true,-1);
+  perObj=objects.map((o,i)=>{
+    const s=sumArr(countPass(false,i));
+    const v=sumArr(countPass(true,i));
+    return {submitted:s, survived:v};
+  });
+  renderNormal();
+  renderHeat();
+  updateStats();
+  updateObjTable();
+  updateSampleTable();
+  if(lastPick) showInspection(lastPick.px,lastPick.py);
+  $('cfgLabel').textContent=
+    `${LAYOUTS[state.layout].name} · ${$('selOrder').selectedOptions[0].textContent} · ${$('selDepth').selectedOptions[0].textContent}`;
+}
+
+/* ================= 事件 ================= */
+function bind(){
+  $('selLayout').onchange=e=>{ state.layout=e.target.value; buildScene(); lastPick=null;
+    for(const id of ['markerN','markerH']) $(id).style.display='none';
+    $('inspBody').textContent='尚未选择位置。'; fullUpdate(); };
+  $('selOrder').onchange=e=>{ state.order=e.target.value; fullUpdate(); };
+  $('selDepth').onchange=e=>{ state.depthMode=e.target.value; fullUpdate(); };
+  $('selRes').onchange=e=>{ state.res=+e.target.value; resizeGL(); fullUpdate(); };
+  $('selScene').onchange=e=>{ state.sceneS=+e.target.value; fullUpdate(); };
+  $('selHeat').onchange=e=>{ state.heatSrc=e.target.value; renderHeat(); };
+  $('chkLock').onchange=e=>{ state.lockMax=e.target.checked; renderHeat(); };
+  $('numMax').onchange=e=>{ state.maxLock=Math.max(1,+e.target.value||1); if(state.lockMax) renderHeat(); };
+  $('btnExportJson').onclick=exportJSON;
+  $('btnExportPng').onclick=exportPNG;
+  canvasN.addEventListener('click',onPick);
+  canvasH.addEventListener('click',onPick);
+}
+
+/* ================= 启动 ================= */
+try{
+  initGL();
+  resizeGL();
+  const mode=selfTest();
+  $('selftest').textContent=mode
+    ? `计数管线自检:通过(${mode==='float'?'R16F 浮点计数':'RGBA8 字节计数,上限 255'})`
+    : '计数管线自检:失败,计数结果可能不可靠';
+  buildScene();
+  bind();
+  fullUpdate();
+}catch(err){
+  fail('初始化失败: '+err.message);
+  throw err;
+}
+</script>
+</body>
+</html>
