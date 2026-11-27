@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FrameLab · 帧率转换与时间映射检查</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>FrameLab <span class="sub">帧率转换 · 时间映射检查</span></h1>
+  <div id="health" class="pill">检查本地服务…</div>
+</header>
+
+<main>
+<!-- 第一步：素材 -->
+<section class="card">
+  <h2>1. 选择本地素材</h2>
+  <div class="row">
+    <input id="srcPath" type="text" placeholder="本地视频绝对路径，如 /Users/me/movies/clip.mp4" spellcheck="false">
+    <button id="btnOpen" class="primary">打开并分析</button>
+    <button id="btnRefreshSamples">刷新样片</button>
+  </div>
+  <div id="samples" class="samples"></div>
+  <div id="probeInfo" class="probe hidden"></div>
+  <div id="analyzeError" class="error-box hidden"></div>
+</section>
+
+<!-- 第二步：参数 -->
+<section class="card hidden" id="settingsCard">
+  <h2>2. 转换参数</h2>
+  <div class="grid4">
+    <label>输出帧率 (fps)
+      <input id="dstFps" type="number" min="1" step="0.01" value="30">
+    </label>
+    <label>播放速度
+      <input id="speed" type="number" min="0.05" step="0.05" value="1">
+    </label>
+    <label>转换方式
+      <select id="method">
+        <option value="nearest">重复 / 丢帧（nearest）</option>
+        <option value="blend">混合帧（blend）</option>
+      </select>
+    </label>
+    <label class="switch-label">音频音调
+      <select id="keepPitch">
+        <option value="1">变速保留音调</option>
+        <option value="0">变速变调</option>
+      </select>
+    </label>
+  </div>
+  <div class="row">
+    <button id="btnApply" class="primary">应用并重新计算</button>
+    <button id="btnSave">保存项目</button>
+    <span id="saveHint" class="hint"></span>
+  </div>
+  <div id="stats" class="stats hidden"></div>
+</section>
+
+<!-- 第三步：预览 -->
+<section class="card hidden" id="previewCard">
+  <h2>3. 运动预览（切换方式对比卡顿 / 拖影）</h2>
+  <div class="preview-grid">
+    <figure>
+      <figcaption>源素材</figcaption>
+      <video id="srcVideo" controls muted playsinline></video>
+      <div class="frame-tag" id="srcTag">—</div>
+    </figure>
+    <figure>
+      <figcaption>转换结果预览（按当前参数即时导出的短预览）</figcaption>
+      <video id="outVideo" controls muted playsinline></video>
+      <div class="frame-tag" id="outTag">—</div>
+    </figure>
+  </div>
+  <div class="row">
+    <button id="btnPreview">生成 2 秒对比预览</button>
+    <span class="hint">预览用与正式导出完全相同的 ffmpeg 滤镜链，仅截取前 2 秒</span>
+  </div>
+</section>
+
+<!-- 第四步：映射表 -->
+<section class="card hidden" id="mappingCard">
+  <h2>4. 帧对应关系（时间码连续，可跳回源素材位置）</h2>
+  <div class="row wrap">
+    <div class="seg" id="kindFilter">
+      <button data-kind="" class="active">全部</button>
+      <button data-kind="exact">精确</button>
+      <button data-kind="duplicate">重复帧</button>
+      <button data-kind="drop">丢帧跳跃</button>
+      <button data-kind="blend">混合帧</button>
+    </div>
+    <input id="jumpOut" type="number" min="0" placeholder="输出帧#">
+    <button id="btnJumpOut">跳到输出帧</button>
+    <input id="jumpSrc" type="number" min="0" placeholder="源帧#">
+    <button id="btnJumpSrc">反查输出位置</button>
+    <label class="inline"><input type="checkbox" id="autoScroll" checked> 联动视频定位</label>
+  </div>
+  <div class="table-wrap">
+    <table id="mapTable">
+      <thead>
+        <tr>
+          <th>输出帧#</th><th>输出时间码</th><th>输出时间(s)</th><th>类型</th>
+          <th>源帧#</th><th>混合帧2</th><th>权重</th>
+          <th>源时间码</th><th>源时间(s)</th><th>源帧预览</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <div class="row pager">
+    <button id="btnPrev">上一页</button>
+    <span id="pageInfo">—</span>
+    <button id="btnNext">下一页</button>
+  </div>
+</section>
+
+<!-- 第五步：导出 -->
+<section class="card hidden" id="exportCard">
+  <h2>5. 导出与项目</h2>
+  <div class="row wrap">
+    <button id="btnExportVideo" class="primary">导出视频 (MP4)</button>
+    <button id="btnExportCsv">导出映射清单 CSV</button>
+    <button id="btnExportJson">导出映射清单 JSON</button>
+  </div>
+  <div id="exportStatus" class="hint"></div>
+  <div id="exportHistory"></div>
+</section>
+</main>
+
+<footer>
+  仅处理本机素材 · 所有转码由本地 ffmpeg 完成 · 项目保存在 <code>.framelab_workspace/</code>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -45,3 +45,7 @@ coverage/
 
 # 生成的示例素材(可用 npm run generate:samples 恢复)
 public/samples/
+
+# FrameLab 运行期工作区（项目、抽帧、导出产物）
+.framelab_workspace/
+framelab_workspace/
