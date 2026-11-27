@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>隔行视频检查台</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>隔行视频检查台</h1>
+  <div class="toolbar">
+    <label class="btn">
+      导入视频
+      <input type="file" id="fileInput" accept="video/*" hidden>
+    </label>
+    <button id="genGood">生成样片（顺序正确）</button>
+    <button id="genBad">生成样片（顺序错误）</button>
+    <span class="sep"></span>
+    <span class="radio-group">
+      场顺序：
+      <label><input type="radio" name="fieldOrder" value="TFF" checked> 顶场先（TFF）</label>
+      <label><input type="radio" name="fieldOrder" value="BFF"> 底场先（BFF）</label>
+    </span>
+    <span id="srcInfo" class="dim">未加载片源</span>
+  </div>
+</header>
+
+<section id="transport">
+  <button id="prevFrame" title="上一帧（两场）">|◀◀</button>
+  <button id="prevField" title="上一场">◀</button>
+  <button id="playBtn">▶ 播放</button>
+  <button id="nextField" title="下一场">▶</button>
+  <button id="nextFrame" title="下一帧（两场）">▶▶|</button>
+  <input type="range" id="slider" min="0" max="0" value="0" step="1">
+  <span id="timeLabel" class="mono">--</span>
+</section>
+
+<main>
+  <div class="row">
+    <div class="panel">
+      <h3>帧预览（交织原帧）</h3>
+      <canvas id="frameView" width="480" height="360"></canvas>
+      <label class="inline"><input type="checkbox" id="tintToggle"> 高亮当前场扫描线</label>
+      <div class="fields-strip">
+        <div>
+          <canvas id="fieldA" width="240" height="180"></canvas>
+          <div id="fieldALabel" class="cap">场①</div>
+        </div>
+        <div class="arrow">→ 时间先后 →</div>
+        <div>
+          <canvas id="fieldB" width="240" height="180"></canvas>
+          <div id="fieldBLabel" class="cap">场②</div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>场步进（当前场单场显示）</h3>
+      <canvas id="fieldView" width="480" height="360"></canvas>
+      <div id="fieldViewLabel" class="cap">--</div>
+      <p class="hint">用 ◀ ▶ 按场逐场步进；切换上方“场顺序”后再次步进，可看到运动方向/顿挫的变化。</p>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>同步对比（左右同时间位置）</h3>
+    <div class="compare-bar">
+      <label>左：
+        <select id="methodL">
+          <option value="weave" selected>原始交织（不处理）</option>
+          <option value="bob">Bob 单场插值</option>
+          <option value="adaptive">运动自适应</option>
+        </select>
+      </label>
+      <label>右：
+        <select id="methodR">
+          <option value="weave">原始交织（不处理）</option>
+          <option value="bob">Bob 单场插值</option>
+          <option value="adaptive" selected>运动自适应</option>
+        </select>
+      </label>
+      <span class="hint">在任意一侧画面上拖拽可框选局部，下方同步放大。</span>
+    </div>
+    <div class="row">
+      <canvas id="viewL" width="480" height="360"></canvas>
+      <canvas id="viewR" width="480" height="360"></canvas>
+    </div>
+    <div class="row">
+      <div><canvas id="zoomL" width="300" height="300"></canvas><div class="cap">左 · 局部放大</div></div>
+      <div><canvas id="zoomR" width="300" height="300"></canvas><div class="cap">右 · 局部放大</div></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>导出</h3>
+    <div class="compare-bar">
+      <label>处理方式：
+        <select id="exportMethod">
+          <option value="bob">Bob 单场插值</option>
+          <option value="adaptive" selected>运动自适应</option>
+          <option value="weave">原始交织（不处理）</option>
+        </select>
+      </label>
+      <button id="exportBtn">导出视频（WebM）</button>
+      <button id="manifestBtn">导出帧对应清单（JSON）</button>
+      <span id="exportStatus" class="dim"></span>
+    </div>
+    <p class="hint">输出帧率 = 场率（帧率×2），时长与源一致；清单中 tailCheck 可核对最后一组场是否完整输出。</p>
+  </div>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
