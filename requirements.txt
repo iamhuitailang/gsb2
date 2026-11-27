@@ -1,0 +1,3 @@
+numpy>=1.26
+# 可选但推荐：ffmpeg 用于 MP3/M4A/FLAC/OGG 等格式和更稳的解码。
+# macOS: brew install ffmpeg
