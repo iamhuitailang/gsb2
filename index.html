@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>指令输入判定 · 可视化拆解</title>
+<style>
+  :root {
+    --bg: #14171c; --panel: #1c2129; --panel2: #232a35; --line: #333c4a;
+    --fg: #d7dee8; --dim: #8b96a5; --accent: #4fc3f7;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 13px/1.5 "SF Mono", Menlo, Consolas, monospace; }
+  h1 { font-size: 16px; margin: 0; }
+  h2 { font-size: 13px; margin: 0 0 8px; color: var(--accent); }
+  button { background: var(--panel2); color: var(--fg); border: 1px solid var(--line); border-radius: 4px; padding: 4px 10px; cursor: pointer; font: inherit; }
+  button:hover { border-color: var(--accent); }
+  button.active { background: var(--accent); color: #10222e; border-color: var(--accent); }
+  header { padding: 10px 16px; border-bottom: 1px solid var(--line); display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; }
+  header .sub { color: var(--dim); font-size: 12px; }
+  main { display: grid; grid-template-columns: 340px 1fr; gap: 10px; padding: 10px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px; margin-bottom: 10px; }
+  .samples button { margin: 0 4px 4px 0; font-size: 12px; }
+  .groupdesc { color: var(--dim); font-size: 12px; margin: 6px 0; }
+  #note { color: #ffd54f; font-size: 12px; min-height: 18px; margin-top: 6px; }
+  textarea { width: 100%; height: 260px; background: #10141a; color: var(--fg); border: 1px solid var(--line); border-radius: 4px; font: 11px/1.4 Menlo, monospace; padding: 6px; }
+  .toolbar { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  #clock { color: #ffd54f; min-width: 110px; }
+  #canvasWrap { overflow: auto; max-height: 460px; border: 1px solid var(--line); border-radius: 4px; background: #10141a; }
+  canvas { display: block; }
+  #log { height: 220px; overflow-y: auto; background: #10141a; border: 1px solid var(--line); border-radius: 4px; padding: 6px; font-size: 12px; }
+  #log div { white-space: nowrap; }
+  .lg-event { color: #90a4ae; } .lg-ignore { color: #616e7a; } .lg-candidate { color: #7ea6c9; }
+  .lg-discard { color: #e57373; } .lg-pending { color: #ffb74d; } .lg-command { color: #aed581; font-weight: bold; }
+  .lg-action { color: #4fc3f7; } .lg-buffer { color: #ce93d8; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  td, th { border: 1px solid var(--line); padding: 2px 6px; text-align: left; }
+  th { color: var(--dim); font-weight: normal; }
+  td input, td select { width: 100%; background: transparent; border: none; color: var(--fg); font: inherit; }
+  td input:focus, td select:focus { outline: 1px solid var(--accent); }
+  .ok { color: #aed581; } .bad { color: #e57373; }
+  .rules { color: var(--dim); font-size: 12px; }
+  .rules b { color: var(--fg); }
+  #fpsOut td { vertical-align: top; }
+</style>
+</head>
+<body>
+<header>
+  <h1>指令输入判定 · 可视化拆解</h1>
+  <span class="sub">判定全部按游戏时间(ms)走 · 同一键既可能是短按、也可能是连续指令的第一下 · 形状 = 动作</span>
+</header>
+<main>
+  <div>
+    <div class="panel samples">
+      <h2>样例（三组可比）</h2>
+      <div id="sampleBtns"></div>
+      <div id="note"></div>
+    </div>
+    <div class="panel">
+      <h2>指令配置（可编辑）</h2>
+      <textarea id="cfgText" spellcheck="false"></textarea>
+      <div style="margin-top:6px; display:flex; gap:6px;">
+        <button id="applyCfg">应用配置并重跑</button>
+        <button id="resetCfg">恢复默认</button>
+      </div>
+    </div>
+    <div class="panel rules">
+      <h2>判定规则</h2>
+      <b>冲突裁决：</b>优先级高 → 步数多 → 凑齐时间早。<br>
+      <b>等后续输入：</b>一条指令凑齐时，若还有以它为前缀的更长候选存活，则挂起；更长候选全部死亡后它才生效。<br>
+      <b>事件消费：</b>生效指令消费掉它用到的事件，引用这些事件的其它候选全部丢弃，一次按键不会被两个动作重复用掉。<br>
+      <b>预存：</b>当前动作不可打断时，成立的指令进入预存，bufferMs 内动作未结束则超时失效；动作结束瞬间预存生效并说明触发指令。<br>
+      <b>重复上报：</b>已按下的键再收到 down 直接忽略。
+    </div>
+    <div class="panel">
+      <h2>帧率无关性重放（需求5）</h2>
+      <div class="toolbar">
+        <button id="runFps">按 24 / 30 / 60 / 144 fps 分别重放当前记录</button>
+      </div>
+      <div id="fpsOut"></div>
+    </div>
+  </div>
+  <div>
+    <div class="panel">
+      <h2>时间轴（事件 / 候选进度 / 丢弃原因 / 动作）</h2>
+      <div class="toolbar">
+        <button id="playBtn">▶ 播放</button>
+        <button id="stepBtn">步进一个事件</button>
+        <button id="resetBtn">重置</button>
+        <label>速度 <select id="speed"><option>0.5</option><option selected>1</option><option>2</option><option>4</option></select>×</label>
+        <span id="clock">t = 0 ms</span>
+      </div>
+      <div id="canvasWrap"><canvas id="cv"></canvas></div>
+    </div>
+    <div class="panel">
+      <h2>事件记录（可编辑一条后重跑）</h2>
+      <div class="toolbar">
+        <button id="applyEvents">应用事件并重跑</button>
+        <button id="addEvent">+ 添加事件</button>
+        <span style="color:var(--dim)">修改任意一格 → 应用 → 自动重放到当前时刻</span>
+      </div>
+      <table id="evTable">
+        <thead><tr><th>#</th><th>t (ms)</th><th>键</th><th>类型</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="panel">
+      <h2>判定日志</h2>
+      <div id="log"></div>
+    </div>
+  </div>
+</main>
+<script type="module" src="dist/main.js"></script>
+</body>
+</html>
