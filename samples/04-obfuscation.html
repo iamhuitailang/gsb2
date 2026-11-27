@@ -1,0 +1,45 @@
+<h2>绕过手法与畸形输入样例</h2>
+<p>重点检验大小写、实体编码、空白字符、嵌套结构与畸形标签。</p>
+
+<h3>大小写与空白</h3>
+<ScRiPt>alert('case-1')</ScRiPt>
+<IMG SRC=x OnErRoR="alert('case-2')">
+<div  class = "x" 	title="多重空白与制表符">属性间异常空白</div>
+
+<h3>多层实体编码</h3>
+<a href="&#x6a;avascript:alert('enc-1')">十六进制实体</a>
+<a href="&#106;&#97;&#118;&#97;...">十进制数字实体(片段)</a>
+<p>&amp;lt;script&amp;gt; 双重编码文本</p>
+
+<h3>畸形标签</h3>
+<p>未闭合的 b: <b>加粗段落一
+<p>第二个段落隐式闭合前者
+<div><span>交叉嵌套</div></span>
+<<div>双小于号</div>
+<div/>非 void 元素的自闭合写法</div>
+<a href="javascript:alert(1)">未闭合引号的属性 <img src=x onerror=alert(2)
+<p class=>空值属性</p>
+<p class>无值属性</p>
+
+<h3>嵌套危险结构</h3>
+<div>
+  安全文本
+  <script>alert('nested-1')</script>
+  <iframe><script>alert('nested-2')</script></iframe>
+  <p>嵌套后的安全文本</p>
+</div>
+<svg><desc><img src=x onerror="alert('nested-3')"></desc></svg>
+<noscript><p title="</noscript><img src=x onerror=alert('nested-4')>"></noscript>
+
+<h3>样式混淆</h3>
+<p style="background: url(javascript:alert('css-1'))">url() 脚本</p>
+<p style="width: expression(alert('css-2'))">IE expression</p>
+<p style="color: red; @import 'https://evil.example/x.css'">@import 外联</p>
+<p style="--x:alert(1)">CSS 自定义属性</p>
+<p style="background: red; z-index: 1">混合安全与危险声明</p>
+
+<h3>其他混淆载体</h3>
+<!-- 注释里的 <script>alert('comment')</script> -->
+<!DOCTYPE html>
+<?xml version="1.0"?>
+<math><mi xlink:href="x">命名空间属性</mi></math>

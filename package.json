@@ -1,0 +1,15 @@
+{
+  "name": "untrusted-html-preview",
+  "version": "1.0.0",
+  "private": true,
+  "description": "本地不可信富文本预览台:粘贴/导入 HTML,查看白名单清理后的安全预览与处理报告",
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test \"test/*.test.js\""
+  },
+  "license": "MIT"
+}

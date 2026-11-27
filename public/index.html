@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- 应用外壳自身的 CSP:无外网、无内联脚本、无框架嵌套 -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; script-src 'self'; style-src 'self'; img-src data:; connect-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>不可信富文本预览台(本地)</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1>不可信富文本预览台</h1>
+    <p>本地运行 · 零外部请求 · 白名单清理 + 沙箱隔离。所有输入仅在本机处理,不上传任何内容。</p>
+  </header>
+
+  <main class="layout">
+    <!-- 左栏:输入 -->
+    <section class="panel">
+      <div class="panel-head">
+        <h2>① 输入 HTML</h2>
+        <select id="sample-select" title="选择演示样例">
+          <option value="">— 选择演示样例 —</option>
+        </select>
+        <button id="btn-import" type="button">导入文件</button>
+        <input type="file" id="file-input" accept=".html,.htm,.txt,text/html" hidden>
+        <button id="btn-clear" type="button" class="danger">清空</button>
+        <button id="btn-clean" type="button" class="primary">清理并预览</button>
+      </div>
+      <div class="panel-body">
+        <textarea id="html-input" spellcheck="false"
+          placeholder="把任意不可信 HTML 粘贴到这里,或选择上方演示样例 / 导入本地文件…"></textarea>
+      </div>
+    </section>
+
+    <!-- 右栏:预览 + 报告 -->
+    <div>
+      <section class="panel">
+        <div class="panel-head">
+          <h2>② 预览</h2>
+          <div class="view-tabs" role="tablist">
+            <button id="tab-safe" type="button" class="active" role="tab">清理结果预览</button>
+            <button id="tab-safe-source" type="button" role="tab">清理结果(源码)</button>
+            <button id="tab-raw" type="button" role="tab">原始输入(纯文本)</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <!-- sandbox 不带任何令牌:无脚本、无同源、无弹窗、无表单、无导航 -->
+          <iframe id="preview-frame" sandbox="" title="隔离预览区域"
+                  referrerpolicy="no-referrer"></iframe>
+          <pre id="safe-source-view" class="raw-view hidden"></pre>
+          <pre id="raw-input-view" class="raw-view hidden"></pre>
+          <div class="isolation-note">
+            预览帧为 <code>sandbox=""</code> 空令牌沙箱,并附带
+            <code>default-src 'none'</code> CSP:帧内脚本不执行、表单不提交、
+            链接不导航、不发起任何外部资源请求,也无法访问父页面。
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" style="margin-top:16px">
+        <div class="panel-head"><h2>③ 处理报告</h2></div>
+        <div class="panel-body" id="report-body">
+          <p class="report-empty">尚未执行清理。点击「清理并预览」后,这里会列出被移除或改写的内容类别。</p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div id="toast" class="toast"></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

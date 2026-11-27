@@ -1,0 +1,33 @@
+<h2>表单、弹窗与隔离绕过样例</h2>
+<p>预览帧使用无令牌 sandbox,以下绕过尝试都应失效。</p>
+
+<form action="#nowhere">
+  <fieldset>
+    <legend>表单(标签整体不在白名单)</legend>
+    <label>输入框 <input type="text" name="field" value="尝试输入"></label>
+    <textarea name="ta">文本域</textarea>
+    <select><option>选项</option></select>
+    <button type="submit">提交按钮</button>
+  </fieldset>
+</form>
+
+<h3>窗口与框架</h3>
+<iframe src="about:blank" width="200" height="80"></iframe>
+<object type="text/html" data="about:blank"></object>
+<embed type="text/html" src="about:blank">
+<frame src="about:blank">
+<portal src="about:blank"></portal>
+
+<h3>试图访问父页面的标记</h3>
+<a href="javascript:window.parent.alert('parent-1')">parent 访问</a>
+<a href="javascript:top.location='https://evil.example'">top 跳转</a>
+<img src=x onerror="window.top.document.body.innerHTML='hacked'">
+<svg><script>parent.postMessage('hi','*')</script></svg>
+
+<h3>弹窗与下载</h3>
+<a href="#x" target="_blank" rel="opener">opener 反向控制</a>
+<a href="data:application/octet-stream;base64,AA">下载型 data URI</a>
+<meta http-equiv="refresh" content="2;url=javascript:alert(1)">
+
+<h3>存活后的安全文本</h3>
+<p>所有危险结构移除后,这段文字与 <strong>加粗</strong> 仍应正常显示。</p>

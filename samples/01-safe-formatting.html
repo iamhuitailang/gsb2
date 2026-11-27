@@ -1,0 +1,29 @@
+<h2>正常排版样例</h2>
+<p>这是一段<strong>普通富文本</strong>,包含<em>行内格式</em>、<a href="#section-1">页内锚点</a>与列表。</p>
+<h3 id="section-1">列表演示</h3>
+<ul>
+  <li>第一项,含 <code>inline code</code></li>
+  <li>第二项,含 <mark>高亮文本</mark></li>
+  <li>第三项,含 <q>短引用</q></li>
+</ul>
+<blockquote>
+  <p>白名单内的标签和安全属性应当原样保留,排版效果正常显示。</p>
+</blockquote>
+<table>
+  <thead>
+    <tr><th>名称</th><th>状态</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>条目 A</td><td>保留</td></tr>
+    <tr><td>条目 B</td><td>保留</td></tr>
+  </tbody>
+</table>
+<p style="color: #2b6cb0; font-weight: 600; padding: 8px; border: 1px solid #cbd2d9;">
+  这段文字使用了安全的内联样式(颜色、字重、内边距与边框)。
+</p>
+<details>
+  <summary>可折叠区块(安全)</summary>
+  <p>details/summary 不具备脚本能力,允许保留。</p>
+</details>
+<p>下面是一张 1x1 红点的 base64 图片(唯一允许的资源类型):</p>
+<p><img alt="红点" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==" width="32" height="32"></p>

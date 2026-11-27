@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>完整文档输入</title>
+  <script>document.title = 'pwned';</script>
+  <link rel="stylesheet" href="https://evil.example/doc.css">
+  <base target="_blank">
+  <style>body { background: url(https://evil.example/tracker.png); }</style>
+</head>
+<body onload="alert('doc-1')">
+  <h1>完整 HTML 文档</h1>
+  <p>输入是一整份文档时:<code>&lt;html&gt;</code>、<code>&lt;head&gt;</code>、
+     <code>&lt;body&gt;</code> 等外壳标签应脱壳,内部安全内容保留,
+     头部里的脚本、样式表、base 与元数据全部丢弃。</p>
+  <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+       alt="1x1 透明 GIF,允许">
+  <ul>
+    <li>列表项 A</li>
+    <li>列表项 B <a href="#anchor">锚点保留</a></li>
+  </ul>
+  <script>alert('doc-2')</script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<h2>脚本执行入口样例</h2>
+<p>以下内容全部试图执行脚本,清理后不应有任何脚本入口残留。</p>
+
+<!-- 直接脚本标签 -->
+<script>alert('xss-1');</script>
+<script src="https://evil.example/x.js"></script>
+
+<!-- 事件处理属性(大小写/空白混淆) -->
+<img src="x" onerror="alert('xss-2')">
+<DIV OnClIcK="alert('xss-3')" style="color:red">点我(事件应被移除)</DIV>
+<body onload="alert('xss-4')">
+<svg onload="alert('xss-5')"></svg>
+
+<!-- javascript: 协议链接 -->
+<a href="javascript:alert('xss-6')">危险链接 A</a>
+<a href="  java
+script:alert('xss-7')">空白与换行混淆</a>
+<a href="&#106;avascript:alert('xss-8')">实体编码混淆</a>
+<a href="JaVaScRiPt:alert('xss-9')">大小写混淆</a>
+
+<!-- 其他脚本载体 -->
+<object data="javascript:alert('xss-10')"></object>
+<embed src="javascript:alert('xss-11')">
+<iframe src="javascript:alert('xss-12')"></iframe>
+<xmp>alert('xss-13')</xmp>
+
+<!-- 实体编码的脚本标签(浏览器解码后才成形) -->
+<p>&lt;script&gt;alert('xss-14')&lt;/script&gt;</p>
