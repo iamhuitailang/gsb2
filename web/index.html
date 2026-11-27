@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>镜头剪辑台 Shot Shelf</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23101319'/%3E%3Crect x='6' y='9' width='20' height='14' rx='2' fill='%237cc4ff'/%3E%3Cpath d='M11 9v14M17 9v14M23 9v14' stroke='%23101319' stroke-width='1.6'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <div class="brand-text">
+        <strong>镜头剪辑台</strong>
+        <span>Shot Shelf · 本地视频素材整理</span>
+      </div>
+    </div>
+    <div class="topbar-group">
+      <label class="field inline">
+        <span>项目</span>
+        <select id="project-select" aria-label="切换项目"></select>
+      </label>
+      <button id="btn-import" class="btn primary" type="button">导入视频</button>
+      <button id="btn-sample" class="btn" type="button">加载样片</button>
+    </div>
+    <div class="topbar-group right">
+      <button id="btn-export" class="btn" type="button" disabled>导出目录</button>
+      <button id="btn-cache" class="btn ghost" type="button">缓存与清理</button>
+      <span id="health-chip" class="chip" title="ffmpeg 状态">检测环境中…</span>
+    </div>
+  </header>
+
+  <div id="empty-state" class="empty-state">
+    <div class="empty-card">
+      <h1>把长视频切成可查的镜头目录</h1>
+      <p>导入本地视频后自动生成缩略图与候选镜头边界；调整灵敏度、合并误切、手动补切点；给片段加标签和备注，按标签 / 时长 / 时间范围筛选，最后导出可离线浏览的网页目录。</p>
+      <ul>
+        <li>视频只在本机读取，<b>不会上传</b>。</li>
+        <li>缩略图按“片段起止 + 取样点”寻址，改边界后自动换新图，不会错位。</li>
+        <li>每个切点都附带判断依据；短促但明显的切换会保留。</li>
+      </ul>
+      <div class="empty-actions">
+        <button id="btn-import-2" class="btn primary large" type="button">导入本地视频</button>
+        <button id="btn-sample-2" class="btn large" type="button">先用样片看看</button>
+      </div>
+      <p class="hint">样片包含硬切、慢变化、静止画面、短镜头、闪光与弱变化，由本机 ffmpeg 生成。</p>
+    </div>
+  </div>
+
+  <main id="workspace" class="workspace" hidden>
+    <aside class="panel library">
+      <div class="panel-head">
+        <div>
+          <h2 id="project-title">未命名项目</h2>
+          <p id="project-subtitle" class="muted small"></p>
+        </div>
+        <button id="btn-refresh" class="icon-btn" type="button" title="重新读取项目">⟳</button>
+      </div>
+
+      <div class="filters">
+        <input id="filter-q" class="input" type="search" placeholder="搜索标签 / 备注 / 时间码">
+        <div class="filter-row">
+          <select id="filter-duration" class="input compact" aria-label="按时长筛选">
+            <option value="all">全部时长</option>
+            <option value="0-1000">短于 1 秒</option>
+            <option value="1000-3000">1–3 秒</option>
+            <option value="3000-8000">3–8 秒</option>
+            <option value="8000-99999999">8 秒以上</option>
+          </select>
+          <select id="filter-tag-mode" class="input compact" aria-label="标签匹配方式">
+            <option value="any">任一标签</option>
+            <option value="all">全部标签</option>
+          </select>
+          <button id="btn-clear-filters" class="btn ghost small" type="button">清空</button>
+        </div>
+        <div class="filter-row range-row">
+          <label class="field tiny">
+            <span>从</span>
+            <input id="filter-from" class="input compact mono" placeholder="00:00:00.000">
+          </label>
+          <label class="field tiny">
+            <span>到</span>
+            <input id="filter-to" class="input compact mono" placeholder="00:10:00.000">
+          </label>
+          <button id="btn-apply-range" class="btn ghost small" type="button">应用</button>
+        </div>
+        <div id="tag-filter" class="tag-filter" aria-label="标签筛选"></div>
+      </div>
+
+      <div class="list-toolbar">
+        <span id="shot-count" class="muted small"></span>
+        <div class="list-actions">
+          <button id="btn-merge" class="btn small" type="button" disabled>合并选中</button>
+          <button id="btn-clear-selection" class="btn ghost small" type="button" disabled>取消选择</button>
+        </div>
+      </div>
+
+      <div id="shot-list" class="shot-list" tabindex="0"></div>
+    </aside>
+
+    <section class="panel stage">
+      <div class="player-wrap">
+        <video id="player" class="player" controls playsinline preload="metadata"></video>
+        <div id="player-placeholder" class="player-placeholder">
+          <span>选择片段后在这里预览</span>
+        </div>
+      </div>
+
+      <div class="transport">
+        <div class="transport-left">
+          <button id="btn-prev" class="icon-btn" type="button" title="上一段 (↑)">⏮</button>
+          <button id="btn-play" class="icon-btn" type="button" title="播放/暂停 (空格)">▶</button>
+          <button id="btn-next" class="icon-btn" type="button" title="下一段 (↓)">⏭</button>
+          <button id="btn-frame-back" class="icon-btn" type="button" title="后退一帧 (←)">◀|</button>
+          <button id="btn-frame-fwd" class="icon-btn" type="button" title="前进一帧 (→)">|▶</button>
+        </div>
+        <div class="timecode mono" id="player-timecode">00:00:00.000 <span class="muted">帧 0</span></div>
+        <div class="transport-right">
+          <button id="btn-goto-in" class="btn ghost small" type="button">到片段起点</button>
+          <button id="btn-goto-out" class="btn ghost small" type="button">到片段终点</button>
+        </div>
+      </div>
+
+      <div class="timeline-wrap">
+        <canvas id="timeline" height="88" aria-label="画面变化强度与切点时间线"></canvas>
+        <div class="timeline-legend">
+          <span><i class="dot kept"></i>保留切点</span>
+          <span><i class="dot merged"></i>已合并</span>
+          <span><i class="dot manual"></i>手动切点</span>
+          <span><i class="dot playhead"></i>播放头</span>
+          <span class="muted">点击时间线可跳转</span>
+        </div>
+      </div>
+
+      <div class="stage-scroll">
+        <section id="shot-editor" class="shot-editor" hidden>
+          <div class="editor-head">
+            <h3>片段 <span id="editor-number" class="mono"></span></h3>
+            <div class="editor-head-actions">
+              <button id="btn-toggle-details" class="btn ghost small" type="button">收起细节</button>
+              <button id="btn-locate-boundary" class="btn ghost small" type="button">查看切点依据</button>
+            </div>
+          </div>
+
+          <div class="editor-grid">
+            <div class="editor-media">
+              <img id="editor-thumb" class="editor-thumb" alt="片段缩略图">
+              <div class="editor-thumb-meta">
+                <span id="editor-thumb-sample" class="mono small muted"></span>
+                <span id="editor-thumb-drift" class="small"></span>
+              </div>
+              <div class="evidence-inline" id="editor-evidence"></div>
+            </div>
+
+            <div class="editor-fields">
+              <div class="field-row">
+                <label class="field">
+                  <span>入点</span>
+                  <input id="input-start" class="input mono" type="text" spellcheck="false">
+                </label>
+                <label class="field">
+                  <span>出点</span>
+                  <input id="input-end" class="input mono" type="text" spellcheck="false">
+                </label>
+                <div class="field-actions">
+                  <button id="btn-start-here" class="btn ghost small" type="button">入点=播放头</button>
+                  <button id="btn-end-here" class="btn ghost small" type="button">出点=播放头</button>
+                </div>
+              </div>
+              <div class="field-row bump-row">
+                <span class="muted small">微调</span>
+                <button class="btn ghost tiny" type="button" data-bump="start" data-delta="-1">入 -1帧</button>
+                <button class="btn ghost tiny" type="button" data-bump="start" data-delta="1">入 +1帧</button>
+                <button class="btn ghost tiny" type="button" data-bump="end" data-delta="-1">出 -1帧</button>
+                <button class="btn ghost tiny" type="button" data-bump="end" data-delta="1">出 +1帧</button>
+                <button id="btn-split-playhead" class="btn small" type="button">在播放头处切开</button>
+                <button id="btn-merge-prev" class="btn ghost small" type="button">并入上一段</button>
+                <button id="btn-merge-next" class="btn ghost small" type="button">并入下一段</button>
+              </div>
+
+              <div class="field">
+                <span>标签</span>
+                <div class="tag-editor" id="tag-editor">
+                  <div id="shot-tags" class="tags"></div>
+                  <input id="tag-input" class="input compact" placeholder="输入后回车添加标签">
+                </div>
+              </div>
+
+              <label class="field">
+                <span>备注</span>
+                <textarea id="shot-note" class="input note" rows="3" placeholder="记录这个镜头的用途、人物、地点…"></textarea>
+              </label>
+              <div id="editor-save-state" class="save-state small muted"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="inspector">
+          <div class="inspector-head">
+            <h3>抽帧对位检查</h3>
+            <span class="muted small">验证“按时间码预览不会因抽帧错位”</span>
+          </div>
+          <div class="inspector-body">
+            <div class="field-row">
+              <label class="field tiny">
+                <span>时间码</span>
+                <input id="inspect-input" class="input compact mono" placeholder="00:00:05.000">
+              </label>
+              <button id="btn-inspect" class="btn small" type="button">精确抽帧</button>
+              <button id="btn-inspect-playhead" class="btn ghost small" type="button">用播放头位置</button>
+            </div>
+            <div class="inspect-result">
+              <img id="inspect-image" class="inspect-image" alt="精确抽帧结果" hidden>
+              <dl id="inspect-meta" class="inspect-meta"></dl>
+            </div>
+          </div>
+        </section>
+
+        <section class="boundaries">
+          <div class="boundaries-head">
+            <h3>切点与判断依据</h3>
+            <div class="boundaries-actions">
+              <span id="boundary-summary" class="muted small"></span>
+              <button id="btn-reset-manual" class="btn ghost small" type="button">清除人工修正并重检</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table" id="boundary-table">
+              <thead>
+                <tr>
+                  <th>时间码</th>
+                  <th>强度</th>
+                  <th>类型</th>
+                  <th>过渡</th>
+                  <th>亮度 Δ</th>
+                  <th>饱和 Δ</th>
+                  <th>判断</th>
+                  <th>依据</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <aside class="panel sidebar">
+      <section class="side-section">
+        <div class="side-head">
+          <h3>检测设置</h3>
+          <button id="btn-reset-settings" class="btn ghost tiny" type="button">恢复默认</button>
+        </div>
+        <label class="slider-field">
+          <span>灵敏度 <b id="val-threshold" class="mono"></b></span>
+          <input id="set-threshold" type="range" min="0.05" max="0.8" step="0.01">
+          <small class="muted">越低越敏感，微弱变化也可能成为候选。</small>
+        </label>
+        <label class="slider-field">
+          <span>强切点阈值 <b id="val-strong" class="mono"></b></span>
+          <input id="set-strong" type="range" min="0.1" max="0.9" step="0.01">
+          <small class="muted">达到该强度视为“明显切换”，会保护短镜头。</small>
+        </label>
+        <label class="slider-field">
+          <span>最小镜头 <b id="val-minshot" class="mono"></b></span>
+          <input id="set-minshot" type="range" min="200" max="4000" step="50">
+          <small class="muted">短于此长度的片段，若切点不够强会并入相邻片段。</small>
+        </label>
+        <label class="check-field">
+          <input id="set-keep-short" type="checkbox">
+          <span>两侧都是明显切换时，保留短镜头</span>
+        </label>
+        <label class="check-field">
+          <input id="set-merge-similar" type="checkbox">
+          <span>画面接近时自动合并相邻片段</span>
+        </label>
+        <label class="slider-field sub-setting">
+          <span>亮度容差 <b id="val-lumatol" class="mono"></b></span>
+          <input id="set-lumatol" type="range" min="0" max="60" step="1">
+        </label>
+        <label class="slider-field sub-setting">
+          <span>饱和度容差 <b id="val-sattol" class="mono"></b></span>
+          <input id="set-sattol" type="range" min="0" max="80" step="1">
+        </label>
+        <button id="btn-apply-settings" class="btn primary full" type="button">应用并重新切分</button>
+        <p id="settings-hint" class="muted small">调整后只在本机重新计算切点，不重新解码视频。</p>
+      </section>
+
+      <section class="side-section">
+        <div class="side-head">
+          <h3>项目信息</h3>
+        </div>
+        <dl id="project-meta" class="meta-list"></dl>
+        <div class="side-actions">
+          <button id="btn-export-2" class="btn full" type="button" disabled>导出网页目录</button>
+          <button id="btn-open-export" class="btn ghost full" type="button" hidden>打开导出目录</button>
+          <button id="btn-delete-project" class="btn danger full" type="button">删除这个项目</button>
+        </div>
+        <div id="export-result" class="export-result" hidden></div>
+      </section>
+
+      <section class="side-section">
+        <div class="side-head">
+          <h3>快捷键</h3>
+        </div>
+        <ul class="shortcut-list">
+          <li><kbd>空格</kbd> 播放 / 暂停</li>
+          <li><kbd>←</kbd><kbd>→</kbd> 逐帧</li>
+          <li><kbd>↑</kbd><kbd>↓</kbd> 上 / 下一段</li>
+          <li><kbd>I</kbd><kbd>O</kbd> 入点 / 出点设为播放头</li>
+          <li><kbd>S</kbd> 在播放头切分当前片段</li>
+          <li><kbd>M</kbd> 合并已勾选的片段</li>
+        </ul>
+      </section>
+    </aside>
+  </main>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<dialog id="import-dialog" class="dialog">
+  <form method="dialog" class="dialog-body" id="import-form">
+    <h2>导入本地视频</h2>
+    <p class="muted small">视频只在本机读取并分析，不会上传到任何服务器。</p>
+    <label class="field">
+      <span>视频绝对路径</span>
+      <div class="input-with-button">
+        <input id="import-path" class="input mono" placeholder="/Users/you/Movies/clip.mp4" autocomplete="off">
+        <button id="btn-pick-file" class="btn" type="button">浏览…</button>
+      </div>
+    </label>
+    <label class="field">
+      <span>项目名称（可选）</span>
+      <input id="import-name" class="input" placeholder="默认使用文件名">
+    </label>
+    <label class="check-field">
+      <input id="import-analyze" type="checkbox" checked>
+      <span>导入后立即分析画面变化</span>
+    </label>
+    <div class="dialog-note" id="import-note"></div>
+    <div class="dialog-actions">
+      <button class="btn ghost" type="button" data-close>取消</button>
+      <button id="btn-import-confirm" class="btn primary" type="submit">导入</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="cache-dialog" class="dialog">
+  <div class="dialog-body">
+    <h2>缓存与清理</h2>
+    <p class="muted small">所有数据都在本机。删除缓存不会删除源视频；分析缓存可按需重建。</p>
+    <div id="cache-list" class="cache-list"></div>
+    <div class="dialog-note" id="cache-note"></div>
+    <div class="dialog-actions">
+      <button id="btn-clear-cache" class="btn danger" type="button">清理全部缓存（保留项目）</button>
+      <button class="btn ghost" type="button" data-close>关闭</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="progress-dialog" class="dialog">
+  <div class="dialog-body">
+    <h2 id="progress-title">正在分析…</h2>
+    <div class="progress"><div id="progress-bar" class="progress-bar"></div></div>
+    <p id="progress-message" class="muted small"></p>
+    <div class="dialog-actions">
+      <button id="btn-progress-close" class="btn ghost" type="button" hidden>关闭</button>
+    </div>
+  </div>
+</dialog>
+
+<script src="/app.js"></script>
+</body>
+</html>

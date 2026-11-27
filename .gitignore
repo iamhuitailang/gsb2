@@ -45,3 +45,9 @@ coverage/
 
 # 生成的示例素材(可用 npm run generate:samples 恢复)
 public/samples/
+
+# ---- Shot Shelf 运行期数据 ----
+# 项目文件含源视频绝对路径和用户标注，默认不进仓库
+projects/
+data/
+samples/
