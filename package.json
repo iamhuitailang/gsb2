@@ -1,0 +1,16 @@
+{
+  "name": "town-namer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "本地游戏命名规则生成器：族群词库 + 声节兼容规则 + 确定性名册",
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "demo": "npm run build && node dist/src/demo.js",
+    "test": "npm run build && node dist/test/run.js"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.0"
+  }
+}
