@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<link rel="icon" href="data:,">
+<title>本地节目切换台</title>
+<style>
+  :root { --bg:#14161a; --panel:#1e2128; --line:#2c313c; --txt:#d7dae0; --dim:#8a90a0;
+          --pgm:#e5484d; --pvw:#46a758; --warn:#f5a524; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font:14px/1.5 -apple-system,"PingFang SC",sans-serif; }
+  header { padding:10px 16px; border-bottom:1px solid var(--line); display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+  header h1 { font-size:16px; margin:0; }
+  header .clock { color:var(--dim); font-variant-numeric:tabular-nums; }
+  main { display:grid; grid-template-columns:1fr 1fr 340px; gap:12px; padding:12px 16px; }
+  .mon { background:#000; border:3px solid var(--line); border-radius:6px; position:relative; aspect-ratio:16/9; overflow:hidden; }
+  .mon.pvw { border-color:var(--pvw); }
+  .mon.pgm { border-color:var(--pgm); }
+  .mon .tag { position:absolute; top:6px; left:8px; z-index:5; font-weight:700; font-size:12px; padding:1px 8px; border-radius:3px; }
+  .mon.pvw .tag { background:var(--pvw); color:#fff; }
+  .mon.pgm .tag { background:var(--pgm); color:#fff; }
+  .mon .layer { position:absolute; inset:0; opacity:0; transition:opacity .5s linear; background:#000; }
+  .mon .layer.on { opacity:1; }
+  .mon video, .mon img { width:100%; height:100%; object-fit:contain; background:#000; display:block; }
+  .mon .pvw-native { position:absolute; inset:0; }
+  .mon .meta { position:absolute; bottom:4px; left:8px; right:8px; z-index:5; font-size:12px; color:#fff;
+               text-shadow:0 1px 2px #000; display:flex; justify-content:space-between; pointer-events:none; }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:10px 12px; margin-bottom:12px; }
+  section h2 { font-size:13px; margin:0 0 8px; color:var(--dim); text-transform:uppercase; letter-spacing:.05em; }
+  button { background:#2f3542; color:var(--txt); border:1px solid var(--line); border-radius:4px; padding:5px 12px; cursor:pointer; font-size:13px; }
+  button:hover { background:#3a4152; }
+  button.primary { background:#2b5cb8; border-color:#2b5cb8; color:#fff; }
+  button.danger { background:#7a2e2e; border-color:#7a2e2e; color:#fff; }
+  button:disabled { opacity:.4; cursor:default; }
+  select, input[type=number], input[type=text] { background:#12141a; color:var(--txt); border:1px solid var(--line); border-radius:4px; padding:4px 6px; font-size:13px; }
+  label { color:var(--dim); font-size:12px; display:inline-flex; align-items:center; gap:4px; }
+  .controls { grid-column:1 / 3; display:flex; gap:18px; align-items:center; flex-wrap:wrap; }
+  .controls .grp { display:flex; gap:8px; align-items:center; }
+  #takeBtn { font-size:16px; padding:8px 28px; }
+  .col-right { grid-row:1 / 4; grid-column:3; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  td, th { padding:4px 6px; border-bottom:1px solid var(--line); text-align:left; }
+  tr.current td { background:#28324a; }
+  tr.missing td { color:var(--warn); }
+  tr.insert-src td { background:#3a2e4a; }
+  .badge { font-size:11px; padding:0 6px; border-radius:3px; background:#333a48; color:var(--dim); }
+  .badge.bad { background:#5a3a10; color:var(--warn); }
+  #logList { max-height:300px; overflow:auto; font:12px/1.6 ui-monospace,monospace; white-space:pre-wrap; }
+  #logList .t { color:var(--dim); }
+  .lib-item { display:flex; justify-content:space-between; align-items:center; padding:3px 0; border-bottom:1px solid var(--line); font-size:13px; }
+  .hint { color:var(--warn); font-size:12px; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+</style>
+</head>
+<body>
+<header>
+  <h1>本地节目切换台</h1>
+  <span class="clock" id="clock">--:--:--</span>
+  <span class="badge" id="runBadge">空场</span>
+  <span style="flex:1"></span>
+  <button id="exportBtn">导出本轮播出记录</button>
+</header>
+
+<main>
+  <!-- 预监 -->
+  <div>
+    <div class="mon pvw" id="pvwMon">
+      <span class="tag">PVW 预监</span>
+      <video class="pvw-native" id="pvwVideo" controls muted playsinline style="display:none"></video>
+      <img class="pvw-native" id="pvwImg" style="display:none" alt="">
+      <div class="meta"><span id="pvwName">（未选择）</span><span id="pvwInfo"></span></div>
+    </div>
+    <section>
+      <h2>预监控制（不影响播出）</h2>
+      <div class="row">
+        <span class="hint">预监内拖动进度条只作用于预监画面，节目输出不受影响。</span>
+      </div>
+    </section>
+  </div>
+
+  <!-- 节目 -->
+  <div>
+    <div class="mon pgm" id="pgmMon">
+      <span class="tag">PGM 播出</span>
+      <div class="layer" id="pgmA"><video muted playsinline></video><img style="display:none" alt=""></div>
+      <div class="layer" id="pgmB"><video muted playsinline></video><img style="display:none" alt=""></div>
+      <div class="meta"><span id="pgmName">（空场）</span><span id="pgmInfo"></span></div>
+    </div>
+    <section>
+      <h2>播出状态</h2>
+      <div class="row" style="font-size:13px">
+        <span>当前条目：<b id="curItem">—</b></span>
+        <span>剩余：<b id="curRemain">—</b></span>
+        <span id="insertState" class="badge" style="display:none">插入中</span>
+      </div>
+    </section>
+  </div>
+
+  <!-- 右栏：播单 / 素材库 / 日志 -->
+  <div class="col-right">
+    <section>
+      <h2>播单</h2>
+      <table>
+        <thead><tr><th>#</th><th>条目</th><th>时长</th><th></th></tr></thead>
+        <tbody id="playlistBody"></tbody>
+      </table>
+      <div class="row" style="margin-top:6px">
+        <button id="plSaveBtn">保存播单</button>
+        <span class="hint" id="plHint"></span>
+      </div>
+    </section>
+    <section>
+      <h2>素材库</h2>
+      <div id="libList"></div>
+      <div class="row" style="margin-top:6px">
+        <input type="file" id="fileInput" multiple accept="video/*,image/*" style="font-size:12px">
+      </div>
+      <div class="hint" id="assetHint" style="display:none">内置素材未加载：请用 `python3 -m http.server` 打开本页，或用上方按钮手动添加素材。</div>
+    </section>
+    <section>
+      <h2>操作记录 <input type="text" id="logFilter" placeholder="过滤…" style="width:90px;float:right"></h2>
+      <div id="logList"></div>
+      <div class="row" style="margin-top:6px">
+        <button id="logClearBtn" class="danger">清空日志</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- 切换控制 -->
+  <section class="controls">
+    <div class="grp">
+      <button id="runBtn" class="primary">开始播出 / 空场重跑</button>
+      <button id="takeBtn" class="primary" disabled>TAKE 下一条</button>
+    </div>
+    <div class="grp">
+      <label>切换方式
+        <select id="transSel"><option value="cut">硬切</option><option value="dissolve">叠化</option></select>
+      </label>
+      <label>叠化 <input type="number" id="dissolveMs" value="500" min="100" max="2000" step="100" style="width:64px"> ms</label>
+    </div>
+    <div class="grp">
+      <button id="insertBtn" disabled>临时插入</button>
+      <label>时长 <input type="number" id="insertDur" value="5" min="1" max="120" style="width:52px"> s</label>
+      <label>结束后
+        <select id="insertAfter">
+          <option value="resume">接回原位置</option>
+          <option value="next">跳下一条</option>
+        </select>
+      </label>
+    </div>
+    <div class="grp">
+      <label>素材失效时
+        <select id="fallbackSel">
+          <option value="bars">切彩条后按播单继续</option>
+          <option value="skip">直接跳过该条</option>
+        </select>
+      </label>
+    </div>
+  </section>
+</main>
+
+<script>
+'use strict';
+/* ================= 工具 ================= */
+const $ = id => document.getElementById(id);
+const fmtT = ms => { const s=Math.max(0,Math.round(ms/1000)); return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); };
+const nowWall = () => new Date().toLocaleTimeString('zh-CN',{hour12:false})+'.'+String(Date.now()%1000).padStart(3,'0');
+
+/* ================= IndexedDB ================= */
+const dbp = new Promise((res,rej)=>{
+  const r = indexedDB.open('gsb-switcher',1);
+  r.onupgradeneeded = e=>{
+    const db=e.target.result;
+    db.createObjectStore('media',{keyPath:'id'});
+    db.createObjectStore('kv',{keyPath:'k'});
+    db.createObjectStore('logs',{keyPath:'lid',autoIncrement:true});
+  };
+  r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
+});
+const tx = (store,mode,fn)=>dbp.then(db=>new Promise((res,rej)=>{
+  const t=db.transaction(store,mode), s=t.objectStore(store), out=fn(s);
+  t.oncomplete=()=>res(out&&out._v); t.onerror=()=>rej(t.error);
+}));
+const idbGet=(st,k)=>dbp.then(db=>new Promise((res,rej)=>{const q=db.transaction(st).objectStore(st).get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);}));
+const idbAll=st=>dbp.then(db=>new Promise((res,rej)=>{const q=db.transaction(st).objectStore(st).getAll();q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);}));
+const idbPut=(st,v)=>tx(st,'readwrite',s=>s.put(v));
+const idbDel=(st,k)=>tx(st,'readwrite',s=>s.delete(k));
+
+/* ================= 全局状态 ================= */
+const BUILTINS = [
+  {id:'builtin:clip1', file:'assets/clip1_16x9.mp4', name:'短片1 (16:9, 440Hz)', kind:'video'},
+  {id:'builtin:clip2', file:'assets/clip2_4x3.mp4',  name:'短片2 (4:3, 550Hz)',  kind:'video'},
+  {id:'builtin:clip3', file:'assets/clip3_9x16.mp4', name:'短片3 (9:16, 660Hz)',  kind:'video'},
+  {id:'builtin:bars',  file:'assets/colorbars.png',  name:'彩条图',               kind:'image'},
+  {id:'builtin:insert',file:'assets/insert_slate.png',name:'临时插入板',           kind:'image'},
+];
+const S = {
+  media: new Map(),      // id -> {id,name,kind,blob?,url,duration,status:'ok'|'missing'}
+  playlist: [],          // {pid, mediaId, name, kind, dur(秒, 图片用; 视频为自然时长)}
+  settings: { transition:'cut', dissolveMs:500, fallback:'bars', insertAfter:'resume', insertDur:5 },
+  run: null,             // {runId, startedAt, idx, itemStartRunT, insert:null|{idx,offsetMs,returnTimer}}
+  pgmEpoch: 0,
+  pgmTimer: null,
+  pgmCurrent: null,      // {pid, mediaId, name, kind, durMs, offsetMs}
+  logs: [],
+};
+
+/* ================= 日志 ================= */
+async function log(event, detail=''){
+  const runT = S.run ? Date.now()-S.run.startedAt : null;
+  const rec = {runId:S.run?S.run.runId:null, wall:nowWall(), runT, event, detail};
+  S.logs.push(rec);
+  await idbPut('logs', {...rec});
+  renderLogs();
+}
+function renderLogs(){
+  const f = $('logFilter').value.trim();
+  $('logList').innerHTML = S.logs.filter(r=>!f || (r.event+r.detail).includes(f)).slice(-200).map(r=>
+    `<div><span class="t">${r.wall}${r.runT!=null?' +'+fmtT(r.runT):''}</span> ${r.event} ${r.detail}</div>`).join('');
+  $('logList').scrollTop = 1e9;
+}
+
+/* ================= 素材库 ================= */
+function mediaUrl(m){ if(!m.url && m.blob) m.url = URL.createObjectURL(m.blob); return m.url||null; }
+async function addMedia(id,name,kind,blob){
+  const m = {id,name,kind,blob,status:'ok',duration:null};
+  if(kind==='video'){
+    m.duration = await new Promise(res=>{
+      const v=document.createElement('video'); v.preload='metadata'; v.muted=true;
+      v.onloadedmetadata=()=>{res(v.duration); URL.revokeObjectURL(v.src);};
+      v.onerror=()=>res(null);
+      v.src=URL.createObjectURL(blob);
+    });
+  }
+  S.media.set(id,m);
+  await idbPut('media',{id,name,kind,blob,duration:m.duration});
+  renderLib();
+}
+async function loadBuiltins(){
+  let missing=0;
+  // 先恢复 IDB 里全部素材（含用户手动添加的），状态重置为 ok
+  for(const rec of await idbAll('media'))
+    S.media.set(rec.id, {...rec, url:null, status:'ok'});
+  // 内置素材缺什么补什么
+  for(const b of BUILTINS){
+    if(S.media.has(b.id)) continue;
+    try{
+      const resp = await fetch(b.file);
+      if(!resp.ok) throw 0;
+      const blob = await resp.blob();
+      await addMedia(b.id, b.name, b.kind, blob);
+    }catch(e){ missing++; }
+  }
+  if(missing) $('assetHint').style.display='block';
+  renderLib();
+}
+function renderLib(){
+  $('libList').innerHTML='';
+  for(const [id,m] of S.media){
+    const div=document.createElement('div'); div.className='lib-item';
+    const dur = m.kind==='video' ? (m.duration?fmtT(m.duration*1000):'?') : '图片';
+    div.innerHTML=`<span>${m.name} <span class="badge">${m.kind} ${dur}</span></span>`;
+    const btn=document.createElement('button'); btn.textContent='加入播单';
+    btn.onclick=()=>{ addPlaylistItem(id); };
+    div.appendChild(btn);
+    $('libList').appendChild(div);
+  }
+}
+
+/* ================= 播单 ================= */
+let pidSeq = 1;
+function addPlaylistItem(mediaId){
+  const m=S.media.get(mediaId); if(!m) return;
+  S.playlist.push({pid:pidSeq++, mediaId, name:m.name, kind:m.kind,
+    dur: m.kind==='image' ? 5 : (m.duration||0)});
+  renderPlaylist(); savePlaylist();
+}
+function itemMedia(it){
+  const m=S.media.get(it.mediaId);
+  return (m && m.status==='ok' && (m.blob||m.url)) ? m : null;
+}
+function renderPlaylist(){
+  const tb=$('playlistBody'); tb.innerHTML='';
+  S.playlist.forEach((it,i)=>{
+    const ok = !!itemMedia(it);
+    const tr=document.createElement('tr');
+    if(!ok) tr.classList.add('missing');
+    if(S.run && S.run.idx===i) tr.classList.add('current');
+    tr.innerHTML=`<td>${i+1}</td>
+      <td>${it.name} ${ok?'':'<span class="badge bad">素材失效</span>'}</td>
+      <td>${it.kind==='image'
+        ? `<input type="number" value="${it.dur}" min="1" style="width:52px" data-pid="${it.pid}" class="durIn"> s`
+        : fmtT(it.dur*1000)}</td>
+      <td></td>`;
+    const ops=tr.lastElementChild;
+    const mk=(t,fn)=>{const b=document.createElement('button');b.textContent=t;b.onclick=fn;ops.appendChild(b);};
+    mk('预监',()=>preview(it));
+    mk('↑',()=>{ if(i>0){[S.playlist[i-1],S.playlist[i]]=[S.playlist[i],S.playlist[i-1]]; renderPlaylist(); savePlaylist();} });
+    mk('↓',()=>{ if(i<S.playlist.length-1){[S.playlist[i+1],S.playlist[i]]=[S.playlist[i],S.playlist[i+1]]; renderPlaylist(); savePlaylist();} });
+    mk('✕',()=>{ S.playlist=S.playlist.filter(x=>x.pid!==it.pid); renderPlaylist(); savePlaylist(); });
+    tb.appendChild(tr);
+  });
+  tb.querySelectorAll('.durIn').forEach(inp=>inp.onchange=()=>{
+    const it=S.playlist.find(x=>x.pid==inp.dataset.pid); if(it){ it.dur=+inp.value||1; savePlaylist(); }
+  });
+}
+async function savePlaylist(){
+  await idbPut('kv',{k:'playlist', v:S.playlist});
+  await idbPut('kv',{k:'settings', v:S.settings});
+  $('plHint').textContent='已保存 '+nowWall();
+  setTimeout(()=>$('plHint').textContent='',1500);
+}
+
+/* ================= 预监（独立，绝不影响 PGM） ================= */
+function preview(it){
+  const m=itemMedia(it);
+  const v=$('pvwVideo'), img=$('pvwImg');
+  v.pause(); v.style.display='none'; img.style.display='none';
+  if(!m){ $('pvwName').textContent=it.name+'（素材失效）'; log('preview_fail', it.name); return; }
+  const url=mediaUrl(m);
+  if(m.kind==='video'){ v.src=url; v.style.display='block'; v.currentTime=0; }
+  else { img.src=url; img.style.display='block'; }
+  $('pvwName').textContent='预监: '+it.name;
+  $('pvwInfo').textContent=m.kind==='video'?fmtT((m.duration||0)*1000):it.dur+'s';
+  log('preview', it.name);
+}
+
+/* ================= PGM 双层（硬切/叠化） ================= */
+const layers=[$('pgmA'),$('pgmB')];
+let activeLayer=0;
+function layerParts(l){ return {video:l.querySelector('video'), img:l.querySelector('img')}; }
+
+function setAudio(){
+  // 音频随画面：只有当前播出层的视频出声，其余静音
+  layers.forEach((l,i)=>{
+    const {video}=layerParts(l);
+    video.muted = (i!==activeLayer);
+    if(i!==activeLayer) video.volume=0; else video.volume=1;
+  });
+}
+function rampAudio(durMs){
+  // 叠化期间音量交叉渐变
+  const from=layers[1-activeLayer].querySelector('video'), to=layers[activeLayer].querySelector('video');
+  const t0=performance.now();
+  const step=()=>{
+    const p=Math.min(1,(performance.now()-t0)/durMs);
+    from.volume=1-p; to.volume=p; to.muted=false;
+    if(p<1) requestAnimationFrame(step); else { from.muted=true; from.volume=0; }
+  };
+  if(durMs>0) step();
+}
+
+/* 节目输出主入口：带 epoch 守卫，未完成的加载不能抢回已切走的画面 */
+async function programPlay(spec){ // spec: {pid?, mediaId, name, kind, durMs, offsetMs?, isInsert?, transition?}
+  const epoch=++S.pgmEpoch;
+  clearTimeout(S.pgmTimer); S.pgmTimer=null;
+
+  const m=S.media.get(spec.mediaId);
+  const ok = m && m.status==='ok' && (m.blob||m.url);
+  if(!ok){
+    log('missing_media', `${spec.name}（素材失效）`);
+    markMissing(spec.mediaId);
+    return applyFallback(spec, epoch);
+  }
+  const url=mediaUrl(m);
+  const next=1-activeLayer;
+  const L=layers[next], {video,img}=layerParts(L);
+
+  // 预载到备用层（异步）
+  try{
+    if(m.kind==='video'){
+      img.style.display='none'; video.style.display='block';
+      video.src=url;
+      await new Promise((res,rej)=>{ video.oncanplay=res; video.onerror=rej; });
+      if(spec.offsetMs) video.currentTime=spec.offsetMs/1000; // 元数据就绪后 seek 才可靠
+    }else{
+      video.pause(); video.removeAttribute('src'); video.load(); video.style.display='none';
+      img.style.display='block'; img.src=url;
+      if(!img.complete) await new Promise((res,rej)=>{ img.onload=res; img.onerror=rej; });
+    }
+  }catch(e){
+    if(epoch!==S.pgmEpoch) return;
+    log('load_fail', spec.name);
+    markMissing(spec.mediaId);
+    return applyFallback(spec, epoch);
+  }
+  if(epoch!==S.pgmEpoch){ // 等待期间节目已被切走 → 放弃本次装载
+    video.pause(); return;
+  }
+
+  // 执行切换
+  const trans = spec.transition || S.settings.transition;
+  const dMs = trans==='dissolve' ? S.settings.dissolveMs : 0;
+  L.style.transition=`opacity ${dMs}ms linear`;
+  layers[activeLayer].style.transition=`opacity ${dMs}ms linear`;
+  const oldLayer=activeLayer;
+  activeLayer=next;
+  L.classList.add('on'); layers[oldLayer].classList.remove('on');
+  if(m.kind==='video'){ video.play().catch(()=>{}); }
+  setAudio();
+  if(dMs>0) rampAudio(dMs);
+  setTimeout(()=>{ // 叠化结束后停掉旧层
+    if(epoch!==S.pgmEpoch) return;
+    const op=layerParts(layers[oldLayer]); op.video.pause();
+  }, dMs+50);
+
+  S.pgmCurrent={...spec, mediaId:spec.mediaId, startAt:Date.now(), offsetMs:spec.offsetMs||0};
+  $('pgmName').textContent=(spec.isInsert?'[插入] ':'')+spec.name;
+  $('curItem').textContent=spec.name;
+
+  // 计划 vs 实际
+  const runT = S.run ? Date.now()-S.run.startedAt : 0;
+  log(spec.isInsert?'switch_insert':'switch',
+      `${spec.name} | ${trans}${dMs?' '+dMs+'ms':''} | runT +${fmtT(runT)}`);
+
+  // 排程下一切换
+  const remain = spec.durMs - (spec.offsetMs||0);
+  if(m.kind==='video'){
+    video.onended=()=>{ if(epoch===S.pgmEpoch) onItemEnd(spec); };
+    S.pgmTimer=setTimeout(()=>{ if(epoch===S.pgmEpoch) onItemEnd(spec); }, remain+800); // 兜底
+  }else{
+    S.pgmTimer=setTimeout(()=>{ if(epoch===S.pgmEpoch) onItemEnd(spec); }, remain);
+  }
+}
+
+function markMissing(mediaId){
+  const m=S.media.get(mediaId); if(m) m.status='missing';
+  renderPlaylist(); renderLib();
+}
+
+/* 失效回退 */
+async function applyFallback(spec, epoch){
+  if(epoch!==S.pgmEpoch) return;
+  if(S.settings.fallback==='skip'){
+    log('fallback', `${spec.name} → 跳过`);
+    return onItemEnd(spec, true);
+  }
+  log('fallback', `${spec.name} → 彩条 ${fmtT(spec.durMs)}`);
+  const bars=S.media.get('builtin:bars');
+  if(spec.mediaId!=='builtin:bars' && bars && bars.status==='ok' && (bars.blob||bars.url)){
+    await programPlay({mediaId:'builtin:bars', name:'彩条（失效回退）', kind:'image',
+      durMs:spec.durMs||5000, transition:'cut', _fallbackFor:spec});
+  }else{
+    // 彩条本身也不可用：黑场等待该条时长后继续，避免回退死循环
+    S.pgmTimer=setTimeout(()=>{ if(epoch===S.pgmEpoch) onItemEnd(spec); }, spec.durMs||5000);
+  }
+}
+
+/* 条目播完 → 视情况结束插入或推进播单 */
+function onItemEnd(spec, skipped){
+  if(spec._fallbackFor) spec=spec._fallbackFor;
+  if(spec.isInsert){ endInsert(); return; }
+  if(S.run && !S.run.insert) takeNext(skipped?'fallback':'auto');
+}
+
+/* 条目时长：视频用自然时长（未知时给兜底，靠 ended 事件推进），图片用设定时长 */
+function itemDurMs(it){
+  if(it.kind==='video') return it.dur>0 ? it.dur*1000 : 3600e3;
+  return (it.dur||5)*1000;
+}
+/* ================= 播单推进 ================= */
+function plannedStart(idx){ // 播单计划起点（相对 run 开始）
+  let t=0; for(let i=0;i<idx;i++) t+=(S.playlist[i].dur||0)*1000; return t;
+}
+async function takeNext(reason){
+  if(!S.run) return;
+  clearTimeout(S.pgmTimer);
+  S.run.idx++;
+  if(S.run.idx>=S.playlist.length){
+    S.run=null; S.pgmCurrent=null;
+    $('runBadge').textContent='空场'; $('takeBtn').disabled=true; $('insertBtn').disabled=true;
+    $('curItem').textContent='—'; $('curRemain').textContent='—';
+    log('run_end','播单播完');
+    const bars=S.media.get('builtin:bars');
+    if(bars) programPlay({mediaId:'builtin:bars',name:'彩条（播单结束）',kind:'image',durMs:3600e3});
+    renderPlaylist();
+    return;
+  }
+  const it=S.playlist[S.run.idx];
+  const planned=plannedStart(S.run.idx), actual=Date.now()-S.run.startedAt;
+  log('take_'+reason, `#${S.run.idx+1} ${it.name} | 计划 +${fmtT(planned)} 实际 +${fmtT(actual)} 偏差 ${((actual-planned)/1000).toFixed(1)}s`);
+  renderPlaylist();
+  await programPlay({pid:it.pid, mediaId:it.mediaId, name:it.name, kind:it.kind, durMs:itemDurMs(it)});
+}
+
+/* ================= 临时插入 ================= */
+async function startInsert(){
+  if(!S.run || S.run.insert || !S.pgmCurrent) return;
+  const cur=S.pgmCurrent;
+  const elapsed=(Date.now()-cur.startAt)+cur.offsetMs;
+  const idx=S.run.idx;
+  S.run.insert={idx, offsetMs:elapsed};
+  $('insertState').style.display='inline';
+  log('insert_start', `在 #${idx+1} ${cur.name} 的 ${fmtT(elapsed)} 处插入，结束后${S.settings.insertAfter==='resume'?'接回原位置':'跳下一条'}`);
+  await programPlay({mediaId:'builtin:insert', name:'临时插入板', kind:'image',
+    durMs:S.settings.insertDur*1000, isInsert:true});
+}
+async function endInsert(){
+  const ins=S.run&&S.run.insert;
+  if(!ins) return;
+  S.run.insert=null;
+  $('insertState').style.display='none';
+  log('insert_end', S.settings.insertAfter==='resume'
+    ? `接回 #${ins.idx+1} 的 ${fmtT(ins.offsetMs)} 处` : '跳下一条');
+  if(S.settings.insertAfter==='resume'){
+    S.run.idx=ins.idx;
+    const it=S.playlist[ins.idx];
+    renderPlaylist();
+    await programPlay({pid:it.pid, mediaId:it.mediaId, name:it.name, kind:it.kind,
+      durMs:itemDurMs(it), offsetMs:ins.offsetMs});
+  }else{
+    await takeNext('insert_end');
+  }
+}
+
+/* ================= 运行控制 ================= */
+async function startRun(){
+  // 空场重跑：新开一轮，从播单第一条开始自动运行
+  S.run={runId:'run-'+Date.now(), startedAt:Date.now(), idx:-1, insert:null};
+  $('runBadge').textContent='播出中 '+S.run.runId;
+  $('takeBtn').disabled=false; $('insertBtn').disabled=false;
+  log('run_start', `播单 ${S.playlist.length} 条，总长 ${fmtT(plannedStart(S.playlist.length))}`);
+  await takeNext('run_start');
+}
+
+/* ================= 导出 ================= */
+async function exportLog(){
+  const all=await idbAll('logs');
+  const data={
+    exportedAt:new Date().toISOString(),
+    settings:S.settings,
+    playlist:S.playlist.map((it,i)=>({seq:i+1, name:it.name, kind:it.kind, durS:it.dur,
+      plannedStartS:plannedStart(i)/1000, mediaOk:!!itemMedia(it)})),
+    events:all,
+  };
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='switcher-log-'+(S.run?S.run.runId:'idle')+'.json';
+  a.click();
+  log('export','已导出播出记录');
+}
+
+/* ================= UI 绑定 ================= */
+$('runBtn').onclick=startRun;
+$('takeBtn').onclick=()=>{ if(S.run){ if(S.run.insert){ S.run.insert=null; $('insertState').style.display='none'; log('insert_cancel','手动 TAKE 取消插入'); } takeNext('manual'); } };
+$('insertBtn').onclick=startInsert;
+$('exportBtn').onclick=exportLog;
+$('plSaveBtn').onclick=savePlaylist;
+$('logClearBtn').onclick=async()=>{ S.logs=[]; await tx('logs','readwrite',s=>s.clear()); renderLogs(); };
+$('logFilter').oninput=renderLogs;
+$('transSel').onchange=e=>{S.settings.transition=e.target.value; savePlaylist();};
+$('dissolveMs').onchange=e=>{S.settings.dissolveMs=+e.target.value||500; savePlaylist();};
+$('fallbackSel').onchange=e=>{S.settings.fallback=e.target.value; savePlaylist();};
+$('insertAfter').onchange=e=>{S.settings.insertAfter=e.target.value; savePlaylist();};
+$('insertDur').onchange=e=>{S.settings.insertDur=+e.target.value||5; savePlaylist();};
+$('fileInput').onchange=async e=>{
+  for(const f of e.target.files){
+    const kind=f.type.startsWith('video')?'video':f.type.startsWith('image')?'image':null;
+    if(!kind) continue;
+    await addMedia('file:'+f.name+':'+f.size, f.name, kind, f);
+  }
+  e.target.value='';
+};
+
+/* 状态条刷新 */
+setInterval(()=>{
+  $('clock').textContent=nowWall();
+  if(S.pgmCurrent && S.run){
+    const cur=S.pgmCurrent;
+    const remain=cur.durMs-((Date.now()-cur.startAt)+cur.offsetMs);
+    $('curRemain').textContent=fmtT(remain);
+  }
+},250);
+
+/* ================= 启动 ================= */
+(async function init(){
+  const [pl,st,logs]=await Promise.all([idbGet('kv','playlist'),idbGet('kv','settings'),idbAll('logs')]);
+  if(st&&st.v) Object.assign(S.settings,st.v);
+  $('transSel').value=S.settings.transition; $('dissolveMs').value=S.settings.dissolveMs;
+  $('fallbackSel').value=S.settings.fallback; $('insertAfter').value=S.settings.insertAfter;
+  $('insertDur').value=S.settings.insertDur;
+  S.logs=logs||[]; renderLogs();
+  await loadBuiltins();
+  if(pl&&pl.v&&pl.v.length){ S.playlist=pl.v; pidSeq=Math.max(...pl.v.map(x=>x.pid))+1; }
+  else{
+    // 默认播单：三段短片 + 彩条
+    for(const id of ['builtin:clip1','builtin:bars','builtin:clip2','builtin:clip3'])
+      if(S.media.has(id)) addPlaylistItem(id);
+  }
+  renderPlaylist();
+  log('init','页面加载完成（空场待命，可点“开始播出 / 空场重跑”）');
+})();
+</script>
+</body>
+</html>
