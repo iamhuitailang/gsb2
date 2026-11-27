@@ -1,0 +1,15 @@
+tolerance          : 40 ms
+true / detected    : 19 / 19
+matched            : 19
+recall / precision : 100.00% / 100.00%
+missed (0): -
+duplicates (0): -
+false alarms (0): -
+distractors rejected: 2/2
+velocity errors (0): -
+local RMS change   : -4.42 dB (orig->export)
+peak level         : -0.45 -> -3.97 dBFS
+
+boundary rules
+  head-clipped samples : 0
+  tail samples past end: 0 (kept via buffer extension; a fixed-length export would lose them)
