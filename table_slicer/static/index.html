@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>表格切格检查工具</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <div class="brand">表格切格检查工具 <span class="sub">本地 · 只切格不识别文字</span></div>
+  <div class="toolbar">
+    <button id="btn-generate" title="生成带合并格/浅线/印章/缺口/旋转的合成图">生成样图</button>
+    <label class="file-btn">打开本地图片
+      <input type="file" id="file-upload" accept="image/*" hidden>
+    </label>
+    <button id="btn-export">导出当前格图</button>
+    <button id="btn-batch">批量导出（跳过待处理）</button>
+    <button id="btn-verify" title="仅合成图可用">自检（对真值）</button>
+  </div>
+</header>
+
+<main>
+  <aside id="sidebar">
+    <div class="side-head">页面列表</div>
+    <ul id="page-list"></ul>
+    <div class="side-head">低可信项 <span id="lc-count" class="badge">0</span></div>
+    <ul id="lc-list"></ul>
+  </aside>
+
+  <section id="workspace">
+    <div class="mode-bar">
+      <div class="mode-group" id="mode-group">
+        <button data-mode="inspect" class="active">查看/联动</button>
+        <button data-mode="edge">边段切换（实线/无边）</button>
+        <button data-mode="add-v">加竖分隔</button>
+        <button data-mode="add-h">加横分隔</button>
+        <button data-mode="merge">确认合并范围</button>
+        <button data-mode="unmerge">取消合并</button>
+      </div>
+      <div id="hint" class="hint">点击页面开始</div>
+    </div>
+
+    <div class="canvas-wrap">
+      <div class="canvas-panel">
+        <div class="panel-title">原图（坐标联动）</div>
+        <div class="canvas-scroll"><canvas id="canvas-original"></canvas></div>
+      </div>
+      <div class="canvas-panel">
+        <div class="panel-title">拉正预览（编辑在此进行）</div>
+        <div class="canvas-scroll"><canvas id="canvas-deskewed"></canvas></div>
+      </div>
+    </div>
+
+    <div class="info-strip">
+      <div id="cell-info" class="cell-info">未选择格子</div>
+      <div id="coord-info" class="coord-info"></div>
+    </div>
+
+    <div class="table-wrap">
+      <table id="cell-table">
+        <thead><tr id="cell-table-head"></tr></thead>
+        <tbody id="cell-table-body"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast hidden"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

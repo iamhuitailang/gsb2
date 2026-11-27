@@ -19,6 +19,9 @@ data.json
 *.sqlite
 *.sqlite3
 tmp/
+# 表格切格工具的本地项目数据（原图、拉正图、导出格图）
+slicer_project/
+**/slicer_project/
 
 # ---- 依赖与构建产物 ----
 node_modules/
