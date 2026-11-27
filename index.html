@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>俯视小车干地 / 湿地操控预演</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>俯视小车：过弯换地面与抓地争夺预演</h1>
+      <p>前后轴独立采样路面 μ；转向、油门和刹车共用摩擦椭圆。录制一次键盘输入，用两套轮胎 / 车重设置在同一输入时刻对齐重跑。</p>
+    </div>
+    <div class="toolbar">
+      <select id="presetSelect" aria-label="选择内置样例"></select>
+      <button id="loadPresetBtn" class="primary">载入样例</button>
+      <button id="recordBtn">● 录制并键盘驾驶</button>
+      <button id="stopRecordBtn" class="danger" hidden>结束录制并对比</button>
+      <button id="exportBtn">导出试车 JSON</button>
+      <label class="import-label">
+        导入 / 拖入复现 JSON
+        <input id="importInput" type="file" accept="application/json,.json" />
+      </label>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="stage-card">
+      <div class="stage-head">
+        <div class="legend">
+          <span class="legend-item"><i class="line-swatch" style="background:var(--blue)"></i>A 配置</span>
+          <span class="legend-item"><i class="line-swatch" style="background:var(--orange)"></i>B 配置</span>
+          <span class="legend-item"><i class="line-swatch" style="background:var(--aqua)"></i>实际运动方向</span>
+          <span class="legend-item"><i class="swatch" style="background:#7fb0da"></i>湿地 / 低 μ</span>
+          <span class="legend-item">➤ 白箭头为车身朝向</span>
+        </div>
+        <span id="modePill" class="pill">样例回放</span>
+      </div>
+      <p id="presetDescription" class="preset-description"></p>
+      <canvas id="worldCanvas" tabindex="0" aria-label="车辆俯视几何画布，点击后可用键盘驾驶"></canvas>
+
+      <div class="playback" aria-label="回放控制">
+        <button id="resetBtn" title="回到起点 (Home)">⏮ 起点</button>
+        <button id="stepBackBtn" title="后退一帧">−1 帧</button>
+        <button id="playPauseBtn" class="primary" title="播放 / 暂停 (P)">暂停</button>
+        <button id="stepFwdBtn" title="前进一帧">+1 帧</button>
+        <input id="timeline" type="range" min="0" max="100" value="0" step="1" aria-label="输入时间轴" />
+        <span id="timeReadout" class="time-readout">0.00 / 0.00 s</span>
+        <select id="speedSelect" aria-label="回放速度">
+          <option value="0.25">0.25×</option>
+          <option value="0.5">0.5×</option>
+          <option value="1" selected>1×</option>
+        </select>
+      </div>
+      <div id="eventChips" class="event-chips" aria-label="关键时刻标记"></div>
+    </section>
+
+    <aside class="side">
+      <section class="panel">
+        <h2>键盘与设置</h2>
+        <div class="help-grid">
+          <span><kbd>W</kbd> / <kbd>↑</kbd></span><span>油门</span>
+          <span><kbd>S</kbd> / <kbd>↓</kbd> / <kbd>Space</kbd></span><span>刹车</span>
+          <span><kbd>A</kbd> <kbd>D</kbd> / <kbd>←</kbd> <kbd>→</kbd></span><span>转向</span>
+          <span><kbd>P</kbd></span><span>播放 / 暂停</span>
+          <span><kbd>[</kbd> <kbd>]</kbd></span><span>逐帧 − / +</span>
+        </div>
+
+        <h3>两套重跑设置（同一输入）</h3>
+        <div class="setup-grid">
+          <div class="setup-card a">
+            <div class="setup-title"><i class="line-swatch" style="background:var(--blue)"></i>A</div>
+            <label>车重 <output id="massAOut"></output>
+              <input id="massA" type="range" min="900" max="2400" step="25" />
+            </label>
+            <label>轮胎 μ 系数 <output id="gripAOut"></output>
+              <input id="gripA" type="range" min="0.55" max="1.15" step="0.01" />
+            </label>
+          </div>
+          <div class="setup-card b">
+            <div class="setup-title"><i class="line-swatch" style="background:var(--orange)"></i>B</div>
+            <label>车重 <output id="massBOut"></output>
+              <input id="massB" type="range" min="900" max="2400" step="25" />
+            </label>
+            <label>轮胎 μ 系数 <output id="gripBOut"></output>
+              <input id="gripB" type="range" min="0.55" max="1.15" step="0.01" />
+            </label>
+          </div>
+          <div class="setup-actions">
+            <button id="swapSetupBtn" type="button">交换 A/B</button>
+            <button id="tireCompareBtn" type="button">改成轮胎对比</button>
+            <button id="weightCompareBtn" type="button">改成车重对比</button>
+          </div>
+        </div>
+        <div id="verifyBox"></div>
+      </section>
+
+      <section class="panel">
+        <h2>当前时刻轴状态</h2>
+        <div id="readouts"></div>
+      </section>
+
+      <section class="panel">
+        <h2>边界跨越与失抓事件</h2>
+        <div id="eventLog" class="event-log"></div>
+      </section>
+    </aside>
+  </main>
+
+  <section class="charts-grid">
+    <article class="chart-card">
+      <h2>速度对比 <span class="chart-legend"><span class="legend-item"><i class="line-swatch" style="background:var(--blue)"></i>A</span><span class="legend-item"><i class="line-swatch" style="background:var(--orange)"></i>B</span></span></h2>
+      <canvas id="speedChart"></canvas>
+    </article>
+    <article class="chart-card">
+      <h2>前后轴摩擦椭圆需求（1 = 饱和）</h2>
+      <div class="chart-legend">
+        <span class="legend-item"><i class="line-swatch" style="background:var(--blue)"></i>A 前轴</span>
+        <span class="legend-item"><i class="line-swatch" style="background:var(--blue);opacity:.55"></i>A 后轴（虚线）</span>
+        <span class="legend-item"><i class="line-swatch" style="background:var(--orange)"></i>B 前轴</span>
+        <span class="legend-item"><i class="line-swatch" style="background:var(--orange);opacity:.55"></i>B 后轴（虚线）</span>
+      </div>
+      <canvas id="gripChart"></canvas>
+    </article>
+    <article class="chart-card">
+      <h2>打滑程度（纵向滑转 / 横向滑移角归一化）</h2>
+      <div class="chart-legend">
+        <span class="legend-item"><i class="line-swatch" style="background:var(--blue)"></i>A 前轴</span>
+        <span class="legend-item"><i class="line-swatch" style="background:var(--blue);opacity:.55"></i>A 后轴（虚线）</span>
+        <span class="legend-item"><i class="line-swatch" style="background:var(--orange)"></i>B 前轴</span>
+        <span class="legend-item"><i class="line-swatch" style="background:var(--orange);opacity:.55"></i>B 后轴（虚线）</span>
+      </div>
+      <canvas id="slipChart"></canvas>
+    </article>
+    <article class="chart-card">
+      <h2>录制的驾驶输入</h2>
+      <div class="chart-legend">
+        <span class="legend-item"><i class="line-swatch" style="background:var(--violet,#6250d6)"></i>转向</span>
+        <span class="legend-item"><i class="line-swatch" style="background:var(--aqua)"></i>油门</span>
+        <span class="legend-item"><i class="line-swatch" style="background:var(--critical)"></i>刹车</span>
+      </div>
+      <canvas id="inputChart"></canvas>
+    </article>
+  </section>
+
+  <section class="panel notes">
+    <h2>这个页面简化了哪些真实车况？</h2>
+    <ul id="simplificationList"></ul>
+  </section>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="model.js"></script>
+  <script src="charts.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
