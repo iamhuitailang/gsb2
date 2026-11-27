@@ -1,0 +1,20 @@
+{
+  "name": "tutorial-hint-lab",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "游戏原型引导提示系统调试台: 解锁/排队/打断/学习状态/重放/规则对比",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "npm run build && node --test \"dist/tests/**/*.test.js\"",
+    "demo": "npm run build && node dist/src/sim/cli.js demo",
+    "experienced": "npm run build && node dist/src/sim/cli.js experienced",
+    "compare": "npm run build && node dist/src/sim/cli.js compare",
+    "replay": "npm run build && node dist/src/sim/cli.js replay",
+    "serve": "node tools/serve.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  }
+}

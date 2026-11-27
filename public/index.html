@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>引导提示调试台 · Tutorial Hint Lab</title>
+    <link rel="stylesheet" href="/public/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>引导提示调试台</h1>
+        <p class="sub">
+          同一事件流, 切换规则集即可对比实际上屏次序 · 引擎只认虚拟时钟, 全程可重放
+        </p>
+      </div>
+      <div class="clock" title="引擎虚拟时间">
+        <span class="clock-label">虚拟时间</span>
+        <strong id="clockNow">0 ms</strong>
+      </div>
+    </header>
+
+    <section class="toolbar">
+      <label>
+        存档样例
+        <select id="accountSelect">
+          <option value="new">新账号(无学习记录)</option>
+          <option value="experienced">老存档(已会拾取 + 背包)</option>
+        </select>
+      </label>
+      <label>
+        规则集
+        <select id="ruleSelect"></select>
+      </label>
+      <label>
+        场景脚本
+        <select id="scenarioSelect"></select>
+      </label>
+      <div class="toolbar-actions">
+        <button id="btnRun" class="primary">▶ 跑脚本</button>
+        <button id="btnStep">单步 ↵</button>
+        <button id="btnReset">↺ 重置</button>
+      </div>
+    </section>
+
+    <main class="grid">
+      <!-- 左列: 引擎实时状态 -->
+      <div class="col">
+        <section class="card">
+          <h2>当前提示</h2>
+          <div id="activeHint" class="active-hint empty">暂无展示中的提示</div>
+        </section>
+
+        <section class="card">
+          <h2>队列与挂起 <span class="hint">同一次只显示一条, 其余排队</span></h2>
+          <div class="lane">
+            <h3>排队中</h3>
+            <ul id="queuedList" class="hint-list"></ul>
+          </div>
+          <div class="lane">
+            <h3>挂起(等回位置恢复)</h3>
+            <ul id="suspendedList" class="hint-list"></ul>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>手动注入事件 <span class="hint">模拟玩家行为</span></h2>
+          <div class="inject">
+            <div class="inject-group">
+              <span>位置</span>
+              <button data-act="zone:hub">进 hub</button>
+              <button data-act="zone:door">进 door</button>
+              <button data-act="zone:workbench">进 workbench</button>
+              <button data-act="zone:hazard">进 hazard</button>
+              <button data-act="leave">离开当前位置</button>
+            </div>
+            <div class="inject-group">
+              <span>动作</span>
+              <button data-act="use:pick:true">pick ✓</button>
+              <button data-act="use:jump:false">jump ✗</button>
+              <button data-act="use:jump:true">jump ✓</button>
+              <button data-act="use:dodge:true">dodge ✓</button>
+              <button data-act="use:openInventory:false">背包 ✗</button>
+              <button data-act="use:craft:false">craft ✗</button>
+              <button data-act="use:craft:true">craft ✓</button>
+            </div>
+            <div class="inject-group">
+              <span>控制</span>
+              <button data-act="dismiss">主动略过</button>
+              <button data-act="tick:+5000">+5s</button>
+              <button data-act="tick:+20000">+20s</button>
+              <button data-act="sceneLeave">退出场景</button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- 中列: 学习状态 + 原因记录 -->
+      <div class="col">
+        <section class="card">
+          <h2>学习状态 <span class="hint">重开/进出场景后沿用</span></h2>
+          <table class="state-table">
+            <thead>
+              <tr><th>提示</th><th>结局</th><th>时间</th></tr>
+            </thead>
+            <tbody id="learnedBody"></tbody>
+          </table>
+          <div class="persist-actions">
+            <button id="btnExport">导出存档 JSON</button>
+            <button id="btnImport">导入存档</button>
+            <input type="file" id="importFile" accept="application/json" hidden />
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>每提示最近原因 <span class="hint">trigger / filter / cancel</span></h2>
+          <table class="state-table">
+            <thead>
+              <tr><th>提示</th><th>最近记录</th><th>原因</th></tr>
+            </thead>
+            <tbody id="traceBody"></tbody>
+          </table>
+        </section>
+
+        <section class="card">
+          <h2>规则对比 <span class="hint">同事件流, 两套规则</span></h2>
+          <div id="compareBox" class="compare-box">跑脚本后生成</div>
+        </section>
+      </div>
+
+      <!-- 右列: 操作日志与重放 -->
+      <div class="col wide">
+        <section class="card grow">
+          <h2>
+            操作日志 / 重放
+            <span class="hint">点任意一条在该处暂停, 用单步重走</span>
+          </h2>
+          <div class="replay-controls">
+            <button id="btnReplayReset">⏮ 回到起点</button>
+            <button id="btnReplayStep">⏭ 单步重走</button>
+            <button id="btnReplayEnd">⏩ 走到末尾</button>
+            <span id="replayPos" class="replay-pos"></span>
+          </div>
+          <div id="logView" class="log-view"></div>
+        </section>
+      </div>
+    </main>
+
+    <div id="toast" class="toast" hidden></div>
+    <script type="module" src="/public/app.js"></script>
+  </body>
+</html>
