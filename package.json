@@ -1,0 +1,18 @@
+{
+  "name": "diamond-deck-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "虚构卡牌桌游的本地牌组 / 备选交换 / 起手校验 / 种子对比工具",
+  "type": "module",
+  "scripts": {
+    "start": "node serve.mjs",
+    "serve": "node serve.mjs",
+    "build": "node build.mjs",
+    "typecheck": "tsc --noEmit",
+    "watch": "node build.mjs --watch"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "typescript": "^5.9.0"
+  }
+}
