@@ -1,0 +1,89 @@
+{
+  "format": "arm-weight-inspector/v1",
+  "meta": {
+    "name": "肘部接缝最小复现 JSON",
+    "farDistanceThreshold": 0.72,
+    "tieRule": [
+      "权重高者优先",
+      "并列时锁定骨骼优先",
+      "再按骨骼表顺序 / 较小骨骼编号",
+      "最后按影响槽位顺序"
+    ],
+    "poses": {
+      "rest": { "label": "静止", "angles": { "0": 0, "1": 0 } },
+      "slight": { "label": "轻微弯曲 38°", "angles": { "0": 0, "1": 0.6632251 } },
+      "strong": { "label": "明显弯曲 82°", "angles": { "0": 0, "1": 1.4311699 } }
+    }
+  },
+  "skeleton": [
+    {
+      "index": 0,
+      "name": "UpperArm",
+      "nameZh": "上臂",
+      "parentIndex": null,
+      "restStart": [-1, 0, 0],
+      "restEnd": [0, 0, 0],
+      "pivot": [-1, 0, 0]
+    },
+    {
+      "index": 1,
+      "name": "Forearm",
+      "nameZh": "前臂",
+      "parentIndex": 0,
+      "restStart": [0, 0, 0],
+      "restEnd": [1, 0, 0],
+      "pivot": [0, 0, 0]
+    }
+  ],
+  "mesh": {
+    "restPositions": [
+      [0, 0.24, 0],
+      [0, 0.24, 0],
+      [-0.18, 0.245, 0]
+    ],
+    "indices": [],
+    "vertices": [
+      {
+        "id": 0,
+        "position": [0, 0.24, 0],
+        "influences": [
+          { "bone": 0, "weight": 0.12 },
+          { "bone": 1, "weight": 0.88 }
+        ],
+        "locks": {},
+        "tags": ["seam-a-bad-neighbour-bone"],
+        "note": "A：同一位置的独立网格顶点，被前臂骨带走。"
+      },
+      {
+        "id": 1,
+        "position": [0, 0.24, 0],
+        "influences": [
+          { "bone": 0, "weight": 0.88 },
+          { "bone": 1, "weight": 0.12 }
+        ],
+        "locks": {},
+        "tags": ["seam-b-reference"],
+        "note": "B：另一个独立网格顶点，主要留在上臂骨。"
+      },
+      {
+        "id": 2,
+        "position": [-0.18, 0.245, 0],
+        "influences": [
+          { "bone": 0, "weight": 0.58 },
+          { "bone": 1, "weight": 0.42 }
+        ],
+        "locks": {},
+        "tags": ["upper-neighbour"],
+        "note": "相邻上臂环，用来观察几个点被带跑后的局部拉扯。"
+      }
+    ],
+    "namedVertices": { "A": 0, "B": 1, "neighbor": 2 }
+  },
+  "config": {
+    "pose": "strong",
+    "selectedVertexId": 0,
+    "selectedBoneIndex": 1,
+    "maxInfluences": 4,
+    "compareMaxInfluences": 2
+  }
+}
