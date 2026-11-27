@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>号码牌遮盖工作台</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">遮</span>
+        <div>
+          <strong>号码牌遮盖工作台</strong>
+          <small>关键帧 · 免遮盖段 · 逐帧检查 · 本机导出</small>
+        </div>
+      </div>
+      <div class="top-actions">
+        <button id="openVideoBtn" class="btn">选择视频</button>
+        <input id="videoFileInput" type="file" accept="video/*" hidden />
+        <button id="demoBtn" class="btn">生成内置演示片</button>
+        <span class="divider"></span>
+        <button id="importBtn" class="btn">导入配置</button>
+        <input id="configFileInput" type="file" accept="application/json,.json" hidden />
+        <button id="exportConfigBtn" class="btn">导出可编辑配置</button>
+        <button id="exportVideoBtn" class="btn btn-primary">导出成片</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar sidebar-left">
+        <section class="panel">
+          <div class="panel-head">
+            <h2>遮盖目标</h2>
+            <button id="addTargetBtn" class="btn btn-small">＋ 新目标</button>
+          </div>
+          <div id="targetList" class="target-list"></div>
+          <p class="hint">每个目标拥有独立关键帧、免遮盖段和检查记录；移动或删除不会影响其他轨迹。</p>
+        </section>
+
+        <section class="panel panel-checks">
+          <div class="panel-head">
+            <h2>缺关键点 / 出画检查</h2>
+            <button id="nextIssueBtn" class="btn btn-small">巡检下一项</button>
+          </div>
+          <div id="reviewProgress" class="review-progress"></div>
+          <div class="filter-row" role="tablist">
+            <button class="chip is-active" data-filter="open">未确认</button>
+            <button class="chip" data-filter="all">全部</button>
+            <button class="chip" data-filter="checked">已检查</button>
+          </div>
+          <div id="issueList" class="issue-list"></div>
+        </section>
+      </aside>
+
+      <section class="workspace">
+        <div class="stage-toolbar">
+          <div class="segmented" aria-label="处理前后切换">
+            <button id="beforeViewBtn" class="seg-btn is-active">处理前 / 描边</button>
+            <button id="afterViewBtn" class="seg-btn">处理后效果</button>
+          </div>
+          <div class="tool-group">
+            <button class="tool-btn is-active" data-tool="select" title="选择/移动/缩放（V）">选择</button>
+            <button class="tool-btn" data-tool="draw-rect" title="拖出矩形关键帧（R）">矩形</button>
+            <button class="tool-btn" data-tool="draw-ellipse" title="拖出椭圆关键帧（O）">椭圆</button>
+          </div>
+          <div class="zoom-group">
+            <button id="zoomOutBtn" class="icon-btn" title="缩小">−</button>
+            <input id="zoomRange" type="range" min="40" max="260" value="100" />
+            <button id="zoomInBtn" class="icon-btn" title="放大">＋</button>
+            <span id="zoomLabel">适应宽度</span>
+            <button id="fitBtn" class="btn btn-small">适应</button>
+            <button id="barsBtn" class="btn btn-small" aria-pressed="false">黑边测试</button>
+          </div>
+        </div>
+
+        <div id="stageScroll" class="stage-scroll">
+          <div id="stage" class="stage">
+            <video id="video" preload="metadata" playsinline></video>
+            <canvas id="overlay"></canvas>
+            <div id="emptyState" class="empty-state">
+              <div class="empty-card">
+                <h2>从一段视频开始</h2>
+                <p>选择本机视频，或生成含交叉移动、短时出画号码牌的几何演示短片。</p>
+                <div class="empty-actions">
+                  <button class="btn btn-primary" id="emptyOpenBtn">选择视频</button>
+                  <button class="btn" id="emptyDemoBtn">生成演示短片</button>
+                </div>
+                <p class="hint">所有处理均在本机完成；导出需要本机已安装 FFmpeg。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="transport">
+          <button id="startBtn" class="icon-btn" title="回到开头">⏮</button>
+          <button id="prevFrameBtn" class="icon-btn" title="上一帧（,）">◀︎</button>
+          <button id="playBtn" class="btn btn-small btn-primary">播放</button>
+          <button id="nextFrameBtn" class="icon-btn" title="下一帧（.）">▶︎</button>
+          <button id="endBtn" class="icon-btn" title="到结尾">⏭</button>
+          <span id="timeLabel" class="time-label">0.000s / 0.000s · 帧 0</span>
+          <input id="seekBar" class="seek-bar" type="range" min="0" max="1000" step="any" value="0" />
+          <label class="fps-label">帧率
+            <input id="fpsInput" type="number" min="1" max="240" step="0.001" value="30" />
+          </label>
+        </div>
+
+        <div class="timeline-panel" id="timelinePanel">
+          <div id="timelineRuler" class="timeline-ruler"></div>
+          <div id="trackList" class="track-list"></div>
+          <div id="playhead" class="playhead"></div>
+        </div>
+        <div class="shortcut-hint">
+          快捷键：Space 播放/暂停 · <kbd>,</kbd>/<kbd>.</kbd> 逐帧 · <kbd>B</kbd> 前后切换 · <kbd>V</kbd>/<kbd>R</kbd>/<kbd>O</kbd> 工具
+        </div>
+      </section>
+
+      <aside class="sidebar sidebar-right">
+        <section class="panel" id="propertiesPanel"></section>
+        <section class="panel" id="gapPanel"></section>
+        <section class="panel">
+          <div class="panel-head"><h2>导出</h2></div>
+          <div class="form-grid">
+            <label>关键点稀疏阈值（秒）
+              <input id="intervalInput" type="number" min="0.2" max="10" step="0.1" value="1" />
+            </label>
+            <label>外侧黑边（偶数像素）
+              <input id="paddingInput" type="number" min="0" max="400" step="2" value="0" />
+            </label>
+            <label class="check-line">
+              <input id="verifyInput" type="checkbox" checked />
+              导出每个关键时点的原图/成片验证帧
+            </label>
+          </div>
+          <button id="exportConfigBtn2" class="btn btn-block">下载可继续编辑的 JSON 配置</button>
+          <button id="exportVideoBtn2" class="btn btn-primary btn-block">导出 MP4 成片 + 验证帧</button>
+          <div id="jobStatus" class="job-status" hidden>
+            <div class="job-head">
+              <strong id="jobStage">准备中</strong>
+              <span id="jobPercent">0%</span>
+            </div>
+            <div class="progress"><div id="jobBar" class="progress-bar"></div></div>
+            <p id="jobMessage" class="hint"></p>
+            <pre id="jobError" class="error-box" hidden></pre>
+            <div id="jobResult" hidden>
+              <a id="resultVideo" class="btn btn-primary btn-block" target="_blank" rel="noreferrer">打开/保存成片</a>
+              <div class="result-links">
+                <a id="resultConfig" download="mask-project.json">配置</a>
+                <a id="resultAudio" hidden>独立音轨</a>
+                <button id="revealBtn" class="link-btn">在文件夹中显示</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" id="verifyPanel" hidden>
+          <div class="panel-head"><h2>关键时点验证</h2><button id="toggleVerifyBtn" class="btn btn-small">只看成片</button></div>
+          <p class="hint">对比同一关键时点的原始帧和导出成片；若号码边缘露出，点击问题项定位补点。</p>
+          <div id="verifyList" class="verify-list"></div>
+        </section>
+      </aside>
+    </main>
+
+    <div id="toast" class="toast" hidden></div>
+    <script src="./app.js"></script>
+  </body>
+</html>
