@@ -1,0 +1,29 @@
+{
+  "fs": 48000,
+  "f1": 300.0,
+  "f2": 3000.0,
+  "taps": 2049,
+  "D": 1024,
+  "latency": 2048,
+  "n": 48000,
+  "channels": 1,
+  "invert": [],
+  "shifts": {},
+  "group_delay": {
+    "low": 1024,
+    "mid": 2048,
+    "high": 2048
+  },
+  "align_comp": {
+    "low": 1024,
+    "mid": 0,
+    "high": 0
+  },
+  "metrics": {
+    "err_peak": 4.83554168928535e-17,
+    "err_rms": 4.439931007994061e-19,
+    "ref_rms": 0.5534859239048345,
+    "err_db": -361.9146071765889
+  },
+  "input": "/Users/sunmengmeng/works/gsb2/tasks/15685/repo/demo_out/gen/xover_tone.wav"
+}
